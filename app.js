@@ -610,9 +610,10 @@ function updateMapMarkers(filteredPets) {
     const waMsg = encodeURIComponent(`Olá ${pet.contactName}, vi o aviso de ${pet.name} no mapa do Pet Searchers!`);
 
     const popupHtml = `
-      <div class="w-64 aspect-[4/5] overflow-hidden font-sans flex flex-col bg-white rounded-2xl shadow-xl" style="aspect-ratio: 4 / 5;">
-        <div class="w-full aspect-square shrink-0 relative overflow-hidden bg-slate-900 cursor-pointer group" style="aspect-ratio: 1 / 1;" onclick="openImageLightbox('${pet.id}')" title="Clique para ampliar foto em tela cheia">
-          <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
+      <div class="w-64 font-sans flex flex-col bg-white rounded-2xl overflow-hidden">
+        <!-- Imagem 1:1 no topo com object-contain (Mesmo padrão da página) -->
+        <div class="w-full aspect-square shrink-0 relative overflow-hidden bg-slate-900 flex items-center justify-center p-1.5 cursor-pointer group" style="aspect-ratio: 1 / 1;" onclick="openImageLightbox('${pet.id}')" title="Clique para ampliar foto em tela cheia">
+          <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-contain rounded-lg group-hover:scale-105 transition-transform duration-300"/>
           <span class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-extrabold text-white ${badgeColor} shadow-md flex items-center gap-1">
             ${badgeText}
           </span>
@@ -621,27 +622,31 @@ function updateMapMarkers(filteredPets) {
           </span>
         </div>
 
-        <div class="p-3 flex flex-col flex-1 min-h-0 justify-between bg-white space-y-1.5 overflow-hidden">
+        <div class="p-3.5 space-y-2.5 bg-white">
           <div>
-            <div class="flex items-center justify-between gap-1">
-              <h4 class="font-extrabold text-xs text-primary leading-snug truncate">${pet.name}</h4>
-              <span class="text-[9px] font-bold text-gray-500 uppercase flex-shrink-0">${pet.species}</span>
+            <div class="flex items-center justify-between">
+              <h4 class="font-extrabold text-sm text-primary leading-snug truncate">${pet.name}</h4>
+              <span class="text-[10px] font-bold text-gray-500 uppercase">${pet.species}</span>
             </div>
-            <p class="text-[10px] text-gray-600 font-medium truncate mt-0.5">${pet.breed} • ${pet.color}</p>
+            <p class="text-[11px] text-gray-600 font-medium">${pet.breed} • ${pet.color}</p>
           </div>
           
-          <div class="text-[10px] text-gray-700 truncate space-y-0.5">
+          <div class="text-[11px] text-gray-700 space-y-1 bg-slate-50 p-2.5 rounded-xl border border-gray-200/70">
             <p class="flex items-center gap-1 font-medium truncate text-gray-900">
               <span class="material-symbols-outlined text-xs text-primary flex-shrink-0">location_on</span>
-              <span class="truncate">${pet.address}, ${pet.city}-${pet.state}</span>
+              <span class="truncate">${pet.address}, ${pet.city} - ${pet.state}</span>
+            </p>
+            <p class="flex items-center gap-1 text-gray-500 text-[10px]">
+              <span class="material-symbols-outlined text-xs flex-shrink-0">calendar_today</span>
+              Data: ${formatDate(pet.date)}
             </p>
           </div>
 
-          <div class="grid grid-cols-2 gap-1.5 pt-1 border-t border-gray-100">
-            <button onclick="openDetailModal('${pet.id}')" class="py-1 px-1.5 bg-primary hover:bg-primary-container text-white rounded-lg text-[10px] font-bold transition-colors flex items-center justify-center gap-0.5 shadow-sm">
+          <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+            <button onclick="openDetailModal('${pet.id}')" class="py-1.5 px-2 bg-primary hover:bg-primary-container text-white rounded-xl text-[11px] font-bold transition-colors flex items-center justify-center gap-1 shadow-sm">
               <span class="material-symbols-outlined text-xs">info</span> Detalhes
             </button>
-            <a href="https://wa.me/55${cleanPhone}?text=${waMsg}" target="_blank" class="py-1 px-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition-colors flex items-center justify-center gap-0.5 shadow-sm no-underline">
+            <a href="https://wa.me/55${cleanPhone}?text=${waMsg}" target="_blank" class="py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-bold transition-colors flex items-center justify-center gap-1 shadow-sm no-underline">
               <span class="material-symbols-outlined text-xs">chat</span> WhatsApp
             </a>
           </div>
@@ -857,11 +862,12 @@ function createPetCardHtml(pet) {
   const daysLeft = pet.daysRemaining !== undefined ? pet.daysRemaining : 30;
 
   return `
-    <article id="card-${pet.id}" onclick="focusPetOnMap('${pet.id}')" class="pet-card bg-surface rounded-2xl border border-outline-variant/50 overflow-hidden shadow-sm flex flex-col group relative cursor-pointer hover:shadow-md hover:border-secondary transition-all w-full aspect-[4/5]" style="aspect-ratio: 4 / 5;" title="Clique para ver este pet no mapa">
+    <article id="card-${pet.id}" onclick="focusPetOnMap('${pet.id}')" class="pet-card bg-surface rounded-2xl border border-outline-variant/50 overflow-hidden shadow-sm flex flex-col group relative cursor-pointer hover:shadow-md hover:border-secondary transition-all h-full justify-between" title="Clique para ver este pet no mapa">
       
-      <!-- Imagem 1:1 no topo do cartão -->
-      <div class="w-full aspect-square shrink-0 relative overflow-hidden bg-slate-900 cursor-pointer group/img" style="aspect-ratio: 1 / 1;" onclick="event.stopPropagation(); openImageLightbox('${pet.id}')" title="Clique para ampliar a foto deste pet em tela cheia">
-        <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500"/>
+      <!-- Imagem 1:1 no topo com object-contain (Preserva formato original com bordas) -->
+      <div class="w-full aspect-square shrink-0 relative overflow-hidden bg-slate-900 flex items-center justify-center p-1.5 cursor-pointer group/img" style="aspect-ratio: 1 / 1;" onclick="event.stopPropagation(); openImageLightbox('${pet.id}')" title="Clique para ampliar a foto deste pet em tela cheia">
+        <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-contain rounded-lg group-hover/img:scale-105 transition-transform duration-500"/>
+        
         <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 backdrop-blur-sm shadow-md group-hover/img:bg-primary transition-colors">
           <span class="material-symbols-outlined text-xs">zoom_in</span> Ampliar Foto
         </div>
@@ -875,38 +881,76 @@ function createPetCardHtml(pet) {
         </div>
       </div>
 
-      <!-- Informações no rodapé do cartão (Mantém altura exata 4:5) -->
-      <div class="p-3.5 flex flex-col flex-1 min-h-0 justify-between bg-surface space-y-1.5 overflow-hidden">
+      <!-- Informações no rodapé do cartão (Todas as informações e botões 100% visíveis) -->
+      <div class="p-5 flex flex-col flex-1 justify-between space-y-3 bg-surface">
+        
         <div>
           <div class="flex items-center justify-between gap-1">
-            <h3 class="font-extrabold text-base text-primary group-hover:text-secondary transition-colors truncate">${pet.name}</h3>
-            <span class="text-[10px] font-bold text-outline uppercase tracking-wider flex-shrink-0">${pet.species}</span>
+            <h3 class="font-extrabold text-lg text-primary group-hover:text-secondary transition-colors leading-snug">${pet.name}</h3>
+            <span class="text-xs font-bold text-outline uppercase tracking-wider flex-shrink-0">${pet.species}</span>
           </div>
-          <p class="text-xs font-medium text-on-surface-variant truncate mt-0.5">${pet.breed} • ${pet.color} ${pet.age ? `(${pet.age})` : ''}</p>
+          <p class="text-xs font-medium text-on-surface-variant mt-0.5">${pet.breed} • ${pet.color} ${pet.age ? `(${pet.age})` : ''}</p>
         </div>
 
-        <div class="space-y-1 text-xs text-outline">
-          <div class="flex items-center gap-1 truncate text-gray-700 font-medium">
-            <span class="material-symbols-outlined text-secondary text-sm flex-shrink-0">location_on</span>
-            <span class="truncate">${pet.address ? pet.address + ', ' : ''}${pet.city} - ${pet.state}</span>
-          </div>
-          <div class="flex items-center justify-between text-[11px] text-gray-500">
-            <span class="flex items-center gap-1 font-medium">
-              <span class="material-symbols-outlined text-xs">calendar_today</span> ${formatDate(pet.date)}
+        <p class="text-xs text-on-surface-variant line-clamp-2 leading-relaxed flex-1">
+          ${pet.description || 'Sem detalhes adicionais fornecidos.'}
+        </p>
+
+        ${isResolved ? `
+          <div class="bg-green-50 border border-green-300 rounded-xl px-3 py-2 flex items-center justify-between text-xs">
+            <span class="text-green-800 flex items-center gap-1 font-bold">
+              <span class="material-symbols-outlined text-base">task_alt</span> Caso Finalizado
             </span>
-            <span class="font-bold text-primary truncate max-w-[120px]">${pet.contactName || 'Responsável'}</span>
+            <span class="text-green-700 font-extrabold">Reencontrado 🎉</span>
+          </div>
+        ` : (isRenewalWindow ? `
+          <div class="bg-amber-50 border border-amber-300 rounded-xl p-2 flex items-center justify-between text-xs text-amber-900" onclick="event.stopPropagation()">
+            <span class="font-bold flex items-center gap-1 text-amber-800">
+              <span class="material-symbols-outlined text-base">warning</span> Faltam ${daysLeft} dias!
+            </span>
+            <button onclick="event.stopPropagation(); renewPetListing('${pet.id}')" class="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[10px] transition-colors flex items-center gap-1 shadow-sm">
+              <span class="material-symbols-outlined text-xs">update</span> Renovar +30d
+            </button>
+          </div>
+        ` : `
+          <div class="bg-surface-container/60 border border-outline-variant/40 rounded-xl px-3 py-1.5 flex items-center justify-between text-xs">
+            <span class="text-outline flex items-center gap-1 font-medium text-[11px]">
+              <span class="material-symbols-outlined text-sm">schedule</span> Válido por mais ${daysLeft} dias
+            </span>
+            <span class="text-secondary font-bold text-[11px]">Ativo</span>
+          </div>
+        `)}
+
+        <div class="pt-3 border-t border-outline-variant/30 space-y-1.5 text-xs text-outline">
+          <div class="flex items-center gap-1.5 truncate">
+            <span class="material-symbols-outlined text-secondary text-base flex-shrink-0">location_on</span>
+            <span class="truncate font-medium text-on-surface">${pet.address}, ${pet.city} - ${pet.state}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-1.5 font-medium text-[11px]">
+              <span class="material-symbols-outlined text-sm">calendar_today</span> ${formatDate(pet.date)}
+            </span>
+            <span class="font-semibold text-primary text-[11px] truncate max-w-[130px]">${pet.contactName}</span>
           </div>
         </div>
 
-        <!-- Botões de Ação Padronizados -->
-        <div class="grid grid-cols-2 gap-1.5 pt-1 border-t border-outline-variant/30">
-          <button onclick="event.stopPropagation(); focusPetOnMap('${pet.id}')" class="py-1.5 px-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary font-bold text-[11px] transition-colors flex items-center justify-center gap-1 truncate shadow-xs">
-            <span class="material-symbols-outlined text-xs">map</span> Ver no Mapa
+        <!-- Botões de Ação do Card (Totalmente Visíveis) -->
+        <div class="grid grid-cols-2 gap-2 pt-2">
+          <button onclick="event.stopPropagation(); focusPetOnMap('${pet.id}')" class="py-2 px-2.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary font-bold text-xs transition-colors flex items-center justify-center gap-1" title="Visualizar a geolocalização no mapa">
+            <span class="material-symbols-outlined text-sm">map</span> Ver no Mapa
           </button>
-          <button onclick="event.stopPropagation(); openDetailModal('${pet.id}')" class="py-1.5 px-2 rounded-lg bg-secondary-container hover:bg-secondary-container/80 text-on-secondary-container font-bold text-[11px] transition-colors flex items-center justify-center gap-1 truncate shadow-xs">
-            <span class="material-symbols-outlined text-xs">visibility</span> Detalhes
+          
+          <button onclick="event.stopPropagation(); openDetailModal('${pet.id}')" class="py-2 px-2.5 rounded-xl bg-secondary-container hover:bg-secondary-container/80 text-on-secondary-container font-bold text-xs transition-colors flex items-center justify-center gap-1" title="Ver detalhes completos do cadastro">
+            <span class="material-symbols-outlined text-sm">visibility</span> Detalhes Completos
           </button>
+          
+          ${pet.type === 'Procurado' ? `
+            <button onclick="event.stopPropagation(); generatePosterModal('${pet.id}')" class="col-span-2 py-2 px-3 rounded-xl bg-red-50 hover:bg-red-100 text-[#E52421] font-bold text-xs transition-colors flex items-center justify-center gap-1 border border-red-200">
+              <span class="material-symbols-outlined text-sm">print</span> Cartaz para Impressão PDF
+            </button>
+          ` : ''}
         </div>
+
       </div>
 
     </article>
