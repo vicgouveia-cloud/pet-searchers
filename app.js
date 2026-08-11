@@ -611,8 +611,8 @@ function updateMapMarkers(filteredPets) {
 
     const popupHtml = `
       <div class="w-64 overflow-hidden font-sans">
-        <div class="relative h-32 bg-slate-900 overflow-hidden cursor-pointer group" onclick="openImageLightbox('${pet.id}')" title="Clique para ampliar foto em tela cheia">
-          <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
+        <div class="relative aspect-square w-full bg-slate-900 overflow-hidden cursor-pointer group flex items-center justify-center p-1" onclick="openImageLightbox('${pet.id}')" title="Clique para ampliar foto em tela cheia">
+          <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-contain rounded-lg group-hover:scale-105 transition-transform duration-300"/>
           <span class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-extrabold text-white ${badgeColor} shadow-md flex items-center gap-1">
             ${badgeText}
           </span>
@@ -863,7 +863,7 @@ function createPetCardHtml(pet) {
   return `
     <article id="card-${pet.id}" onclick="focusPetOnMap('${pet.id}')" class="pet-card bg-surface rounded-2xl border border-outline-variant/50 overflow-hidden shadow-sm flex flex-col group relative cursor-pointer hover:shadow-md hover:border-secondary transition-all" title="Clique para ver este pet no mapa">
       
-      <div class="h-48 w-full relative overflow-hidden bg-slate-900 flex items-center justify-center p-1 cursor-pointer group/img" onclick="event.stopPropagation(); openImageLightbox('${pet.id}')" title="Clique para ampliar a foto deste pet em tela cheia">
+      <div class="aspect-square w-full relative overflow-hidden bg-slate-900 flex items-center justify-center p-1 cursor-pointer group/img" onclick="event.stopPropagation(); openImageLightbox('${pet.id}')" title="Clique para ampliar a foto deste pet em tela cheia">
         <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-contain rounded-lg group-hover/img:scale-105 transition-transform duration-500"/>
         <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 backdrop-blur-sm shadow-md group-hover/img:bg-primary transition-colors">
           <span class="material-symbols-outlined text-xs">zoom_in</span> Ampliar Foto
@@ -1102,6 +1102,11 @@ function initModalEvents() {
   document.getElementById("btnPrintPoster").addEventListener("click", () => {
     window.print();
   });
+
+  const btnDownloadJPG = document.getElementById("btnDownloadPosterJPG");
+  if (btnDownloadJPG) {
+    btnDownloadJPG.addEventListener("click", downloadPosterJPG);
+  }
 }
 
 function openReportModal(type, editPetId = null) {
@@ -1307,6 +1312,50 @@ function generatePosterModal(petId) {
   document.getElementById("posterContactPhone").textContent = pet.contactPhone;
 
   document.getElementById("posterModal").classList.remove("hidden");
+}
+
+async function downloadPosterJPG() {
+  const posterArea = document.getElementById("posterArea");
+  const btnDownload = document.getElementById("btnDownloadPosterJPG");
+  const petNameElem = document.getElementById("posterPetName");
+  const petName = (petNameElem ? petNameElem.textContent.trim() : "pet").toLowerCase().replace(/\s+/g, "_");
+
+  if (!posterArea) return;
+
+  const originalContent = btnDownload ? btnDownload.innerHTML : "";
+  if (btnDownload) {
+    btnDownload.disabled = true;
+    btnDownload.innerHTML = `<span class="material-symbols-outlined text-base animate-spin">progress_activity</span> Gerando JPG...`;
+  }
+
+  try {
+    if (typeof html2canvas === "undefined") {
+      throw new Error("Biblioteca html2canvas não foi carregada.");
+    }
+    const canvas = await html2canvas(posterArea, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: "#ffffff",
+      logging: false
+    });
+
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    const link = document.createElement("a");
+    link.download = `cartaz_procura_se_${petName}.jpg`;
+    link.href = dataUrl;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } catch (err) {
+    console.error("Erro ao gerar JPG do cartaz:", err);
+    alert("⚠️ Não foi possível gerar a imagem em JPG automaticamente. Utilize a opção 'Imprimir Cartaz A4' para imprimir ou salvar como PDF.");
+  } finally {
+    if (btnDownload) {
+      btnDownload.disabled = false;
+      btnDownload.innerHTML = originalContent;
+    }
+  }
 }
 
 // --- DETAIL MODAL ---
@@ -1658,4 +1707,5 @@ window.adminChangeStatus = adminChangeStatus;
 window.adminRenewPet = adminRenewPet;
 window.adminEditPet = adminEditPet;
 window.adminDeletePet = adminDeletePet;
+window.downloadPosterJPG = downloadPosterJPG;
 window.getRandomDefaultPhoto = getRandomDefaultPhoto;

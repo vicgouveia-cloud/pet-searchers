@@ -697,8 +697,11 @@
 
       <!-- Action buttons (No Print) -->
       <div class="no-print flex items-center justify-between pt-1 pb-2 border-b border-outline-variant/40">
-        <span class="text-xs text-outline font-medium">Padrão de Impressão A4 Proporcional</span>
+        <span class="text-xs text-outline font-medium">Opções de Divulgação (Impressão A4 & Imagem JPG)</span>
         <div class="flex items-center gap-2">
+          <button id="btnDownloadPosterJPG" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs transition-all flex items-center gap-1.5 shadow-sm">
+            <span class="material-symbols-outlined text-base">download</span> Baixar Cartaz (JPG)
+          </button>
           <button id="btnPrintPoster" class="px-4 py-2 rounded-xl bg-[#E52421] text-white font-bold text-xs hover:bg-red-700 transition-all flex items-center gap-1.5 shadow-sm">
             <span class="material-symbols-outlined text-base">print</span> Imprimir Cartaz A4
           </button>
@@ -859,6 +862,9 @@
   <!-- Flatpickr Date Picker JS (pt-BR Format dd/mm/aaaa) -->
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+
+  <!-- HTML2Canvas JS for downloading high-res JPG poster -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <!-- Main Application Script (Official Firebase v10 Modular ES SDK pet-searchers-52c3e v61) -->
   <script type="module" src="app.js?v=20260811_bugfixes_v61"></script>
