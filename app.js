@@ -611,8 +611,8 @@ function updateMapMarkers(filteredPets) {
 
     const popupHtml = `
       <div class="w-64 overflow-hidden font-sans">
-        <div class="relative aspect-square w-full bg-slate-900 overflow-hidden cursor-pointer group flex items-center justify-center p-1" onclick="openImageLightbox('${pet.id}')" title="Clique para ampliar foto em tela cheia">
-          <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-contain rounded-lg group-hover:scale-105 transition-transform duration-300"/>
+        <div class="relative aspect-square w-full bg-slate-900 overflow-hidden cursor-pointer group" onclick="openImageLightbox('${pet.id}')" title="Clique para ampliar foto em tela cheia">
+          <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
           <span class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-extrabold text-white ${badgeColor} shadow-md flex items-center gap-1">
             ${badgeText}
           </span>
@@ -863,8 +863,8 @@ function createPetCardHtml(pet) {
   return `
     <article id="card-${pet.id}" onclick="focusPetOnMap('${pet.id}')" class="pet-card bg-surface rounded-2xl border border-outline-variant/50 overflow-hidden shadow-sm flex flex-col group relative cursor-pointer hover:shadow-md hover:border-secondary transition-all" title="Clique para ver este pet no mapa">
       
-      <div class="aspect-square w-full relative overflow-hidden bg-slate-900 flex items-center justify-center p-1 cursor-pointer group/img" onclick="event.stopPropagation(); openImageLightbox('${pet.id}')" title="Clique para ampliar a foto deste pet em tela cheia">
-        <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-contain rounded-lg group-hover/img:scale-105 transition-transform duration-500"/>
+      <div class="aspect-square w-full relative overflow-hidden bg-slate-900 cursor-pointer group/img" onclick="event.stopPropagation(); openImageLightbox('${pet.id}')" title="Clique para ampliar a foto deste pet em tela cheia">
+        <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500"/>
         <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 backdrop-blur-sm shadow-md group-hover/img:bg-primary transition-colors">
           <span class="material-symbols-outlined text-xs">zoom_in</span> Ampliar Foto
         </div>
