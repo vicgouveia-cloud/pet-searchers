@@ -654,8 +654,8 @@ function updateMapMarkers(filteredPets) {
 
     const popupHtml = `
       <div class="w-56 font-sans flex flex-col bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden">
-        <!-- Imagem 1:1 no topo com object-contain -->
-        <div class="w-full aspect-square shrink-0 relative overflow-hidden bg-slate-900 flex items-center justify-center p-1.5 cursor-pointer group" style="aspect-ratio: 1 / 1;" onclick="openImageLightbox('${pet.id}')" title="Clique para ampliar foto em tela cheia">
+        <!-- Imagem 1:1 no topo com object-contain e Fundo Branco -->
+        <div class="w-full aspect-square shrink-0 relative overflow-hidden bg-white border-b border-gray-100 flex items-center justify-center p-1.5 cursor-pointer group" style="aspect-ratio: 1 / 1;" onclick="openImageLightbox('${pet.id}')" title="Clique para ampliar foto em tela cheia">
           <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-contain rounded-lg group-hover:scale-105 transition-transform duration-300"/>
           <span class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-extrabold text-white ${badgeColor} shadow-md flex items-center gap-1">
             ${badgeText}
@@ -897,8 +897,8 @@ function createPetCardHtml(pet) {
   return `
     <article id="card-${pet.id}" onclick="focusPetOnMap('${pet.id}')" class="pet-card bg-surface rounded-2xl border border-outline-variant/50 overflow-hidden shadow-sm flex flex-col group relative cursor-pointer hover:shadow-md hover:border-secondary transition-all h-full justify-between" title="Clique para ver este pet no mapa">
       
-      <!-- Imagem 1:1 no topo com object-contain (Preserva formato original com bordas) -->
-      <div class="w-full aspect-square shrink-0 relative overflow-hidden bg-slate-900 flex items-center justify-center p-1.5 cursor-pointer group/img" style="aspect-ratio: 1 / 1;" onclick="event.stopPropagation(); openImageLightbox('${pet.id}')" title="Clique para ampliar a foto deste pet em tela cheia">
+      <!-- Imagem 1:1 no topo com object-contain e Fundo Branco -->
+      <div class="w-full aspect-square shrink-0 relative overflow-hidden bg-white border-b border-outline-variant/30 flex items-center justify-center p-1.5 cursor-pointer group/img" style="aspect-ratio: 1 / 1;" onclick="event.stopPropagation(); openImageLightbox('${pet.id}')" title="Clique para ampliar a foto deste pet em tela cheia">
         <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-contain rounded-lg group-hover/img:scale-105 transition-transform duration-500"/>
         
         <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 backdrop-blur-sm shadow-md group-hover/img:bg-primary transition-colors">
@@ -1403,6 +1403,11 @@ function openDetailModal(petId) {
   const detailImg = document.getElementById("detailImg");
   detailImg.onerror = () => { detailImg.src = getRandomDefaultPhoto(pet.species); };
   detailImg.src = pet.photo;
+
+  const detailFrame = document.getElementById("detailImgFrame");
+  if (detailFrame) {
+    detailFrame.onclick = () => openImageLightbox(pet.id);
+  }
   document.getElementById("detailName").textContent = pet.name;
   document.getElementById("detailSpecies").textContent = pet.species;
   document.getElementById("detailBreedColor").textContent = `${pet.breed} • ${pet.color} ${pet.age ? `(${pet.age})` : ''} - ${pet.gender}`;

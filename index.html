@@ -788,11 +788,14 @@
         <span class="material-symbols-outlined text-xl">close</span>
       </button>
 
-      <!-- Photo Hero -->
-      <div class="h-60 w-full relative bg-surface-container">
-        <img id="detailImg" src="" alt="Pet" class="w-full h-full object-cover"/>
-        <span id="detailBadge" class="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md flex items-center gap-1">
+      <!-- Photo Hero: Moldura 1:1 Quadrada com Fundo Branco & Encaixe object-contain -->
+      <div id="detailImgFrame" class="w-full aspect-square relative bg-white border-b border-outline-variant/30 flex items-center justify-center p-3 cursor-pointer group/img overflow-hidden" style="aspect-ratio: 1 / 1;" title="Clique para ampliar foto em tela cheia">
+        <img id="detailImg" src="" alt="Pet" class="w-full h-full object-contain rounded-xl group-hover/img:scale-105 transition-transform duration-300"/>
+        <span id="detailBadge" class="absolute top-4 left-4 z-10 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md flex items-center gap-1">
           Status
+        </span>
+        <span class="absolute bottom-3 right-3 bg-black/70 text-white text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 backdrop-blur-sm shadow-md group-hover/img:bg-primary transition-colors">
+          <span class="material-symbols-outlined text-sm">zoom_in</span> Ampliar Foto
         </span>
       </div>
 
