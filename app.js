@@ -67,8 +67,12 @@ function listenToFirebasePets() {
 async function savePetToFirebase(pet) {
   if (!db) return false;
   try {
-    await setDoc(doc(db, "pets", pet.id), pet);
-    console.log("✅ Pet gravado no Firebase Firestore com sucesso:", pet.name);
+    let petToSave = { ...pet };
+    if (petToSave.photo && petToSave.photo.length > 450000 && petToSave.photo.startsWith("data:image/")) {
+      petToSave.photo = getRandomDefaultPhoto(petToSave.species);
+    }
+    await setDoc(doc(db, "pets", petToSave.id), petToSave);
+    console.log("✅ Pet gravado no Firebase Firestore com sucesso:", petToSave.name);
     return true;
   } catch (e) {
     console.error("❌ Erro ao gravar no Firebase Firestore:", e);
@@ -278,7 +282,8 @@ function initDatePicker() {
       altFormat: "d/m/Y",
       altInputClass: "w-full px-3.5 py-2 rounded-xl border border-outline-variant bg-background text-sm focus:border-secondary outline-none font-medium cursor-pointer",
       maxDate: "today",
-      allowInput: true
+      allowInput: true,
+      disableMobile: true
     });
   }
 }
@@ -295,8 +300,11 @@ async function singleNominatimQuery(query, timeoutMs = 2200) {
     clearTimeout(timeoutId);
     if (res.ok) {
       const data = await res.json();
-      if (data && data.length > 0 && data[0].lat && data[0].lon) {
-        return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+        const latVal = parseFloat(data[0].lat);
+        const lonVal = parseFloat(data[0].lon);
+        if (Number.isFinite(latVal) && Number.isFinite(lonVal)) {
+          return { lat: latVal, lng: lonVal };
+        }
       }
     }
   } catch (e) {
@@ -418,7 +426,22 @@ function loadPetsFromStorage() {
 }
 
 function savePetsToStorage() {
-  localStorage.setItem("pet_searchers_portal_data_v5", JSON.stringify(petsData));
+  try {
+    localStorage.setItem("pet_searchers_portal_data_v5", JSON.stringify(petsData));
+  } catch (e) {
+    console.warn("⚠️ Cota do localStorage excedida. Otimizando fotos locais...", e);
+    try {
+      const sanitizedPets = petsData.map((p, idx) => {
+        if (idx > 2 && p.photo && p.photo.startsWith("data:image/")) {
+          return { ...p, photo: getRandomDefaultPhoto(p.species) };
+        }
+        return p;
+      });
+      localStorage.setItem("pet_searchers_portal_data_v5", JSON.stringify(sanitizedPets));
+    } catch (e2) {
+      console.error("Não foi possível salvar no localStorage:", e2);
+    }
+  }
 }
 
 function deduplicatePets(pets) {
@@ -553,6 +576,36 @@ function preloadPopularStatesCities() {
   });
 }
 
+const STATE_CAPITALS_FALLBACK = {
+  AC: ["Rio Branco", "Cruzeiro do Sul", "Sena Madureira"],
+  AL: ["Maceió", "Arapiraca", "Rio Largo"],
+  AP: ["Macapá", "Santana", "Laranjal do Jari"],
+  AM: ["Manaus", "Parintins", "Itacoatiara"],
+  BA: ["Salvador", "Feira de Santana", "Vitória da Conquista", "Camaçari", "Juazeiro", "Ilhéus"],
+  CE: ["Fortaleza", "Caucaia", "Juazeiro do Norte", "Maracanaú", "Sobral"],
+  DF: ["Brasília", "Ceilândia", "Taguatinga", "Samambaia", "Plano Piloto"],
+  ES: ["Vitória", "Vila Velha", "Serra", "Cariacica", "Cachoeiro de Itapemirim"],
+  GO: ["Goiânia", "Aparecida de Goiânia", "Anápolis", "Rio Verde"],
+  MA: ["São Luís", "Imperatriz", "São José de Ribamar", "Caxias"],
+  MT: ["Cuiabá", "Várzea Grande", "Rondonópolis", "Sinop"],
+  MS: ["Campo Grande", "Dourados", "Três Lagoas", "Corumbá"],
+  MG: ["Belo Horizonte", "Uberlândia", "Contagem", "Juiz de Fora", "Betim", "Montes Claros"],
+  PA: ["Belém", "Ananindeua", "Santarém", "Marabá"],
+  PB: ["João Pessoa", "Campina Grande", "Santa Rita", "Patos"],
+  PR: ["Curitiba", "Londrina", "Maringá", "Ponta Grossa", "Cascavel", "São José dos Pinhais"],
+  PE: ["Recife", "Jaboatão dos Guararapes", "Olinda", "Caruaru", "Petrolina"],
+  PI: ["Teresina", "Parnaíba", "Picos"],
+  RJ: ["Rio de Janeiro", "São Gonçalo", "Duque de Caxias", "Nova Iguaçu", "Niterói", "Campos dos Goytacazes"],
+  RN: ["Natal", "Mossoró", "Parnamirim"],
+  RS: ["Porto Alegre", "Caxias do Sul", "Canoas", "Pelotas", "Santa Maria", "Gravataí"],
+  RO: ["Porto Velho", "Ji-Paraná", "Ariquemes"],
+  RR: ["Boa Vista", "Rorainópolis"],
+  SC: ["Florianópolis", "Joinville", "Blumenau", "São José", "Chapecó", "Criciúma"],
+  SP: ["São Paulo", "Guarulhos", "Campinas", "São Bernardo do Campo", "Santo André", "Osasco", "Carapicuíba", "Sorocaba", "Ribeirão Preto", "Santos"],
+  SE: ["Aracaju", "Nossa Senhora do Socorro", "Lagarto"],
+  TO: ["Palmas", "Araguaína", "Gurupi"]
+};
+
 async function loadCitiesForState(uf, selectElem, defaultText) {
   selectElem.innerHTML = `<option value="">${defaultText}</option>`;
   if (!uf) return;
@@ -562,10 +615,14 @@ async function loadCitiesForState(uf, selectElem, defaultText) {
     return;
   }
 
-  selectElem.innerHTML = `<option value="">⏳ Carregando todas as cidades de ${uf}...</option>`;
+  selectElem.innerHTML = `<option value="">⏳ Carregando cidades de ${uf}...</option>`;
 
   try {
-    const res = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
     if (!res.ok) throw new Error("Erro ao buscar cidades no IBGE");
     const data = await res.json();
     const cityNames = data.map(item => item.nome);
@@ -573,8 +630,10 @@ async function loadCitiesForState(uf, selectElem, defaultText) {
     citiesCache[uf] = cityNames;
     populateCityOptions(selectElem, cityNames, defaultText);
   } catch (err) {
-    console.error("Erro na API do IBGE:", err);
-    selectElem.innerHTML = `<option value="">${defaultText}</option>`;
+    console.warn("⚠️ API do IBGE indisponível ou lenta na rede móvel. Carregando lista de cidades de fallback para:", uf);
+    const fallbackCities = STATE_CAPITALS_FALLBACK[uf] || ["Capital", "Outras Cidades"];
+    citiesCache[uf] = fallbackCities;
+    populateCityOptions(selectElem, fallbackCities, defaultText);
   }
 }
 
@@ -619,7 +678,7 @@ function updateMapMarkers(filteredPets) {
   const bounds = L.latLngBounds();
 
   filteredPets.forEach(pet => {
-    if (typeof pet.lat !== 'number' || typeof pet.lng !== 'number') return;
+    if (!Number.isFinite(pet.lat) || !Number.isFinite(pet.lng)) return;
 
     // Ícones em Formato de Bolinha:
     // Vermelho (#E52E10) -> Procurado / Perdido
@@ -696,7 +755,11 @@ function updateMapMarkers(filteredPets) {
   });
 
   if (bounds.isValid() && filteredPets.length > 0) {
-    leafletMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+    try {
+      leafletMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+    } catch (e) {
+      console.warn("Aviso fitBounds:", e);
+    }
   }
 }
 
@@ -711,8 +774,12 @@ function focusPetOnMap(petId) {
   }
 
   // 2. Voo animado até a coordenada com zoom 16 e abertura do popup card
-  if (typeof pet.lat === 'number' && typeof pet.lng === 'number') {
-    leafletMap.setView([pet.lat, pet.lng], 16, { animate: true });
+  if (Number.isFinite(pet.lat) && Number.isFinite(pet.lng)) {
+    try {
+      leafletMap.setView([pet.lat, pet.lng], 16, { animate: true });
+    } catch (e) {
+      console.warn("Aviso setView:", e);
+    }
     
     const marker = mapMarkers[petId];
     if (marker) {
@@ -1034,34 +1101,52 @@ function openImageLightbox(petId) {
   }
 }
 
-// --- COMPRESSÃO DE IMAGEM HD (PRESERVA FOTOS EM ALTA NITIDEZ PARA TELAS DE PC, MAPAS E CARTAZES) ---
-function compressImage(file, maxWidth = 1200, maxHeight = 1200, quality = 0.82) {
+// --- FORMATADOR MÁSCARA TELEFONE BRASIL (XX) XXXXX-XXXX ---
+function formatBrazilianPhone(val) {
+  if (!val) return "";
+  let digits = val.replace(/\D/g, "").slice(0, 11);
+  if (digits.length === 0) return "";
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
+}
+
+// --- COMPRESSÃO DE IMAGEM HD (PRESERVA FOTOS EM ALTA NITIDEZ COM TAMANHO OTIMIZADO PARA DISPOSITIVOS MÓVEIS) ---
+function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.68) {
   return new Promise((resolve, reject) => {
+    if (!file || !file.type || !file.type.startsWith("image/")) {
+      return reject(new Error("Arquivo de imagem inválido."));
+    }
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement("canvas");
-        let width = img.width;
-        let height = img.height;
+        try {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
 
-        if (width > maxWidth || height > maxHeight) {
-          if (width > height) {
-            height = Math.round((height * maxWidth) / width);
-            width = maxWidth;
-          } else {
-            width = Math.round((width * maxHeight) / height);
-            height = maxHeight;
+          if (width > maxWidth || height > maxHeight) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
           }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        } catch (canvasErr) {
+          reject(canvasErr);
         }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, width, height);
-
-        resolve(canvas.toDataURL("image/jpeg", quality));
       };
       img.onerror = reject;
       img.src = e.target.result;
@@ -1109,26 +1194,39 @@ function initModalEvents() {
   });
 
   const filePhotoInput = document.getElementById("filePhotoInput");
-  filePhotoInput.addEventListener("change", async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      try {
-        const compressedDataUrl = await compressImage(file, 1200, 1200, 0.82);
-        document.getElementById("imgPreview").src = compressedDataUrl;
-        document.getElementById("photoPlaceholder").classList.add("hidden");
-        document.getElementById("photoPreviewContainer").classList.remove("hidden");
-      } catch (err) {
-        console.error("Erro ao comprimir foto:", err);
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          document.getElementById("imgPreview").src = evt.target.result;
+  if (filePhotoInput) {
+    filePhotoInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        try {
+          const compressedDataUrl = await compressImage(file, 800, 800, 0.68);
+          document.getElementById("imgPreview").src = compressedDataUrl;
           document.getElementById("photoPlaceholder").classList.add("hidden");
           document.getElementById("photoPreviewContainer").classList.remove("hidden");
-        };
-        reader.readAsDataURL(file);
+        } catch (err) {
+          console.warn("Tentando compressão secundária ultra-compacta...", err);
+          try {
+            const ultraCompressed = await compressImage(file, 450, 450, 0.55);
+            document.getElementById("imgPreview").src = ultraCompressed;
+            document.getElementById("photoPlaceholder").classList.add("hidden");
+            document.getElementById("photoPreviewContainer").classList.remove("hidden");
+          } catch (err2) {
+            console.error("Erro na compressão da foto:", err2);
+            document.getElementById("imgPreview").src = getRandomDefaultPhoto("Cachorro");
+            document.getElementById("photoPlaceholder").classList.add("hidden");
+            document.getElementById("photoPreviewContainer").classList.remove("hidden");
+          }
+        }
       }
-    }
-  });
+    });
+  }
+
+  const iptContactPhone = document.getElementById("iptContactPhone");
+  if (iptContactPhone) {
+    iptContactPhone.addEventListener("input", (e) => {
+      e.target.value = formatBrazilianPhone(e.target.value);
+    });
+  }
 
   const petFormElem = document.getElementById("petForm");
   if (petFormElem) {
@@ -1252,16 +1350,22 @@ async function handleFormSubmit(e) {
       return;
     }
 
-    const photoImg = document.getElementById("imgPreview").src;
+    const imgPreviewElem = document.getElementById("imgPreview");
     let photo = getRandomDefaultPhoto(species);
-    if (photoImg && (photoImg.startsWith("data:image/") || photoImg.startsWith("http"))) {
-      photo = photoImg;
+    if (imgPreviewElem) {
+      const srcAttr = imgPreviewElem.getAttribute("src") || "";
+      if (srcAttr.startsWith("data:image/") || (srcAttr.startsWith("http") && !srcAttr.includes(".html") && !srcAttr.endsWith("/"))) {
+        photo = imgPreviewElem.src;
+      }
     }
 
     // Geolocalização com tempo limite seguro de 2s para nunca travar a resposta
     let geoCoords = { lat: -23.5505, lng: -46.6333 };
     try {
-      geoCoords = await fetchGeocodeCoordinates(address, city, state);
+      const resCoords = await fetchGeocodeCoordinates(address, city, state);
+      if (resCoords && Number.isFinite(resCoords.lat) && Number.isFinite(resCoords.lng)) {
+        geoCoords = resCoords;
+      }
     } catch (e) {
       console.warn("Timeout de geocodificação no envio, utilizando fallback...", e);
     }
@@ -1302,32 +1406,48 @@ async function handleFormSubmit(e) {
       petsData.unshift(targetPet);
     }
 
-    // 1. Salva localmente e fecha modal/renderiza IMEDIATAMENTE (Resposta instantânea ao usuário)
+    // 1. Salva localmente e fecha modal/renderiza IMEDIATAMENTE
     savePetsToStorage();
 
-    document.getElementById("petForm").reset();
-    document.getElementById("photoPlaceholder").classList.remove("hidden");
-    document.getElementById("photoPreviewContainer").classList.add("hidden");
-    document.getElementById("imgPreview").src = "";
-    document.getElementById("reportModal").classList.add("hidden");
-
-    renderApp();
-
-    if (targetPet) {
-      focusPetOnMap(targetPet.id);
+    try {
+      document.getElementById("petForm").reset();
+      document.getElementById("photoPlaceholder").classList.remove("hidden");
+      document.getElementById("photoPreviewContainer").classList.add("hidden");
+      document.getElementById("imgPreview").src = "";
+      document.getElementById("reportModal").classList.add("hidden");
+    } catch (uiErr) {
+      console.warn("Erro ao resetar modal:", uiErr);
     }
 
-    if (!editPetId && targetPet) {
-      document.getElementById("notice30DaysModal").classList.remove("hidden");
-      if (type === "Procurado") {
-        const btnAck = document.getElementById("btnAckNotice");
-        const targetId = targetPet.id;
-        const ackHandler = () => {
-          generatePosterModal(targetId);
-          btnAck.removeEventListener("click", ackHandler);
-        };
-        btnAck.addEventListener("click", ackHandler);
+    try {
+      renderApp();
+    } catch (renderErr) {
+      console.warn("Erro ao renderizar app pós-envio:", renderErr);
+    }
+
+    try {
+      if (targetPet) {
+        focusPetOnMap(targetPet.id);
       }
+    } catch (mapErr) {
+      console.warn("Erro ao focar pet no mapa pós-envio:", mapErr);
+    }
+
+    try {
+      if (!editPetId && targetPet) {
+        document.getElementById("notice30DaysModal").classList.remove("hidden");
+        if (type === "Procurado") {
+          const btnAck = document.getElementById("btnAckNotice");
+          const targetId = targetPet.id;
+          const ackHandler = () => {
+            generatePosterModal(targetId);
+            btnAck.removeEventListener("click", ackHandler);
+          };
+          btnAck.addEventListener("click", ackHandler);
+        }
+      }
+    } catch (noticeErr) {
+      console.warn("Erro ao exibir modal de aviso de 30 dias:", noticeErr);
     }
 
     // 2. Sincroniza com Firebase Firestore em segundo plano
@@ -1338,7 +1458,7 @@ async function handleFormSubmit(e) {
     }
   } catch (err) {
     console.error("Erro no processamento do formulário:", err);
-    alert("⚠️ Não foi possível concluir o cadastro. Verifique os dados fornecidos.");
+    alert("⚠️ Não foi possível concluir o cadastro. Motivo: " + (err.message || err));
   } finally {
     isFormSubmitting = false;
     btnSubmit.disabled = false;
