@@ -583,8 +583,8 @@ function updateMapMarkers(filteredPets) {
     // Cinza (#6B7280)    -> Avistado
     // Verde (#16A34A)   -> Reencontrado (Encontrado pelo dono / Dono encontrado)
     const isResolved = pet.type === "Encontrado pelo dono" || pet.type === "Dono encontrado";
-    let circleClass = "marker-circle-sighted"; // Cinza por padrão (Avistado)
-    let badgeColor = "bg-gray-600";
+    let circleClass = "marker-circle-sighted"; // Azul claro por padrão (Avistado)
+    let badgeColor = "bg-sky-500";
     let badgeText = pet.type;
 
     if (pet.type === "Procurado") {
@@ -847,7 +847,7 @@ function createPetCardHtml(pet) {
   const isFoundPet = pet.type === "Dono encontrado";
   const isResolved = isFoundOwner || isFoundPet;
 
-  let badgeBg = "bg-secondary text-on-secondary";
+  let badgeBg = "bg-sky-500 text-white font-bold";
   let statusIcon = "visibility";
 
   if (pet.type === "Procurado") {
@@ -1171,7 +1171,7 @@ function setReportFormType(type) {
     lblPetName.textContent = "Nome do Pet *";
     lblEventDate.textContent = "Data do Desaparecimento *";
   } else {
-    tabSighted.className = "py-2.5 rounded-lg text-sm font-bold transition-all bg-secondary text-on-primary shadow-sm flex items-center justify-center gap-2";
+    tabSighted.className = "py-2.5 rounded-lg text-sm font-bold transition-all bg-sky-500 text-white shadow-sm flex items-center justify-center gap-2";
     tabLost.className = "py-2.5 rounded-lg text-sm font-bold transition-all text-on-surface-variant hover:text-primary flex items-center justify-center gap-2";
     lblPetName.textContent = "Nome / Identificação no Avistamento *";
     lblEventDate.textContent = "Data do Avistamento *";
@@ -1386,8 +1386,8 @@ function openDetailModal(petId) {
     badge.className = "absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md flex items-center gap-1 bg-green-600";
     badge.innerHTML = `<span class="material-symbols-outlined text-sm">task_alt</span> ${pet.type.toUpperCase()}`;
   } else {
-    badge.className = "absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md flex items-center gap-1 bg-secondary";
-    badge.innerHTML = `<span class="material-symbols-outlined text-sm">check_circle</span> AVISTADO`;
+    badge.className = "absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md flex items-center gap-1 bg-sky-500";
+    badge.innerHTML = `<span class="material-symbols-outlined text-sm">visibility</span> AVISTADO`;
   }
 
   const detailBox = document.getElementById("detailMaintenanceBox");
