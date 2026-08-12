@@ -653,10 +653,10 @@ function updateMapMarkers(filteredPets) {
     const waMsg = encodeURIComponent(`Olá ${pet.contactName}, vi o aviso de ${pet.name} no mapa do Pet Searchers!`);
 
     const popupHtml = `
-      <div class="w-64 font-sans flex flex-col bg-white rounded-2xl overflow-hidden">
-        <!-- Imagem 1:1 no topo com object-contain (Mesmo padrão da página) -->
-        <div class="w-full aspect-square shrink-0 relative overflow-hidden bg-slate-900 flex items-center justify-center p-1.5 cursor-pointer group" style="aspect-ratio: 1 / 1;" onclick="openImageLightbox('${pet.id}')" title="Clique para ampliar foto em tela cheia">
-          <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-contain rounded-lg group-hover:scale-105 transition-transform duration-300"/>
+      <div class="w-60 aspect-[4/5] overflow-hidden font-sans flex flex-col bg-white rounded-2xl border border-gray-200 shadow-xl" style="aspect-ratio: 4 / 5;">
+        <!-- Imagem 1:1 no topo com object-contain -->
+        <div class="w-full aspect-square shrink-0 relative overflow-hidden bg-slate-900 flex items-center justify-center p-1 cursor-pointer group" style="aspect-ratio: 1 / 1;" onclick="openImageLightbox('${pet.id}')" title="Clique para ampliar foto em tela cheia">
+          <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-contain rounded-md group-hover:scale-105 transition-transform duration-300"/>
           <span class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-extrabold text-white ${badgeColor} shadow-md flex items-center gap-1">
             ${badgeText}
           </span>
@@ -665,31 +665,28 @@ function updateMapMarkers(filteredPets) {
           </span>
         </div>
 
-        <div class="p-3.5 space-y-2.5 bg-white">
+        <!-- Conteúdo inferior mais compacto e elegante -->
+        <div class="p-2.5 flex flex-col flex-1 min-h-0 justify-between bg-white text-[11px] overflow-hidden">
           <div>
-            <div class="flex items-center justify-between">
-              <h4 class="font-extrabold text-sm text-primary leading-snug truncate">${pet.name}</h4>
-              <span class="text-[10px] font-bold text-gray-500 uppercase">${pet.species}</span>
+            <div class="flex items-center justify-between gap-1">
+              <h4 class="font-extrabold text-xs text-primary leading-tight truncate">${pet.name}</h4>
+              <span class="text-[9px] font-bold text-gray-500 uppercase flex-shrink-0">${pet.species}</span>
             </div>
-            <p class="text-[11px] text-gray-600 font-medium">${pet.breed} • ${pet.color}</p>
+            <p class="text-[10px] text-gray-600 font-medium truncate mt-0.5">${pet.breed} • ${pet.color}</p>
           </div>
           
-          <div class="text-[11px] text-gray-700 space-y-1 bg-slate-50 p-2.5 rounded-xl border border-gray-200/70">
+          <div class="text-[10px] text-gray-700 space-y-0.5">
             <p class="flex items-center gap-1 font-medium truncate text-gray-900">
               <span class="material-symbols-outlined text-xs text-primary flex-shrink-0">location_on</span>
-              <span class="truncate">${pet.address}, ${pet.city} - ${pet.state}</span>
-            </p>
-            <p class="flex items-center gap-1 text-gray-500 text-[10px]">
-              <span class="material-symbols-outlined text-xs flex-shrink-0">calendar_today</span>
-              Data: ${formatDate(pet.date)}
+              <span class="truncate">${pet.address}, ${pet.city}-${pet.state}</span>
             </p>
           </div>
 
-          <div class="grid grid-cols-2 gap-1.5 pt-0.5">
-            <button onclick="openDetailModal('${pet.id}')" class="py-1.5 px-2 bg-primary hover:bg-primary-container text-white rounded-xl text-[11px] font-bold transition-colors flex items-center justify-center gap-1 shadow-sm">
+          <div class="grid grid-cols-2 gap-1 pt-1 border-t border-gray-100">
+            <button onclick="openDetailModal('${pet.id}')" class="py-1 px-1.5 bg-primary hover:bg-primary-container text-white rounded-lg text-[10px] font-bold transition-colors flex items-center justify-center gap-0.5 shadow-sm">
               <span class="material-symbols-outlined text-xs">info</span> Detalhes
             </button>
-            <a href="https://wa.me/55${cleanPhone}?text=${waMsg}" target="_blank" class="py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-bold transition-colors flex items-center justify-center gap-1 shadow-sm no-underline">
+            <a href="https://wa.me/55${cleanPhone}?text=${waMsg}" target="_blank" class="py-1 px-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition-colors flex items-center justify-center gap-0.5 shadow-sm no-underline">
               <span class="material-symbols-outlined text-xs">chat</span> WhatsApp
             </a>
           </div>
