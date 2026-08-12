@@ -6,9 +6,6 @@
    Calendário Português Brasil (dd/mm/aaaa) e Painel Admin Master (Pet129502@)
    ========================================================================== */
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
 // Configuração Oficial do Firebase Firestore (Projeto: pet-searchers-52c3e)
 const firebaseConfig = {
   apiKey: "AIzaSyCQhXeplGxtn2a9XVJCSj2jv2OApX1xNgo",
@@ -20,24 +17,29 @@ const firebaseConfig = {
   measurementId: "G-10BX1Q3C9W"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+let db = null;
+let firestoreSDK = null;
 
-function initFirebaseConnection() {
+async function initFirebaseConnection() {
   try {
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
+    firestoreSDK = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+    
+    const app = initializeApp(firebaseConfig);
+    db = firestoreSDK.getFirestore(app);
     console.log("🔥 Firebase Firestore Modular inicializado no projeto:", firebaseConfig.projectId);
     listenToFirebasePets();
     return true;
   } catch (e) {
-    console.error("Erro ao inicializar Firebase Firestore:", e);
+    console.warn("⚠️ Firebase em nuvem indisponível no momento. O app funcionará localmente:", e);
     return false;
   }
 }
 
 function listenToFirebasePets() {
-  if (!db) return;
+  if (!db || !firestoreSDK) return;
   try {
-    onSnapshot(collection(db, "pets"), (snapshot) => {
+    firestoreSDK.onSnapshot(firestoreSDK.collection(db, "pets"), (snapshot) => {
       const cloudPets = [];
       snapshot.forEach((docSnap) => {
         cloudPets.push({ id: docSnap.id, ...docSnap.data() });
@@ -54,7 +56,7 @@ function listenToFirebasePets() {
       }
     }, (err) => {
       if (err && (err.code === "permission-denied" || (err.message && err.message.includes("permission-denied")))) {
-        console.info("ℹ️ Firestore (pet-searchers-52c3e) aguardando você clicar em 'Criar banco de dados' no Firebase Console (Modo de teste / São Paulo).");
+        console.info("ℹ️ Firestore aguardando permissão no Firebase Console.");
       } else {
         console.warn("Aviso no listener do Firestore:", err.message || err);
       }
@@ -65,13 +67,13 @@ function listenToFirebasePets() {
 }
 
 async function savePetToFirebase(pet) {
-  if (!db) return false;
+  if (!db || !firestoreSDK) return false;
   try {
     let petToSave = { ...pet };
     if (petToSave.photo && petToSave.photo.length > 450000 && petToSave.photo.startsWith("data:image/")) {
       petToSave.photo = getRandomDefaultPhoto(petToSave.species);
     }
-    await setDoc(doc(db, "pets", petToSave.id), petToSave);
+    await firestoreSDK.setDoc(firestoreSDK.doc(db, "pets", petToSave.id), petToSave);
     console.log("✅ Pet gravado no Firebase Firestore com sucesso:", petToSave.name);
     return true;
   } catch (e) {
@@ -81,15 +83,22 @@ async function savePetToFirebase(pet) {
 }
 
 async function deletePetFromFirebase(petId) {
-  if (!db) return false;
+  if (!db || !firestoreSDK) return false;
   try {
-    await deleteDoc(doc(db, "pets", petId));
+    await firestoreSDK.deleteDoc(firestoreSDK.doc(db, "pets", petId));
     console.log("🗑️ Pet excluído do Firebase Firestore com sucesso:", petId);
     return true;
   } catch (e) {
     console.error("❌ Erro ao excluir do Firebase Firestore:", e);
     return false;
   }
+}
+
+function savePetsToCloud() {
+  if (!petsData || !Array.isArray(petsData)) return;
+  petsData.forEach(p => {
+    savePetToFirebase(p);
+  });
 }
 
 // --- TODOS OS 27 ESTADOS DO BRASIL (IBGE) ---
@@ -305,6 +314,7 @@ async function singleNominatimQuery(query, timeoutMs = 2200) {
     clearTimeout(timeoutId);
     if (res.ok) {
       const data = await res.json();
+      if (data && data.length > 0 && data[0].lat && data[0].lon) {
         const latVal = parseFloat(data[0].lat);
         const lonVal = parseFloat(data[0].lon);
         if (Number.isFinite(latVal) && Number.isFinite(lonVal)) {
