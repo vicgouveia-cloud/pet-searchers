@@ -283,60 +283,91 @@ function initDatePicker() {
   }
 }
 
-// --- GEOLOCALIZAÇÃO PRECISA COM TIMEOUT ANTI-TRAVAMENTO (2.5s) ---
-async function fetchGeocodeCoordinates(address, city, state) {
+// --- GEOLOCALIZAÇÃO PRECISA E INTELIGENTE EM CASCATA ---
+async function singleNominatimQuery(query, timeoutMs = 2200) {
+  if (!query || query.trim().length < 3) return null;
   const headers = { 'Accept': 'application/json' };
-  
-  if (address && city && state) {
-    try {
-      const cleanAddress = address.replace(/próximo a[o]?|em frente a[o]?|altura do/gi, "").trim();
-      const q1 = `${cleanAddress}, ${city}, ${state}, Brasil`;
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2500);
-
-      const res1 = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q1)}&limit=1`, { 
-        headers,
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-
-      if (res1.ok) {
-        const data1 = await res1.json();
-        if (data1 && data1.length > 0) {
-          return { lat: parseFloat(data1[0].lat), lng: parseFloat(data1[0].lon) };
-        }
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
+    const res = await fetch(url, { headers, signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.length > 0 && data[0].lat && data[0].lon) {
+        return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
       }
-    } catch (e) {
-      console.warn("Geocoding de endereço cancelado ou com resposta lenta. Usando cidade...", e);
+    }
+  } catch (e) {
+    // Silencia timeout para permitir tentativa do próximo candidato
+  }
+  return null;
+}
+
+async function fetchGeocodeCoordinates(address = "", city = "", state = "") {
+  const cleanState = (state || "").trim();
+  const cleanCity = (city || "").trim();
+  const rawAddress = (address || "").trim();
+
+  if (rawAddress && cleanCity && cleanState) {
+    // Limpeza inteligente de ruídos e prefixos de endereço
+    const sanitized = rawAddress
+      .replace(/próximo a[o]?|em frente a[o]?|altura do|altura nº|altura|nº|número|na rua|no bairro|perto d[oea]|esquina com|próximo|ao lado d[oea]|esquina/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const candidates = [];
+
+    // 1. Endereço Limpo Completo na Cidade
+    if (sanitized) {
+      candidates.push(`${sanitized}, ${cleanCity}, ${cleanState}, Brasil`);
+    }
+
+    // 2. Fragmentos divididos por vírgula, traço ou barra (ex: "Rua X, Vila Mariana" -> tenta "Rua X", depois "Vila Mariana")
+    const segments = rawAddress.split(/[,;\-\/]/).map(s => s.trim()).filter(s => s.length >= 3);
+    for (let seg of segments) {
+      const cleanSeg = seg.replace(/próximo a[o]?|em frente a[o]?|altura do|altura|nº|número/gi, "").trim();
+      if (cleanSeg && cleanSeg.length >= 3) {
+        candidates.push(`${cleanSeg}, ${cleanCity}, ${cleanState}, Brasil`);
+      }
+    }
+
+    // 3. Apenas o nome da rua/avenida (removendo números da residência)
+    const streetOnly = sanitized.replace(/\d+/g, "").trim();
+    if (streetOnly && streetOnly.length >= 3 && streetOnly !== sanitized) {
+      candidates.push(`${streetOnly}, ${cleanCity}, ${cleanState}, Brasil`);
+    }
+
+    // 4. Primeiras 3 palavras (ex: "Avenida Paulista altura do 1000" -> "Avenida Paulista")
+    const words = sanitized.split(" ");
+    if (words.length > 2) {
+      const firstWords = words.slice(0, 3).join(" ").replace(/\d+/g, "").trim();
+      if (firstWords.length >= 3) {
+        candidates.push(`${firstWords}, ${cleanCity}, ${cleanState}, Brasil`);
+      }
+    }
+
+    // Testa os candidatos únicos em ordem de prioridade (Rua -> Bairro -> Ponto de Referência)
+    const uniqueCandidates = [...new Set(candidates)];
+    for (let cand of uniqueCandidates) {
+      const coords = await singleNominatimQuery(cand, 2000);
+      if (coords) {
+        return coords;
+      }
     }
   }
 
-  if (city && state) {
-    try {
-      const q2 = `${city}, ${state}, Brasil`;
-      
-      const controller2 = new AbortController();
-      const timeoutId2 = setTimeout(() => controller2.abort(), 2500);
-
-      const res2 = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q2)}&limit=1`, { 
-        headers,
-        signal: controller2.signal
-      });
-      clearTimeout(timeoutId2);
-
-      if (res2.ok) {
-        const data2 = await res2.json();
-        if (data2 && data2.length > 0) {
-          return { lat: parseFloat(data2[0].lat), lng: parseFloat(data2[0].lon) };
-        }
-      }
-    } catch (e) {
-      console.warn("Geocoding de cidade cancelado ou com resposta lenta. Usando UF...", e);
+  // 5. Fallback para o Centro da Cidade (Cidade + Estado)
+  if (cleanCity && cleanState) {
+    const cityCoords = await singleNominatimQuery(`${cleanCity}, ${cleanState}, Brasil`, 2500);
+    if (cityCoords) {
+      return cityCoords;
     }
   }
 
-  const ufObj = BRAZIL_UFS.find(u => u.sigla === state) || { lat: -23.5505, lng: -46.6333 };
+  // 6. Fallback final para a Capital / Estado (UF)
+  const ufObj = BRAZIL_UFS.find(u => u.sigla === cleanState) || { lat: -23.5505, lng: -46.6333 };
   return { lat: ufObj.lat, lng: ufObj.lng };
 }
 
@@ -344,18 +375,30 @@ async function retroactiveGeocodePets() {
   let updated = false;
 
   for (let pet of petsData) {
-    if (!pet.geocodedCity || pet.geocodedCity !== pet.city) {
+    const isDefaultSecoCoords = (pet.lat === -23.5505 && pet.lng === -46.6333);
+    const cityChanged = !pet.geocodedCity || pet.geocodedCity !== pet.city;
+    const addressChanged = !pet.geocodedAddress || pet.geocodedAddress !== pet.address;
+
+    if (cityChanged || addressChanged || isDefaultSecoCoords) {
       const coords = await fetchGeocodeCoordinates(pet.address, pet.city, pet.state);
-      pet.lat = coords.lat;
-      pet.lng = coords.lng;
-      pet.geocodedCity = pet.city;
-      updated = true;
+      if (coords && (coords.lat !== pet.lat || coords.lng !== pet.lng)) {
+        pet.lat = coords.lat;
+        pet.lng = coords.lng;
+        pet.geocodedCity = pet.city;
+        pet.geocodedAddress = pet.address;
+        updated = true;
+      }
     }
   }
 
   if (updated) {
     savePetsToStorage();
     renderApp();
+    for (let p of petsData) {
+      if (p.isLocalPending || (p.id && !p.id.startsWith("pet-100"))) {
+        savePetToFirebase(p);
+      }
+    }
   }
 }
 
