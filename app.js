@@ -653,8 +653,8 @@ function updateMapMarkers(filteredPets) {
     const waMsg = encodeURIComponent(`Olá ${pet.contactName}, vi o aviso de ${pet.name} no mapa do Pet Searchers!`);
 
     const popupHtml = `
-      <div class="w-[270px] font-sans flex flex-col bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden min-h-[350px]">
-        <!-- Imagem 1:1 no topo com object-contain (Preserva formato original) -->
+      <div class="w-56 font-sans flex flex-col bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden">
+        <!-- Imagem 1:1 no topo com object-contain -->
         <div class="w-full aspect-square shrink-0 relative overflow-hidden bg-slate-900 flex items-center justify-center p-1.5 cursor-pointer group" style="aspect-ratio: 1 / 1;" onclick="openImageLightbox('${pet.id}')" title="Clique para ampliar foto em tela cheia">
           <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-contain rounded-lg group-hover:scale-105 transition-transform duration-300"/>
           <span class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-extrabold text-white ${badgeColor} shadow-md flex items-center gap-1">
@@ -665,28 +665,17 @@ function updateMapMarkers(filteredPets) {
           </span>
         </div>
 
-        <!-- Conteúdo inferior bem espaçado com todas as informações e botões 100% visíveis -->
-        <div class="p-3.5 space-y-2.5 bg-white flex flex-col justify-between flex-1">
+        <!-- Conteúdo inferior ultra compacto (Nome, Dados do Pet e Botões) -->
+        <div class="p-3 space-y-2 bg-white">
           <div>
             <div class="flex items-center justify-between gap-1">
-              <h4 class="font-extrabold text-sm text-primary leading-snug truncate">${pet.name}</h4>
-              <span class="text-[10px] font-bold text-gray-500 uppercase flex-shrink-0">${pet.species}</span>
+              <h4 class="font-extrabold text-xs sm:text-sm text-primary leading-tight truncate">${pet.name}</h4>
+              <span class="text-[9px] font-bold text-gray-500 uppercase flex-shrink-0">${pet.species}</span>
             </div>
-            <p class="text-[11px] text-gray-600 font-medium truncate mt-0.5">${pet.breed} • ${pet.color}</p>
-          </div>
-          
-          <div class="text-[11px] text-gray-700 space-y-1 bg-slate-50 p-2.5 rounded-xl border border-gray-200/70">
-            <p class="flex items-center gap-1 font-medium truncate text-gray-900">
-              <span class="material-symbols-outlined text-xs text-primary flex-shrink-0">location_on</span>
-              <span class="truncate">${pet.address}, ${pet.city} - ${pet.state}</span>
-            </p>
-            <p class="flex items-center gap-1 text-gray-500 text-[10px]">
-              <span class="material-symbols-outlined text-xs flex-shrink-0">calendar_today</span>
-              Data: ${formatDate(pet.date)}
-            </p>
+            <p class="text-[11px] text-gray-600 font-medium truncate mt-0.5">${pet.breed} • ${pet.color} ${pet.age ? `(${pet.age})` : ''}</p>
           </div>
 
-          <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+          <div class="grid grid-cols-2 gap-1.5 pt-1 border-t border-gray-100">
             <button onclick="openDetailModal('${pet.id}')" class="py-1.5 px-2 bg-primary hover:bg-primary-container text-white rounded-xl text-[11px] font-bold transition-colors flex items-center justify-center gap-1 shadow-sm">
               <span class="material-symbols-outlined text-xs">info</span> Detalhes
             </button>
