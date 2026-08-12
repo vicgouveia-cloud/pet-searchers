@@ -1188,7 +1188,9 @@ function openReportModal(type, editPetId = null) {
     document.getElementById("imgPreview").src = "";
   }
 
-  document.getElementById("reportModal").classList.remove("hidden");
+  const reportModal = document.getElementById("reportModal");
+  reportModal.classList.remove("hidden");
+  reportModal.scrollTop = 0;
 }
 
 function setReportFormType(type) {
@@ -1348,7 +1350,9 @@ function generatePosterModal(petId) {
   document.getElementById("posterDesc").textContent = `${pet.name} foi visto pela última vez em ${pet.address}, ${pet.city} - ${pet.state}. Por favor, se tiver qualquer informação, entre em contato imediatamente!`;
   document.getElementById("posterContactPhone").textContent = pet.contactPhone;
 
-  document.getElementById("posterModal").classList.remove("hidden");
+  const posterModal = document.getElementById("posterModal");
+  posterModal.classList.remove("hidden");
+  posterModal.scrollTop = 0;
 }
 
 async function downloadPosterJPG() {
@@ -1448,7 +1452,9 @@ function openDetailModal(petId) {
     generatePosterModal(pet.id);
   };
 
-  document.getElementById("detailModal").classList.remove("hidden");
+  const detailModal = document.getElementById("detailModal");
+  detailModal.classList.remove("hidden");
+  detailModal.scrollTop = 0;
 }
 
 // --- ADMIN DASHBOARD EVENTS & SECURE PASSWORD CHANGE LOGIC ---

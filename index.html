@@ -300,8 +300,8 @@
   </footer>
 
   <!-- ================= MODAL: REPORT PET (PROCURADO / AVISTADO) ================= -->
-  <div id="reportModal" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-surface rounded-2xl shadow-2xl border border-outline-variant max-w-2xl w-full p-6 space-y-6 my-8 animate-fade-in relative">
+  <div id="reportModal" class="fixed inset-0 z-50 modal-backdrop hidden overflow-y-auto p-2 sm:p-4 flex justify-center items-start sm:items-center min-h-full">
+    <div class="bg-surface rounded-2xl shadow-2xl border border-outline-variant max-w-2xl w-full p-4 sm:p-6 space-y-4 sm:space-y-6 my-auto animate-fade-in relative">
       
       <!-- Close Button -->
       <button type="button" class="btnCloseModal absolute top-5 right-5 text-outline hover:text-primary p-1 rounded-lg hover:bg-surface-container transition-colors">
@@ -467,8 +467,8 @@
   </div>
 
   <!-- ================= MODAL: ADMIN LOGIN ================= -->
-  <div id="adminLoginModal" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
-    <div class="bg-surface rounded-2xl shadow-2xl border border-outline-variant max-w-sm w-full p-6 space-y-5 animate-fade-in relative">
+  <div id="adminLoginModal" class="fixed inset-0 z-50 modal-backdrop hidden overflow-y-auto p-2 sm:p-4 flex justify-center items-start sm:items-center min-h-full">
+    <div class="bg-surface rounded-2xl shadow-2xl border border-outline-variant max-w-sm w-full p-6 space-y-5 my-auto animate-fade-in relative">
       <button type="button" id="btnCloseAdminLogin" class="absolute top-4 right-4 text-outline hover:text-primary p-1 rounded-lg">
         <span class="material-symbols-outlined text-xl">close</span>
       </button>
@@ -494,8 +494,8 @@
   </div>
 
   <!-- ================= MODAL: ALTERAR SENHA DO ADMIN ================= -->
-  <div id="adminChangePasswordModal" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
-    <div class="bg-surface rounded-2xl shadow-2xl border border-outline-variant max-w-md w-full p-6 space-y-5 animate-fade-in relative">
+  <div id="adminChangePasswordModal" class="fixed inset-0 z-50 modal-backdrop hidden overflow-y-auto p-2 sm:p-4 flex justify-center items-start sm:items-center min-h-full">
+    <div class="bg-surface rounded-2xl shadow-2xl border border-outline-variant max-w-md w-full p-6 space-y-5 my-auto animate-fade-in relative">
       <button type="button" id="btnCloseAdminChangePassword" class="absolute top-4 right-4 text-outline hover:text-primary p-1 rounded-lg">
         <span class="material-symbols-outlined text-xl">close</span>
       </button>
@@ -537,8 +537,8 @@
   </div>
 
   <!-- ================= MODAL: ADMIN DASHBOARD (PAINEL DE ADMINISTRAÇÃO COMPLETO) ================= -->
-  <div id="adminDashboardModal" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-surface rounded-2xl shadow-2xl border border-outline-variant max-w-6xl w-full p-6 space-y-6 my-8 animate-fade-in relative max-h-[90vh] flex flex-col">
+  <div id="adminDashboardModal" class="fixed inset-0 z-50 modal-backdrop hidden overflow-y-auto p-2 sm:p-4 flex justify-center items-start sm:items-center min-h-full">
+    <div class="bg-surface rounded-2xl shadow-2xl border border-outline-variant max-w-6xl w-full p-4 sm:p-6 space-y-6 my-auto animate-fade-in relative max-h-[90vh] flex flex-col">
       
       <!-- Header Admin -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-outline-variant/40">
@@ -632,8 +632,8 @@
   </div>
 
   <!-- ================= MODAL: 30-DAY RENEWAL WARNING ================= -->
-  <div id="notice30DaysModal" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
-    <div class="bg-surface rounded-2xl shadow-2xl border border-outline-variant max-w-md w-full p-6 space-y-5 animate-fade-in text-center">
+  <div id="notice30DaysModal" class="fixed inset-0 z-50 modal-backdrop hidden overflow-y-auto p-2 sm:p-4 flex justify-center items-start sm:items-center min-h-full">
+    <div class="bg-surface rounded-2xl shadow-2xl border border-outline-variant max-w-md w-full p-6 space-y-5 my-auto animate-fade-in text-center">
       
       <div class="w-16 h-16 rounded-full bg-secondary-container text-on-secondary-container mx-auto flex items-center justify-center">
         <span class="material-symbols-outlined text-3xl">verified</span>
@@ -676,8 +676,8 @@
   </div>
 
   <!-- ================= MODAL: PRINTABLE SEARCH POSTER ================= -->
-  <div id="posterModal" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4 overflow-y-auto">
-    <div id="posterModalContainer" class="bg-surface rounded-2xl shadow-2xl border border-outline-variant max-w-2xl w-full p-6 space-y-4 my-8 animate-fade-in relative">
+  <div id="posterModal" class="fixed inset-0 z-50 modal-backdrop hidden overflow-y-auto p-2 sm:p-4 flex justify-center items-start sm:items-center min-h-full">
+    <div id="posterModalContainer" class="bg-surface rounded-2xl shadow-2xl border border-outline-variant max-w-2xl w-full p-4 sm:p-6 space-y-4 my-auto animate-fade-in relative">
       
       <!-- Close Button (No Print) -->
       <button type="button" class="btnClosePosterModal no-print absolute top-4 right-4 text-outline hover:text-primary p-1 rounded-lg hover:bg-surface-container transition-colors">
@@ -780,8 +780,8 @@
   </div>
 
   <!-- ================= MODAL: PET DETAIL MODAL ================= -->
-  <div id="detailModal" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-surface rounded-2xl shadow-2xl border border-outline-variant max-w-lg w-full overflow-hidden animate-fade-in relative my-8">
+  <div id="detailModal" class="fixed inset-0 z-50 modal-backdrop hidden overflow-y-auto p-2 sm:p-4 flex justify-center items-start sm:items-center min-h-full">
+    <div class="bg-surface rounded-2xl shadow-2xl border border-outline-variant max-w-lg w-full overflow-hidden animate-fade-in relative my-auto">
       
       <!-- Close Button -->
       <button type="button" class="btnCloseDetailModal absolute top-4 right-4 z-10 bg-surface/80 backdrop-blur-md text-on-surface hover:bg-surface p-1.5 rounded-full shadow-md transition-colors">
