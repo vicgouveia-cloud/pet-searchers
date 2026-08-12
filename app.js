@@ -550,11 +550,11 @@ function initLeafletMap() {
     zoomControl: true
   });
 
-  // Camada oficial do Google Maps Roadmap (Visual limpo, atualizado e em Português)
-  L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+  // Camada oficial do Google Maps Roadmap (Visual limpo, atualizado e em Português-BR)
+  L.tileLayer('https://{s}.google.com/vt/lyrs=m&hl=pt-BR&x={x}&y={y}&z={z}', {
     maxZoom: 20,
     subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-    attribution: 'Map data &copy; <a href="https://maps.google.com" target="_blank">Google Maps</a>'
+    attribution: 'Map data &copy; <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer">Google Maps</a>'
   }).addTo(leafletMap);
 
   document.getElementById("btnResetMap").addEventListener("click", () => {
