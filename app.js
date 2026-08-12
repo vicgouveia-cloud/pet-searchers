@@ -1227,20 +1227,30 @@ async function handleFormSubmit(e) {
 
   try {
     const editPetId = document.getElementById("formEditPetId").value;
-    const type = document.getElementById("formReportType").value;
-    const name = document.getElementById("iptName").value;
-    const species = document.getElementById("iptSpecies").value;
-    const breed = document.getElementById("iptBreed").value || "Vira-lata (SRD)";
-    const color = document.getElementById("iptColor").value;
-    const age = document.getElementById("iptAge").value || "Não informada";
-    const gender = document.getElementById("iptGender").value;
-    const date = document.getElementById("iptDate").value;
+    const type = document.getElementById("formReportType").value || "Procurado";
+    const name = (document.getElementById("iptName").value || "").trim();
+    const species = document.getElementById("iptSpecies").value || "Cachorro";
+    const breed = (document.getElementById("iptBreed").value || "").trim() || "Vira-lata (SRD)";
+    const color = (document.getElementById("iptColor").value || "").trim();
+    const age = (document.getElementById("iptAge").value || "").trim() || "Não informada";
+    const gender = document.getElementById("iptGender").value || "Macho";
+    
+    let date = document.getElementById("iptDate").value;
+    if (!date || date.trim() === "") {
+      date = new Date().toISOString().split("T")[0];
+    }
+    
     const state = document.getElementById("iptState").value;
     const city = document.getElementById("iptCity").value;
-    const address = document.getElementById("iptAddress").value;
-    const description = document.getElementById("iptDescription").value;
-    const contactName = document.getElementById("iptContactName").value;
-    const contactPhone = document.getElementById("iptContactPhone").value;
+    const address = (document.getElementById("iptAddress").value || "").trim();
+    const description = (document.getElementById("iptDescription").value || "").trim();
+    const contactName = (document.getElementById("iptContactName").value || "").trim();
+    const contactPhone = (document.getElementById("iptContactPhone").value || "").trim();
+
+    if (!name || !color || !state || !city || !address || !contactName || !contactPhone) {
+      alert("Por favor, preencha todos os campos obrigatórios (*).");
+      return;
+    }
 
     const photoImg = document.getElementById("imgPreview").src;
     let photo = getRandomDefaultPhoto(species);
@@ -1248,16 +1258,22 @@ async function handleFormSubmit(e) {
       photo = photoImg;
     }
 
-    // Geolocalização com tempo limite de 2.5s para nunca travar o formulário
-    const geoCoords = await fetchGeocodeCoordinates(address, city, state);
+    // Geolocalização com tempo limite seguro de 2s para nunca travar a resposta
+    let geoCoords = { lat: -23.5505, lng: -46.6333 };
+    try {
+      geoCoords = await fetchGeocodeCoordinates(address, city, state);
+    } catch (e) {
+      console.warn("Timeout de geocodificação no envio, utilizando fallback...", e);
+    }
 
+    let targetPet = null;
     if (editPetId) {
-      const existing = petsData.find(p => p.id === editPetId);
-      if (existing) {
-        Object.assign(existing, { name, type, species, breed, color, age, gender, date, state, city, address, description, contactName, contactPhone, photo, lat: geoCoords.lat, lng: geoCoords.lng, geocodedCity: city });
+      targetPet = petsData.find(p => p.id === editPetId);
+      if (targetPet) {
+        Object.assign(targetPet, { name, type, species, breed, color, age, gender, date, state, city, address, description, contactName, contactPhone, photo, lat: geoCoords.lat, lng: geoCoords.lng, geocodedCity: city, geocodedAddress: address });
       }
     } else {
-      const newPet = {
+      targetPet = {
         id: "pet-" + Date.now(),
         isLocalPending: true,
         name,
@@ -1280,17 +1296,14 @@ async function handleFormSubmit(e) {
         lastRenewedAt: new Date().toISOString(),
         lat: geoCoords.lat,
         lng: geoCoords.lng,
-        geocodedCity: city
+        geocodedCity: city,
+        geocodedAddress: address
       };
-      petsData.unshift(newPet);
+      petsData.unshift(targetPet);
     }
 
-    // Salva localmente e no banco global no Firebase Firestore
+    // 1. Salva localmente e fecha modal/renderiza IMEDIATAMENTE (Resposta instantânea ao usuário)
     savePetsToStorage();
-    const petToSave = editPetId ? petsData.find(p => p.id === editPetId) : (petsData.length > 0 ? petsData[0] : null);
-    if (petToSave) {
-      await savePetToFirebase(petToSave);
-    }
 
     document.getElementById("petForm").reset();
     document.getElementById("photoPlaceholder").classList.remove("hidden");
@@ -1300,24 +1313,32 @@ async function handleFormSubmit(e) {
 
     renderApp();
 
-    if (petsData.length > 0) {
-      focusPetOnMap(petsData[0].id);
+    if (targetPet) {
+      focusPetOnMap(targetPet.id);
     }
 
-    if (!editPetId) {
+    if (!editPetId && targetPet) {
       document.getElementById("notice30DaysModal").classList.remove("hidden");
       if (type === "Procurado") {
         const btnAck = document.getElementById("btnAckNotice");
+        const targetId = targetPet.id;
         const ackHandler = () => {
-          generatePosterModal(petsData[0].id);
+          generatePosterModal(targetId);
           btnAck.removeEventListener("click", ackHandler);
         };
         btnAck.addEventListener("click", ackHandler);
       }
     }
+
+    // 2. Sincroniza com Firebase Firestore em segundo plano
+    if (targetPet) {
+      savePetToFirebase(targetPet).catch(err => {
+        console.warn("Sincronização em nuvem concluída no banco local:", err);
+      });
+    }
   } catch (err) {
     console.error("Erro no processamento do formulário:", err);
-    alert("⚠️ O cadastro foi armazenado localmente.");
+    alert("⚠️ Não foi possível concluir o cadastro. Verifique os dados fornecidos.");
   } finally {
     isFormSubmitting = false;
     btnSubmit.disabled = false;
