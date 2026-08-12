@@ -1736,22 +1736,40 @@ function renderAdminDashboardTable() {
   const resolvedCount = petsData.filter(p => p.type === "Encontrado pelo dono" || p.type === "Dono encontrado").length;
   const expiringCount = petsData.filter(p => p.isRenewalWindow && p.type !== "Encontrado pelo dono" && p.type !== "Dono encontrado").length;
 
-  document.getElementById("kpiTotalPets").textContent = total;
-  document.getElementById("kpiLostPets").textContent = lostCount;
-  document.getElementById("kpiSightedPets").textContent = sightedCount;
-  document.getElementById("kpiResolvedPets").textContent = resolvedCount;
-  document.getElementById("kpiExpiringPets").textContent = expiringCount;
+  const kpiTotal = document.getElementById("kpiTotalPets");
+  if (kpiTotal) kpiTotal.textContent = total;
+  const kpiLost = document.getElementById("kpiLostPets");
+  if (kpiLost) kpiLost.textContent = lostCount;
+  const kpiSighted = document.getElementById("kpiSightedPets");
+  if (kpiSighted) kpiSighted.textContent = sightedCount;
+  const kpiResolved = document.getElementById("kpiResolvedPets");
+  if (kpiResolved) kpiResolved.textContent = resolvedCount;
+  const kpiExpiring = document.getElementById("kpiExpiringPets");
+  if (kpiExpiring) kpiExpiring.textContent = expiringCount;
 
-  const searchQuery = document.getElementById("adminSearchInput").value.toLowerCase().trim();
-  const statusFilter = document.getElementById("adminStatusFilter").value;
+  const searchInput = document.getElementById("adminSearchInput");
+  const statusSelect = document.getElementById("adminStatusFilter");
+  const searchQuery = searchInput ? (searchInput.value || "").toLowerCase().trim() : "";
+  const statusFilter = statusSelect ? (statusSelect.value || "") : "";
 
   const filtered = petsData.filter(pet => {
+    if (!pet) return false;
     if (searchQuery) {
-      const match = pet.name.toLowerCase().includes(searchQuery) ||
-                    pet.contactName.toLowerCase().includes(searchQuery) ||
-                    pet.contactPhone.includes(searchQuery) ||
-                    pet.city.toLowerCase().includes(searchQuery) ||
-                    pet.breed.toLowerCase().includes(searchQuery);
+      const nameStr = (pet.name || "").toLowerCase();
+      const contactNameStr = (pet.contactName || "").toLowerCase();
+      const phoneStr = (pet.contactPhone || "").toLowerCase();
+      const cityStr = (pet.city || "").toLowerCase();
+      const breedStr = (pet.breed || "").toLowerCase();
+      const colorStr = (pet.color || "").toLowerCase();
+      const descStr = (pet.description || "").toLowerCase();
+
+      const match = nameStr.includes(searchQuery) ||
+                    contactNameStr.includes(searchQuery) ||
+                    phoneStr.includes(searchQuery) ||
+                    cityStr.includes(searchQuery) ||
+                    breedStr.includes(searchQuery) ||
+                    colorStr.includes(searchQuery) ||
+                    descStr.includes(searchQuery);
       if (!match) return false;
     }
 
@@ -1763,74 +1781,145 @@ function renderAdminDashboardTable() {
   });
 
   const tbody = document.getElementById("adminTableBody");
+  const mobileList = document.getElementById("adminMobileList");
+
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-gray-500">Nenhum registro encontrado.</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-gray-500 font-medium">Nenhum registro encontrado.</td></tr>`;
+    if (mobileList) mobileList.innerHTML = `<div class="p-6 text-center text-gray-500 font-medium text-xs">Nenhum registro encontrado.</div>`;
     return;
   }
 
-  tbody.innerHTML = filtered.map(pet => {
-    let statusPill = `<span class="px-2 py-0.5 rounded bg-teal-100 text-teal-800 font-bold">Avistado</span>`;
-    
-    if (pet.type === "Procurado") {
-      statusPill = `<span class="px-2 py-0.5 rounded bg-red-100 text-red-700 font-bold">Procurado</span>`;
-    } else if (pet.type === "Encontrado pelo dono") {
-      statusPill = `<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 font-bold">🟢 Encontrado pelo dono</span>`;
-    } else if (pet.type === "Dono encontrado") {
-      statusPill = `<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 font-bold">🟢 Dono encontrado</span>`;
-    }
+  if (tbody) {
+    tbody.innerHTML = filtered.map(pet => createAdminTableRowHtml(pet)).join("");
+  }
 
-    let validityBadge = `<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 font-semibold">🟢 Ativo (${pet.daysRemaining}d)</span>`;
-    if (pet.type === "Encontrado pelo dono" || pet.type === "Dono encontrado") {
-      validityBadge = `<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 font-bold">🎉 Reencontrado</span>`;
-    } else if (pet.isRenewalWindow) {
-      validityBadge = `<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-bold">⚠️ Requer Renovação (${pet.daysRemaining}d)</span>`;
-    }
+  if (mobileList) {
+    mobileList.innerHTML = filtered.map(pet => createAdminMobileCardHtml(pet)).join("");
+  }
+}
 
-    return `
-      <tr class="hover:bg-gray-50 transition-colors">
-        <td class="p-3">
-          <div class="flex items-center gap-2">
-            <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-9 h-9 rounded-lg object-cover border"/>
-            <div>
-              <span class="font-bold text-primary block">${pet.name}</span>
-              <span class="text-[10px] text-gray-500">${pet.species} • ${pet.breed}</span>
-            </div>
+function createAdminTableRowHtml(pet) {
+  let statusPill = `<span class="px-2 py-0.5 rounded bg-teal-100 text-teal-800 font-bold">Avistado</span>`;
+  
+  if (pet.type === "Procurado") {
+    statusPill = `<span class="px-2 py-0.5 rounded bg-red-100 text-red-700 font-bold">Procurado</span>`;
+  } else if (pet.type === "Encontrado pelo dono") {
+    statusPill = `<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 font-bold">🟢 Encontrado pelo dono</span>`;
+  } else if (pet.type === "Dono encontrado") {
+    statusPill = `<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 font-bold">🟢 Dono encontrado</span>`;
+  }
+
+  let validityBadge = `<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 font-semibold">🟢 Ativo (${pet.daysRemaining !== undefined ? pet.daysRemaining : 30}d)</span>`;
+  if (pet.type === "Encontrado pelo dono" || pet.type === "Dono encontrado") {
+    validityBadge = `<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 font-bold">🎉 Reencontrado</span>`;
+  } else if (pet.isRenewalWindow) {
+    validityBadge = `<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-bold">⚠️ Requer Renovação (${pet.daysRemaining !== undefined ? pet.daysRemaining : 30}d)</span>`;
+  }
+
+  return `
+    <tr class="hover:bg-gray-50 transition-colors">
+      <td class="p-3">
+        <div class="flex items-center gap-2">
+          <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-9 h-9 rounded-lg object-cover border"/>
+          <div>
+            <span class="font-bold text-primary block">${pet.name}</span>
+            <span class="text-[10px] text-gray-500">${pet.species} • ${pet.breed}</span>
           </div>
-        </td>
-        <td class="p-3">${statusPill}</td>
-        <td class="p-3 font-medium">${pet.city} - ${pet.state}</td>
-        <td class="p-3">
-          <span class="block font-medium">${pet.contactName}</span>
-          <span class="text-[10px] text-gray-500">${pet.contactPhone}</span>
-        </td>
-        <td class="p-3 text-[11px]">
-          <div>Reg: ${formatDate(pet.date)}</div>
-          <div class="text-gray-400 font-mono text-[10px]">${pet.daysActive || 0} dias ativo</div>
-        </td>
-        <td class="p-3">${validityBadge}</td>
-        <td class="p-3 text-right">
-          <div class="flex items-center justify-end gap-1">
-            <select onchange="adminChangeStatus('${pet.id}', this.value)" class="px-2 py-1 rounded-lg text-[11px] font-bold border border-outline-variant bg-white text-primary outline-none cursor-pointer">
-              <option value="Procurado" ${pet.type === 'Procurado' ? 'selected' : ''}>Procurado (Perdido)</option>
-              <option value="Avistado" ${pet.type === 'Avistado' ? 'selected' : ''}>Avistado (Encontrado)</option>
-              <option value="Encontrado pelo dono" ${pet.type === 'Encontrado pelo dono' ? 'selected' : ''}>🟢 Encontrado pelo dono</option>
-              <option value="Dono encontrado" ${pet.type === 'Dono encontrado' ? 'selected' : ''}>🟢 Dono encontrado</option>
-            </select>
+        </div>
+      </td>
+      <td class="p-3">${statusPill}</td>
+      <td class="p-3 font-medium">${pet.city || ''} - ${pet.state || ''}</td>
+      <td class="p-3">
+        <span class="block font-medium">${pet.contactName || ''}</span>
+        <span class="text-[10px] text-gray-500">${pet.contactPhone || ''}</span>
+      </td>
+      <td class="p-3 text-[11px]">
+        <div>Reg: ${formatDate(pet.date)}</div>
+        <div class="text-gray-400 font-mono text-[10px]">${pet.daysActive || 0} dias ativo</div>
+      </td>
+      <td class="p-3">${validityBadge}</td>
+      <td class="p-3 text-right">
+        <div class="flex items-center justify-end gap-1">
+          <select onchange="adminChangeStatus('${pet.id}', this.value)" class="px-2 py-1 rounded-lg text-[11px] font-bold border border-outline-variant bg-white text-primary outline-none cursor-pointer">
+            <option value="Procurado" ${pet.type === 'Procurado' ? 'selected' : ''}>Procurado (Perdido)</option>
+            <option value="Avistado" ${pet.type === 'Avistado' ? 'selected' : ''}>Avistado (Encontrado)</option>
+            <option value="Encontrado pelo dono" ${pet.type === 'Encontrado pelo dono' ? 'selected' : ''}>🟢 Encontrado pelo dono</option>
+            <option value="Dono encontrado" ${pet.type === 'Dono encontrado' ? 'selected' : ''}>🟢 Dono encontrado</option>
+          </select>
 
-            <button onclick="adminRenewPet('${pet.id}')" class="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-xs" title="Renovar +30 Dias">
-              <span class="material-symbols-outlined text-sm">update</span>
-            </button>
-            <button onclick="adminEditPet('${pet.id}')" class="p-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold text-xs" title="Editar Registro">
-              <span class="material-symbols-outlined text-sm">edit</span>
-            </button>
-            <button onclick="adminDeletePet('${pet.id}')" class="p-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 font-bold text-xs" title="Excluir Registro">
-              <span class="material-symbols-outlined text-sm">delete</span>
-            </button>
+          <button onclick="adminRenewPet('${pet.id}')" class="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-xs" title="Renovar +30 Dias">
+            <span class="material-symbols-outlined text-sm">update</span>
+          </button>
+          <button onclick="adminEditPet('${pet.id}')" class="p-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold text-xs" title="Editar Registro">
+            <span class="material-symbols-outlined text-sm">edit</span>
+          </button>
+          <button onclick="adminDeletePet('${pet.id}')" class="p-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 font-bold text-xs" title="Excluir Registro">
+            <span class="material-symbols-outlined text-sm">delete</span>
+          </button>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+function createAdminMobileCardHtml(pet) {
+  let validityBadge = `<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 font-semibold text-[10px]">🟢 Ativo (${pet.daysRemaining !== undefined ? pet.daysRemaining : 30}d)</span>`;
+  if (pet.type === "Encontrado pelo dono" || pet.type === "Dono encontrado") {
+    validityBadge = `<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 font-bold text-[10px]">🎉 Reencontrado</span>`;
+  } else if (pet.isRenewalWindow) {
+    validityBadge = `<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[10px]">⚠️ Requer Renovação (${pet.daysRemaining !== undefined ? pet.daysRemaining : 30}d)</span>`;
+  }
+
+  return `
+    <div class="bg-surface rounded-xl p-3.5 border border-outline-variant/50 shadow-sm space-y-3 text-xs">
+      <div class="flex items-center justify-between gap-2 pb-2 border-b border-outline-variant/30">
+        <div class="flex items-center gap-2.5">
+          <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-11 h-11 rounded-xl object-cover border border-outline-variant/40 shrink-0"/>
+          <div>
+            <h4 class="font-extrabold text-sm text-primary leading-tight">${pet.name}</h4>
+            <span class="text-[10px] text-outline font-semibold">${pet.species} • ${pet.breed}</span>
           </div>
-        </td>
-      </tr>
-    `;
-  }).join("");
+        </div>
+        <div>${validityBadge}</div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 text-[11px] text-on-surface-variant">
+        <div>
+          <span class="text-outline font-bold block text-[10px] uppercase">Localização</span>
+          <span class="font-medium text-on-surface">${pet.city || ''} - ${pet.state || ''}</span>
+        </div>
+        <div>
+          <span class="text-outline font-bold block text-[10px] uppercase">Contato</span>
+          <span class="font-medium text-on-surface truncate block">${pet.contactName || ''}</span>
+          <span class="text-[10px] text-outline">${pet.contactPhone || ''}</span>
+        </div>
+      </div>
+
+      <div class="pt-2 border-t border-outline-variant/30 space-y-2">
+        <div class="flex flex-col gap-1">
+          <span class="text-[11px] font-bold text-primary">Alterar Status:</span>
+          <select onchange="adminChangeStatus('${pet.id}', this.value)" class="w-full px-2 py-2 rounded-lg text-xs font-bold border border-outline-variant bg-white text-primary outline-none shadow-sm">
+            <option value="Procurado" ${pet.type === 'Procurado' ? 'selected' : ''}>Procurado (Perdido)</option>
+            <option value="Avistado" ${pet.type === 'Avistado' ? 'selected' : ''}>Avistado (Encontrado)</option>
+            <option value="Encontrado pelo dono" ${pet.type === 'Encontrado pelo dono' ? 'selected' : ''}>🟢 Encontrado pelo dono</option>
+            <option value="Dono encontrado" ${pet.type === 'Dono encontrado' ? 'selected' : ''}>🟢 Dono encontrado</option>
+          </select>
+        </div>
+
+        <div class="flex items-center justify-end gap-1.5 pt-1">
+          <button onclick="adminRenewPet('${pet.id}')" class="flex-1 py-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-xs flex items-center justify-center gap-1">
+            <span class="material-symbols-outlined text-sm">update</span> Renovar
+          </button>
+          <button onclick="adminEditPet('${pet.id}')" class="flex-1 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold text-xs flex items-center justify-center gap-1">
+            <span class="material-symbols-outlined text-sm">edit</span> Editar
+          </button>
+          <button onclick="adminDeletePet('${pet.id}')" class="flex-1 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 font-bold text-xs flex items-center justify-center gap-1">
+            <span class="material-symbols-outlined text-sm">delete</span> Excluir
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 async function adminChangeStatus(petId, newStatus) {
