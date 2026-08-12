@@ -705,7 +705,6 @@ function updateMapMarkers(filteredPets) {
     bounds.extend([pet.lat, pet.lng]);
   });
 
-  leafletMap.invalidateSize();
   if (bounds.isValid() && filteredPets.length > 0) {
     leafletMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
   }
