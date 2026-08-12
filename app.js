@@ -250,27 +250,32 @@ function setAdminPassword(newPassword) {
 }
 
 // --- APP INITIALIZATION ---
-document.addEventListener("DOMContentLoaded", async () => {
-  initFirebaseConnection();
-  initLocationSelectors();
-  initLeafletMap();
-  initDatePicker();
-  initFilterEvents();
-  initModalEvents();
-  initAdminEvents();
-  preloadPopularStatesCities();
+async function startApp() {
+  try {
+    initFirebaseConnection();
+    initLocationSelectors();
+    initLeafletMap();
+    initDatePicker();
+    initFilterEvents();
+    initModalEvents();
+    initAdminEvents();
+    preloadPopularStatesCities();
 
-  // 1. Carrega do storage local primeiro para renderizar instantaneamente
-  loadPetsFromStorage();
-  runAutoPurgeEngine();
-  renderApp();
+    loadPetsFromStorage();
+    runAutoPurgeEngine();
+    renderApp();
 
-  // 2. O listener em tempo real do Firebase (initFirebaseConnection -> listenToFirebasePets) 
-  // atualiza automaticamente qualquer inserção ou exclusão em tempo real (< 300ms) sem necessidade de polling HTTP.
+    await retroactiveGeocodePets();
+  } catch (err) {
+    console.error("Erro durante a inicialização da aplicação:", err);
+  }
+}
 
-  // 4. Verifica geocodificação em segundo plano
-  await retroactiveGeocodePets();
-});
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", startApp);
+} else {
+  startApp();
+}
 
 // --- DATE PICKER INITIALIZATION (FLATPICKR PT-BR - FORMATO DIA/MÊS/ANO) ---
 function initDatePicker() {
@@ -526,6 +531,8 @@ function initLocationSelectors() {
   const filterCity = document.getElementById("filterCity");
   const iptState = document.getElementById("iptState");
   const iptCity = document.getElementById("iptCity");
+
+  if (!filterState || !filterCity || !iptState || !iptCity) return;
 
   filterState.innerHTML = `<option value="">Todos os Estados do Brasil (27 UFs)</option>`;
   iptState.innerHTML = `<option value="">Selecione o Estado (UF)</option>`;
@@ -808,7 +815,7 @@ function focusPetOnMap(petId) {
 // --- FILTER EVENT LISTENERS ---
 function initFilterEvents() {
   const filterSearch = document.getElementById("filterSearch");
-  filterSearch.addEventListener("input", (e) => {
+  filterSearch?.addEventListener("input", (e) => {
     currentActiveFilters.search = e.target.value.toLowerCase().trim();
     renderApp();
   });
@@ -847,11 +854,14 @@ function initFilterEvents() {
     });
   });
 
-  document.getElementById("btnClearFilters").addEventListener("click", () => {
+  document.getElementById("btnClearFilters")?.addEventListener("click", () => {
     currentActiveFilters = { search: "", state: "", city: "", status: "", species: "" };
-    document.getElementById("filterSearch").value = "";
-    document.getElementById("filterState").value = "";
-    document.getElementById("filterCity").value = "";
+    const fs = document.getElementById("filterSearch");
+    const fst = document.getElementById("filterState");
+    const fc = document.getElementById("filterCity");
+    if (fs) fs.value = "";
+    if (fst) fst.value = "";
+    if (fc) fc.value = "";
     syncStatusFilterUI();
     renderApp();
   });
@@ -1164,33 +1174,33 @@ function initModalEvents() {
   const detailModal = document.getElementById("detailModal");
   const lightboxModal = document.getElementById("imageLightboxModal");
 
-  document.getElementById("btnCloseLightbox").addEventListener("click", () => {
-    lightboxModal.classList.add("hidden");
+  document.getElementById("btnCloseLightbox")?.addEventListener("click", () => {
+    lightboxModal?.classList.add("hidden");
   });
-  lightboxModal.addEventListener("click", (e) => {
+  lightboxModal?.addEventListener("click", (e) => {
     if (e.target === lightboxModal) {
       lightboxModal.classList.add("hidden");
     }
   });
 
-  document.getElementById("btnOpenReportLost").addEventListener("click", () => openReportModal("Procurado"));
-  document.getElementById("btnOpenReportSighted").addEventListener("click", () => openReportModal("Avistado"));
+  document.getElementById("btnOpenReportLost")?.addEventListener("click", () => openReportModal("Procurado"));
+  document.getElementById("btnOpenReportSighted")?.addEventListener("click", () => openReportModal("Avistado"));
 
-  document.getElementById("tabReportLost").addEventListener("click", () => setReportFormType("Procurado"));
-  document.getElementById("tabReportSighted").addEventListener("click", () => setReportFormType("Avistado"));
+  document.getElementById("tabReportLost")?.addEventListener("click", () => setReportFormType("Procurado"));
+  document.getElementById("tabReportSighted")?.addEventListener("click", () => setReportFormType("Avistado"));
 
   document.querySelectorAll(".btnCloseModal").forEach(btn => {
-    btn.addEventListener("click", () => reportModal.classList.add("hidden"));
+    btn.addEventListener("click", () => reportModal?.classList.add("hidden"));
   });
   document.querySelectorAll(".btnClosePosterModal").forEach(btn => {
-    btn.addEventListener("click", () => posterModal.classList.add("hidden"));
+    btn.addEventListener("click", () => posterModal?.classList.add("hidden"));
   });
   document.querySelectorAll(".btnCloseDetailModal").forEach(btn => {
-    btn.addEventListener("click", () => detailModal.classList.add("hidden"));
+    btn.addEventListener("click", () => detailModal?.classList.add("hidden"));
   });
 
-  document.getElementById("btnAckNotice").addEventListener("click", () => {
-    noticeModal.classList.add("hidden");
+  document.getElementById("btnAckNotice")?.addEventListener("click", () => {
+    noticeModal?.classList.add("hidden");
   });
 
   const filePhotoInput = document.getElementById("filePhotoInput");
@@ -1234,7 +1244,7 @@ function initModalEvents() {
     petFormElem.addEventListener("submit", handleFormSubmit);
   }
 
-  document.getElementById("btnPrintPoster").addEventListener("click", () => {
+  document.getElementById("btnPrintPoster")?.addEventListener("click", () => {
     window.print();
   });
 
@@ -1614,34 +1624,35 @@ function initAdminEvents() {
   const adminLoginForm = document.getElementById("adminLoginForm");
   const adminChangePasswordForm = document.getElementById("adminChangePasswordForm");
 
-  btnOpenAdmin.addEventListener("click", () => {
+  btnOpenAdmin?.addEventListener("click", () => {
     if (isAdminAuthenticated) {
       openAdminDashboard();
     } else {
-      adminLoginModal.classList.remove("hidden");
+      adminLoginModal?.classList.remove("hidden");
     }
   });
 
-  btnCloseAdminLogin.addEventListener("click", () => adminLoginModal.classList.add("hidden"));
-  btnCloseAdminDashboard.addEventListener("click", () => adminDashboardModal.classList.add("hidden"));
+  btnCloseAdminLogin?.addEventListener("click", () => adminLoginModal?.classList.add("hidden"));
+  btnCloseAdminDashboard?.addEventListener("click", () => adminDashboardModal?.classList.add("hidden"));
 
-  btnAdminChangePassword.addEventListener("click", () => {
-    adminChangePasswordForm.reset();
-    adminChangePasswordModal.classList.remove("hidden");
+  btnAdminChangePassword?.addEventListener("click", () => {
+    adminChangePasswordForm?.reset();
+    adminChangePasswordModal?.classList.remove("hidden");
   });
 
-  btnCloseAdminChangePassword.addEventListener("click", () => adminChangePasswordModal.classList.add("hidden"));
-  btnCancelChangePassword.addEventListener("click", () => adminChangePasswordModal.classList.add("hidden"));
+  btnCloseAdminChangePassword?.addEventListener("click", () => adminChangePasswordModal?.classList.add("hidden"));
+  btnCancelChangePassword?.addEventListener("click", () => adminChangePasswordModal?.classList.add("hidden"));
 
-  adminLoginForm.addEventListener("submit", (e) => {
+  adminLoginForm?.addEventListener("submit", (e) => {
     e.preventDefault();
-    const enteredPassword = document.getElementById("iptAdminPassword").value;
+    const enteredPassword = document.getElementById("iptAdminPassword")?.value;
     const currentMasterPassword = getAdminPassword();
 
     if (enteredPassword === currentMasterPassword) {
       isAdminAuthenticated = true;
-      adminLoginModal.classList.add("hidden");
-      document.getElementById("iptAdminPassword").value = "";
+      adminLoginModal?.classList.add("hidden");
+      const iptP = document.getElementById("iptAdminPassword");
+      if (iptP) iptP.value = "";
       openAdminDashboard();
     } else {
       alert("❌ Senha de administrador incorreta! Tente novamente.");
