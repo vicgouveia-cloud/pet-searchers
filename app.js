@@ -3095,22 +3095,23 @@ async function retroactiveGeocodePets() {
 
 // --- LOCALSTORAGE & GLOBAL CLOUD PERSISTENCE ---
 function loadPetsFromStorage() {
-  const saved = localStorage.getItem("pet_searchers_portal_data_v5");
+  const saved = localStorage.getItem("pet_searchers_portal_data_v6");
   if (saved) {
     try {
-      petsData = JSON.parse(saved);
+      const localPets = JSON.parse(saved);
+      petsData = deduplicatePets([...localPets, ...INITIAL_PETS]);
     } catch (e) {
       petsData = [...INITIAL_PETS];
     }
   } else {
     petsData = [...INITIAL_PETS];
-    savePetsToStorage();
   }
+  savePetsToStorage();
 }
 
 function savePetsToStorage() {
   try {
-    localStorage.setItem("pet_searchers_portal_data_v5", JSON.stringify(petsData));
+    localStorage.setItem("pet_searchers_portal_data_v6", JSON.stringify(petsData));
   } catch (e) {
     console.warn("⚠️ Cota do localStorage excedida. Otimizando fotos locais...", e);
     try {
@@ -3120,7 +3121,7 @@ function savePetsToStorage() {
         }
         return p;
       });
-      localStorage.setItem("pet_searchers_portal_data_v5", JSON.stringify(sanitizedPets));
+      localStorage.setItem("pet_searchers_portal_data_v6", JSON.stringify(sanitizedPets));
     } catch (e2) {
       console.error("Não foi possível salvar no localStorage:", e2);
     }
