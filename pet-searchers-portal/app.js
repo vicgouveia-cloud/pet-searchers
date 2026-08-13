@@ -4315,7 +4315,13 @@ function renderApp() {
 
     if (currentActiveFilters.state && pet.state !== currentActiveFilters.state) return false;
     if (currentActiveFilters.city && pet.city !== currentActiveFilters.city) return false;
-    if (currentActiveFilters.status && pet.type !== currentActiveFilters.status) return false;
+    if (currentActiveFilters.status) {
+      if (currentActiveFilters.status === "Encontrado pelo dono" || currentActiveFilters.status === "Dono encontrado" || currentActiveFilters.status === "Reencontrado") {
+        if (pet.type !== "Encontrado pelo dono" && pet.type !== "Dono encontrado") return false;
+      } else if (pet.type !== currentActiveFilters.status) {
+        return false;
+      }
+    }
     if (currentActiveFilters.species && pet.species !== currentActiveFilters.species) return false;
 
     return true;
