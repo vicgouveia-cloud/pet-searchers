@@ -676,6 +676,9 @@ function populateCityOptions(selectElem, cityList, defaultText) {
 
 // --- LEAFLET INTERACTIVE MAP ---
 function initLeafletMap() {
+  const mapContainer = document.getElementById('map');
+  if (!mapContainer) return;
+
   leafletMap = L.map('map', {
     center: [-14.2350, -51.9253],
     zoom: 4,
@@ -690,6 +693,10 @@ function initLeafletMap() {
   document.getElementById("btnResetMap").addEventListener("click", () => {
     leafletMap.setView([-14.2350, -51.9253], 4);
   });
+
+  setTimeout(() => {
+    if (leafletMap) leafletMap.invalidateSize();
+  }, 350);
 }
 
 function updateMapMarkers(filteredPets) {
@@ -828,12 +835,30 @@ function initFilterEvents() {
   });
 }
 
+function getPetInclusionTimestamp(pet) {
+  if (!pet) return 0;
+  if (pet.createdAt) {
+    const t = new Date(pet.createdAt).getTime();
+    if (!isNaN(t) && t > 0) return t;
+  }
+  if (pet.id && typeof pet.id === "string" && pet.id.startsWith("pet-")) {
+    const rawId = pet.id.replace("pet-", "");
+    const numId = parseInt(rawId, 10);
+    if (!isNaN(numId) && numId > 100000) return numId;
+  }
+  if (pet.date) {
+    const tDate = new Date(pet.date).getTime();
+    if (!isNaN(tDate) && tDate > 0) return tDate;
+  }
+  return 0;
+}
+
 // --- APP RENDERER ---
 function renderApp() {
   runAutoPurgeEngine();
 
-  // Ordena sempre por ordem cronológica de inclusão (mais recentes primeiro)
-  petsData.sort((a, b) => new Date(b.createdAt || b.date || 0) - new Date(a.createdAt || a.date || 0));
+  // Ordena rigorosamente por ordem de inclusão (dos últimos incluídos para os primeiros)
+  petsData.sort((a, b) => getPetInclusionTimestamp(b) - getPetInclusionTimestamp(a));
 
   const filteredPets = petsData.filter(pet => {
     if (currentActiveFilters.search) {
