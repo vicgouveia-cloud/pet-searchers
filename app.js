@@ -3093,34 +3093,54 @@ async function retroactiveGeocodePets() {
 }
 
 // --- LOCALSTORAGE & GLOBAL CLOUD PERSISTENCE ---
+function sanitizePetObject(pet) {
+  if (!pet) return pet;
+  if (pet.address && pet.address.toLowerCase().includes("petmapa")) {
+    pet.address = pet.address.replace(/Registrado via PetMapa em [A-Z]{2}/gi, "Região Central")
+                             .replace(/Registrado via PetMapa/gi, "Região Central")
+                             .replace(/Localização registrada via mapa PetMapa/gi, "Região Central")
+                             .replace(/Localização registrada no PetMapa/gi, "Região Central")
+                             .replace(/ via PetMapa/gi, "");
+  }
+  if (pet.contactName && pet.contactName.toLowerCase().includes("petmapa")) {
+    pet.contactName = "Tutor Responsável";
+  }
+  if (pet.description && pet.description.toLowerCase().includes("petmapa")) {
+    pet.description = pet.description.replace(/PetMapa/gi, "Comunidade");
+  }
+  return pet;
+}
+
 function loadPetsFromStorage() {
-  const saved = localStorage.getItem("pet_searchers_portal_data_v6");
+  const saved = localStorage.getItem("pet_searchers_portal_data_v7");
   if (saved) {
     try {
       const localPets = JSON.parse(saved);
-      petsData = deduplicatePets([...localPets, ...INITIAL_PETS]);
+      petsData = deduplicatePets([...localPets, ...INITIAL_PETS]).map(sanitizePetObject);
     } catch (e) {
-      petsData = [...INITIAL_PETS];
+      petsData = INITIAL_PETS.map(sanitizePetObject);
     }
   } else {
-    petsData = [...INITIAL_PETS];
+    petsData = INITIAL_PETS.map(sanitizePetObject);
   }
   savePetsToStorage();
 }
 
 function savePetsToStorage() {
   try {
-    localStorage.setItem("pet_searchers_portal_data_v6", JSON.stringify(petsData));
+    const sanitized = petsData.map(sanitizePetObject);
+    localStorage.setItem("pet_searchers_portal_data_v7", JSON.stringify(sanitized));
   } catch (e) {
     console.warn("⚠️ Cota do localStorage excedida. Otimizando fotos locais...", e);
     try {
       const sanitizedPets = petsData.map((p, idx) => {
-        if (idx > 2 && p.photo && p.photo.startsWith("data:image/")) {
-          return { ...p, photo: getRandomDefaultPhoto(p.species) };
+        let cleanP = sanitizePetObject(p);
+        if (idx > 2 && cleanP.photo && cleanP.photo.startsWith("data:image/")) {
+          return { ...cleanP, photo: getRandomDefaultPhoto(cleanP.species) };
         }
-        return p;
+        return cleanP;
       });
-      localStorage.setItem("pet_searchers_portal_data_v6", JSON.stringify(sanitizedPets));
+      localStorage.setItem("pet_searchers_portal_data_v7", JSON.stringify(sanitizedPets));
     } catch (e2) {
       console.error("Não foi possível salvar no localStorage:", e2);
     }
