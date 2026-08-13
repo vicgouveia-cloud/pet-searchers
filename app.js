@@ -126,6 +126,32 @@ const citiesCache = {};
 // --- MOCK INITIAL DATASET ---
 const INITIAL_PETS = [
   {
+    "id": "pet-penelope-petropolis",
+    "name": "Penélope",
+    "species": "Gato",
+    "breed": "Vira-lata (SRD)",
+    "color": "Branca c/ manchas cinzas e marrom",
+    "gender": "Fêmea",
+    "age": "1 ano",
+    "size": "Pequeno",
+    "type": "Procurado",
+    "status": "Procurado",
+    "date": "2026-08-12",
+    "time": "18:00",
+    "state": "RJ",
+    "city": "Petrópolis",
+    "neighborhood": "Pedro do Rio",
+    "address": "Estrada União Indústria, Pedro do Rio (ao lado da Casa de Festas JM), Petrópolis - RJ",
+    "description": "Penélope foi vista pela última vez em Estrada União Indústria, Pedro do Rio, ao lado da Casa de Festas JM, Petrópolis - RJ. Por favor, se tiver qualquer informação, entre em contato imediatamente!",
+    "healthNotes": "É muito assustada.",
+    "contactName": "Tutor Responsável",
+    "contactPhone": "(24) 99994-2003",
+    "photo": "assets/penelope.png",
+    "lat": -22.3422,
+    "lng": -43.1294,
+    "createdAt": "2026-08-13T13:00:00.000Z"
+  },
+  {
     "id": "pet-228",
     "name": "Bidu Sorocaba",
     "species": "Cão",
@@ -150,32 +176,6 @@ const INITIAL_PETS = [
     "lat": -23.5298,
     "lng": -47.4646,
     "createdAt": "2026-08-13T11:00:00.000Z"
-  },
-  {
-    "id": "pet-227",
-    "name": "Penélope",
-    "species": "Cão",
-    "breed": "Poodle / SRD",
-    "color": "Branco",
-    "gender": "Fêmea",
-    "age": "2 Anos",
-    "size": "Pequeno",
-    "type": "Procurado",
-    "status": "Procurado",
-    "date": "2026-08-13",
-    "time": "10:00",
-    "state": "SP",
-    "city": "São Paulo",
-    "neighborhood": "Moema",
-    "address": "Av. Moema, Moema, São Paulo - SP",
-    "description": "Penélope é uma Poodle branca muito dócil, desapareceu perto do parque. Usa lacinho cor-de-rosa.",
-    "healthNotes": "Muito carinhosa e assustada.",
-    "contactName": "Tutor da Penélope",
-    "contactPhone": "(11) 99888-7766",
-    "photo": "https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=600&q=80",
-    "lat": -23.6025,
-    "lng": -46.6622,
-    "createdAt": "2026-08-13T10:00:00.000Z"
   },
   {
     "id": "pet-201",
@@ -3812,7 +3812,7 @@ async function retroactiveGeocodePets() {
 
 // --- LOCALSTORAGE & GLOBAL CLOUD PERSISTENCE ---
 function loadPetsFromStorage() {
-  const saved = localStorage.getItem("pet_searchers_portal_data_v13");
+  const saved = localStorage.getItem("pet_searchers_portal_data_v14");
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
@@ -3827,7 +3827,7 @@ function loadPetsFromStorage() {
 }
 
 function savePetsToStorage() {
-  localStorage.setItem("pet_searchers_portal_data_v13", JSON.stringify(petsData));
+  localStorage.setItem("pet_searchers_portal_data_v14", JSON.stringify(petsData));
 }
 
 function deduplicatePets(pets) {
