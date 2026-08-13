@@ -4102,7 +4102,7 @@ function updateMapMarkers(filteredPets) {
     });
 
     const isResolved = pet.type === "Encontrado pelo dono" || pet.type === "Dono encontrado";
-    const badgeColor = isResolved ? 'bg-green-600' : (pet.type === 'Procurado' ? 'bg-[#E52421]' : 'bg-secondary');
+    const badgeColor = isResolved ? 'bg-green-600' : (pet.type === 'Procurado' ? 'bg-[#E52421]' : 'bg-sky-500');
 
     const popupHtml = `
       <div class="w-56 overflow-hidden">
@@ -4282,7 +4282,7 @@ function createPetCardHtml(pet) {
   const isFoundPet = pet.type === "Dono encontrado";
   const isResolved = isFoundOwner || isFoundPet;
 
-  let badgeBg = "bg-secondary text-on-secondary";
+  let badgeBg = "bg-sky-500 text-white font-bold";
   let statusIcon = "visibility";
 
   if (pet.type === "Procurado") {
@@ -4846,7 +4846,7 @@ function openDetailModal(petId) {
     badge.className = "absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md flex items-center gap-1 bg-green-600";
     badge.innerHTML = `<span class="material-symbols-outlined text-sm">task_alt</span> ${pet.type.toUpperCase()}`;
   } else {
-    badge.className = "absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md flex items-center gap-1 bg-secondary";
+    badge.className = "absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md flex items-center gap-1 bg-sky-500";
     badge.innerHTML = `<span class="material-symbols-outlined text-sm">check_circle</span> AVISTADO`;
   }
 
@@ -5034,7 +5034,7 @@ function renderAdminDashboardTable() {
   }
 
   tbody.innerHTML = filtered.map(pet => {
-    let statusPill = `<span class="px-2 py-0.5 rounded bg-teal-100 text-teal-800 font-bold">Avistado</span>`;
+    let statusPill = `<span class="px-2 py-0.5 rounded bg-sky-100 text-sky-800 font-bold">Avistado</span>`;
     
     if (pet.type === "Procurado") {
       statusPill = `<span class="px-2 py-0.5 rounded bg-red-100 text-red-700 font-bold">Procurado</span>`;
