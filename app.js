@@ -36,6 +36,54 @@ async function initFirebaseConnection() {
   }
 }
 
+// --- MAPEAMENTO OFICIAL DE CAPITAIS DOS 27 ESTADOS DO BRASIL ---
+const STATE_CAPITALS = {
+  AC: "Rio Branco", AL: "Maceió", AP: "Macapá", AM: "Manaus", BA: "Salvador",
+  CE: "Fortaleza", DF: "Brasília", ES: "Vitória", GO: "Goiânia", MA: "São Luís",
+  MT: "Cuiabá", MS: "Campo Grande", MG: "Belo Horizonte", PA: "Belém", PB: "João Pessoa",
+  PR: "Curitiba", PE: "Recife", PI: "Teresina", RJ: "Rio de Janeiro", RN: "Natal",
+  RS: "Porto Alegre", RO: "Porto Velho", RR: "Boa Vista", SC: "Florianópolis", SP: "São Paulo",
+  SE: "Aracaju", TO: "Palmas"
+};
+
+function getCapitalCityForState(uf) {
+  if (!uf) return "São Paulo";
+  const cleanUf = String(uf).trim().toUpperCase();
+  return STATE_CAPITALS[cleanUf] || "São Paulo";
+}
+
+// --- PERSISTÊNCIA INVIOLÁVEL DE EDIÇÕES DO ADMINISTRADOR ---
+function getEditedPetsMap() {
+  try {
+    return JSON.parse(localStorage.getItem("pet_searchers_edited_pets_v1") || "{}");
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveEditedPet(pet) {
+  if (!pet || !pet.id) return;
+  pet.lastModifiedAt = pet.lastModifiedAt || new Date().toISOString();
+  const map = getEditedPetsMap();
+  map[pet.id] = { ...map[pet.id], ...pet };
+  localStorage.setItem("pet_searchers_edited_pets_v1", JSON.stringify(map));
+
+  // Atualiza a constante INITIAL_PETS em memória para evitar reversão local
+  if (typeof INITIAL_PETS !== "undefined" && Array.isArray(INITIAL_PETS)) {
+    const initIdx = INITIAL_PETS.findIndex(p => p.id === pet.id);
+    if (initIdx !== -1) {
+      INITIAL_PETS[initIdx] = { ...INITIAL_PETS[initIdx], ...pet };
+    }
+  }
+}
+
+function removeEditedPet(petId) {
+  if (!petId) return;
+  const map = getEditedPetsMap();
+  delete map[petId];
+  localStorage.setItem("pet_searchers_edited_pets_v1", JSON.stringify(map));
+}
+
 function listenToFirebasePets() {
   if (!db || !firestoreSDK) return;
   try {
@@ -48,8 +96,21 @@ function listenToFirebasePets() {
       const deletedSet = getDeletedPetIds();
       const filteredPets = cloudPets.filter(p => !deletedSet.has(p.id));
 
-      // Importante: Mescla a nuvem com os 120 pets de INITIAL_PETS para nunca sobrescrever ou perder a base completa
-      petsData = deduplicatePets([...filteredPets, ...petsData, ...INITIAL_PETS]);
+      const editedMap = getEditedPetsMap();
+
+      // Aplica edições salvas do Administrador nos registros vindos da nuvem
+      const mergedCloudPets = filteredPets.map(cloudPet => {
+        const localEdit = editedMap[cloudPet.id];
+        if (localEdit) {
+          return { ...cloudPet, ...localEdit };
+        }
+        return cloudPet;
+      });
+
+      const editedList = Object.values(editedMap).filter(p => !deletedSet.has(p.id));
+
+      // Prioridade absoluta: Edições do Administrador > Nuvem Mesclada > petsData Atual > INITIAL_PETS
+      petsData = deduplicatePets([...editedList, ...mergedCloudPets, ...petsData, ...INITIAL_PETS]).map(sanitizePetObject);
       savePetsToStorage();
       renderApp();
       console.log("🔥 Sincronizado em tempo real com Firebase Firestore:", petsData.length, "pets.");
@@ -214,7 +275,7 @@ const INITIAL_PETS = [
     "age": "4 Ano(s)",
     "gender": "Macho",
     "state": "CE",
-    "city": "Capital",
+    "city": "Fortaleza",
     "address": "Bairro Padre Andrade próximo o Assai ataca",
     "date": "2026-08-12",
     "description": "Boa Noite! Procura-se meu gatinho macho castrados de nome: Lulu tem 4 anos tem olhos amarelo e está com a patinha esquerda mancando. Foi visto pela a última vez na Rua: Alcântara Bilhar 430 casa. ele sumiu dia 29/07/2026 bairro Padre Andrade próximo o Assai atacadista por volta de 10:00hs de manhã. Caso alguém encontre entre em contato comigo. 85 987639647",
@@ -306,7 +367,7 @@ const INITIAL_PETS = [
     "age": "3 Ano(s)",
     "gender": "Macho",
     "state": "DF",
-    "city": "Capital",
+    "city": "Brasília",
     "address": "Rua não por falta de cuidado. Tentamos",
     "date": "2026-08-11",
     "description": "Shazam desapareceu na segunda-feira. Estou desesperada procurando por ele. Encontrei-o ainda filhote, abandonado na rua. Há 3 anos faz parte da nossa família e é muito amado e bem cuidado. Ele tinha acesso à rua não por falta de cuidado. Tentamos mantê-lo dentro de casa, mas parava de comer e adoecia. Em uma dessas vezes, ficou muito mal e o veterinário disse que estava com depressão. Por isso, para preservar sua saúde, permitimos que saísse. Ele é muito docio e confia em humanos",
@@ -375,7 +436,7 @@ const INITIAL_PETS = [
     "age": "8 Ano(s)",
     "gender": "Macho",
     "state": "SC",
-    "city": "Capital",
+    "city": "Florianópolis",
     "address": "Rua João Kasdorf",
     "date": "2026-08-11",
     "description": "TEQUILA Gato de médio porte Visto pela última vez na rua João Kasdorf, próximo ao mercado Itamaraty, no bairro Xaxim. Somos muito apegados nele! CARACTERÍSTICA IMPORTANTE: não possui um dos dentes caninos (presa) de um dos lados da boca. Mais informações, entre em contato comigo (41)998667946. Obrigada!",
@@ -398,7 +459,7 @@ const INITIAL_PETS = [
     "age": "2 Ano(s)",
     "gender": "Macho",
     "state": "SC",
-    "city": "Capital",
+    "city": "Florianópolis",
     "address": "Centro",
     "date": "2026-08-11",
     "description": "Frajola Castrado e vacinado, manchinha branca em cima da boca/bochecha no lado esquerdo, peito branco, patinhas que lembram meias, rabo peludo, é dócil mas não gosta que peguem ele no colo (só as vezes), não usa coleira, olhos amarelos, desaparecido desde dia 15/05/26",
@@ -421,7 +482,7 @@ const INITIAL_PETS = [
     "age": "12 Ano(s)",
     "gender": "Fêmea",
     "state": "DF",
-    "city": "Capital",
+    "city": "Brasília",
     "address": "Centro",
     "date": "2026-08-11",
     "description": "Está muito assustado e sumiu na 516 samambaia sul",
@@ -490,7 +551,7 @@ const INITIAL_PETS = [
     "age": "10 Ano(s)",
     "gender": "Macho",
     "state": "SC",
-    "city": "Capital",
+    "city": "Florianópolis",
     "address": "Centro",
     "date": "2026-08-11",
     "description": "Bulldog do tipo tigrado. Macho. Dócil. Não late.",
@@ -513,7 +574,7 @@ const INITIAL_PETS = [
     "age": "2 Ano(s)",
     "gender": "Macho",
     "state": "SC",
-    "city": "Capital",
+    "city": "Florianópolis",
     "address": "Centro",
     "date": "2026-08-11",
     "description": "Mancha / pintas na lingua",
@@ -605,7 +666,7 @@ const INITIAL_PETS = [
     "age": "14 Ano(s)",
     "gender": "Macho",
     "state": "SC",
-    "city": "Capital",
+    "city": "Florianópolis",
     "address": "Centro",
     "date": "2026-08-10",
     "description": "Porte médio caramelo, idoso e assustado. Ele não sabe andar na rua",
@@ -674,7 +735,7 @@ const INITIAL_PETS = [
     "age": "2 Ano(s)",
     "gender": "Fêmea",
     "state": "MA",
-    "city": "Capital",
+    "city": "São Luís",
     "address": "Centro",
     "date": "2026-08-09",
     "description": "Ela sumiu de casa",
@@ -743,7 +804,7 @@ const INITIAL_PETS = [
     "age": "7 Ano(s)",
     "gender": "Macho",
     "state": "DF",
-    "city": "Capital",
+    "city": "Brasília",
     "address": "Centro",
     "date": "2026-08-08",
     "description": "Parrudo e peludo. Castrado, manso, olhos amarelos, pelagem branca com o rabo cinza.",
@@ -766,7 +827,7 @@ const INITIAL_PETS = [
     "age": "2 Ano(s)",
     "gender": "Macho",
     "state": "GO",
-    "city": "Capital",
+    "city": "Goiânia",
     "address": "Centro",
     "date": "2026-08-08",
     "description": "Papel na cabeça escrito Tom",
@@ -789,7 +850,7 @@ const INITIAL_PETS = [
     "age": "2 Ano(s)",
     "gender": "Macho",
     "state": "GO",
-    "city": "Capital",
+    "city": "Goiânia",
     "address": "Centro",
     "date": "2026-08-08",
     "description": "Rajado, grande, com um papel escrito Tom na cabeça",
@@ -812,7 +873,7 @@ const INITIAL_PETS = [
     "age": "2 Ano(s)",
     "gender": "Fêmea",
     "state": "CE",
-    "city": "Capital",
+    "city": "Fortaleza",
     "address": "Centro",
     "date": "2026-08-08",
     "description": "Gata mansa, usando uma coleira rosa da Hello Kitty, tem a pelagem bem colorida, meio cinza, meio marrom, com algumas manchas brancas e o focinho tem uma mancha grande marrom escuro. Os olhos dela são azuis, não consegui tirar foto de olhos abertos.",
@@ -904,7 +965,7 @@ const INITIAL_PETS = [
     "age": "3 Mes(es)",
     "gender": "Macho",
     "state": "RS",
-    "city": "Capital",
+    "city": "Porto Alegre",
     "address": "Centro",
     "date": "2026-08-07",
     "description": "Encontrado após o temporal escondido no motor do carro. Bem cuidado, sociável e parecendo não ter mais de 3 meses.",
@@ -1065,7 +1126,7 @@ const INITIAL_PETS = [
     "age": "1 Ano(s)",
     "gender": "Fêmea",
     "state": "ES",
-    "city": "Capital",
+    "city": "Vitória",
     "address": "Centro",
     "date": "2026-08-06",
     "description": "GATA DESAPARECIDA – PROCURA-SE Pelagem: Tigrada (marrom/cinza com listras pretas marcantes pelas costas e patas). Rosto: Olhos verdes, marcação em 'M' na testa, focinho avermelhado, queixo claro e bigodes brancos. Porte: Médio a pequeno, pelagem curta e rabo peludo com anéis escuros.",
@@ -1088,7 +1149,7 @@ const INITIAL_PETS = [
     "age": "4 Ano(s)",
     "gender": "Macho",
     "state": "SC",
-    "city": "Capital",
+    "city": "Florianópolis",
     "address": "Centro",
     "date": "2026-08-06",
     "description": "Venom é todo preto de pelagem curta… como não tem o costume de sair para fora.. deve estar muito assustado e desesperado… por favor nos ajudem achar nosso Pet!! 😭",
@@ -1249,7 +1310,7 @@ const INITIAL_PETS = [
     "age": "4 Ano(s)",
     "gender": "Fêmea",
     "state": "BA",
-    "city": "Capital",
+    "city": "Salvador",
     "address": "Centro",
     "date": "2026-08-05",
     "description": "Ela e uma cadela que não vai com todo mundo sumiu no centro de Lauro de Freitas por volta das 7 da noite",
@@ -1318,7 +1379,7 @@ const INITIAL_PETS = [
     "age": "3 Ano(s)",
     "gender": "Macho",
     "state": "MS",
-    "city": "Capital",
+    "city": "Campo Grande",
     "address": "Centro",
     "date": "2026-08-04",
     "description": "Pinchter mistura",
@@ -1341,7 +1402,7 @@ const INITIAL_PETS = [
     "age": "2 Mes(es)",
     "gender": "Fêmea",
     "state": "GO",
-    "city": "Capital",
+    "city": "Goiânia",
     "address": "Centro",
     "date": "2026-08-04",
     "description": "Uma filhote mestiça de shiatsu Pequeno porte",
@@ -1387,7 +1448,7 @@ const INITIAL_PETS = [
     "age": "4 Mes(es)",
     "gender": "Macho",
     "state": "SC",
-    "city": "Capital",
+    "city": "Florianópolis",
     "address": "Próximo a padaria Empório e o bar do Cláudio",
     "date": "2026-08-04",
     "description": "Foi visto pela última vez próximo a padaria Empório e o bar do Cláudio. Ele é dócil mas bem assustado.",
@@ -1433,7 +1494,7 @@ const INITIAL_PETS = [
     "age": "1 Ano(s)",
     "gender": "Macho",
     "state": "MA",
-    "city": "Capital",
+    "city": "São Luís",
     "address": "Centro",
     "date": "2026-08-03",
     "description": "Pet docil encontrado no estacionamento do BOULEVARD TROPICAL",
@@ -1456,7 +1517,7 @@ const INITIAL_PETS = [
     "age": "3 Ano(s)",
     "gender": "Macho",
     "state": "CE",
-    "city": "Capital",
+    "city": "Fortaleza",
     "address": "Centro",
     "date": "2026-08-03",
     "description": "Cinza. Olhos amarelos meio verde. Coleira vermelha. Cicatriz na barriga.",
@@ -1502,7 +1563,7 @@ const INITIAL_PETS = [
     "age": "10 Ano(s)",
     "gender": "Macho",
     "state": "MT",
-    "city": "Capital",
+    "city": "Cuiabá",
     "address": "Centro",
     "date": "2026-08-03",
     "description": "Doki e caramelo rabinho cortado orelha em pé um cachorro muito amigo",
@@ -1525,7 +1586,7 @@ const INITIAL_PETS = [
     "age": "5 Mes(es)",
     "gender": "Fêmea",
     "state": "PB",
-    "city": "Capital",
+    "city": "João Pessoa",
     "address": "Centro",
     "date": "2026-08-02",
     "description": "Gatinha preta, de tamanho médio, peluda e tem olhos amarelos meio alaranjados.",
@@ -1571,7 +1632,7 @@ const INITIAL_PETS = [
     "age": "7 Ano(s)",
     "gender": "Macho",
     "state": "AP",
-    "city": "Capital",
+    "city": "Macapá",
     "address": "Centro",
     "date": "2026-08-02",
     "description": "Ele é calmo, não é agressivo mas é muito medroso.. Ele tem o olho bem azul, e o lado direito tem uma manchinha",
@@ -1594,7 +1655,7 @@ const INITIAL_PETS = [
     "age": "Não informada",
     "gender": "Macho",
     "state": "PB",
-    "city": "Capital",
+    "city": "João Pessoa",
     "address": "Centro",
     "date": "2026-08-02",
     "description": "Encontrei ele na praia de boa viagem, porte médio, docio e castrado, ele é branco com partes pretas e marrons",
@@ -1640,7 +1701,7 @@ const INITIAL_PETS = [
     "age": "2 Ano(s)",
     "gender": "Macho",
     "state": "RS",
-    "city": "Capital",
+    "city": "Porto Alegre",
     "address": "Centro",
     "date": "2026-08-01",
     "description": "Eles aparecem aqui em Belém novo",
@@ -1686,7 +1747,7 @@ const INITIAL_PETS = [
     "age": "8 Ano(s)",
     "gender": "Macho",
     "state": "AP",
-    "city": "Capital",
+    "city": "Macapá",
     "address": "Centro",
     "date": "2026-08-01",
     "description": "O portão ficou aberto e ele deve ter visto um cachorro e foi atrás porque ele não é de fugir e se perdeu. Isso aconteceu aqui na We 72. Cidade Nova 6.Ele se perdeu na noite de quinta feira 30 de agosto. Estamos desolados e só queremos encontrar nosso amorzinho. Ele é um poodle e está com o pelo um pouco tosado.",
@@ -1709,7 +1770,7 @@ const INITIAL_PETS = [
     "age": "14 Ano(s)",
     "gender": "Fêmea",
     "state": "SC",
-    "city": "Capital",
+    "city": "Florianópolis",
     "address": "Centro",
     "date": "2026-08-01",
     "description": "Super dócil. Estamos desesperados 48999174990",
@@ -1755,7 +1816,7 @@ const INITIAL_PETS = [
     "age": "3 Ano(s)",
     "gender": "Macho",
     "state": "DF",
-    "city": "Capital",
+    "city": "Brasília",
     "address": "Centro",
     "date": "2026-07-30",
     "description": "É um gato persa, preto com a pelagem longa, ele é castrado.",
@@ -1778,7 +1839,7 @@ const INITIAL_PETS = [
     "age": "3 Ano(s)",
     "gender": "Macho",
     "state": "GO",
-    "city": "Capital",
+    "city": "Goiânia",
     "address": "Centro",
     "date": "2026-07-29",
     "description": "Marrom claro, olhos castanhos, fucinho branco.",
@@ -1801,7 +1862,7 @@ const INITIAL_PETS = [
     "age": "2 Ano(s)",
     "gender": "Macho",
     "state": "MT",
-    "city": "Capital",
+    "city": "Cuiabá",
     "address": "Centro",
     "date": "2026-07-29",
     "description": "O meu Pet foi roubado em frente da minha casa, e o meu filho é autista de grau 2 está muito triste pelo cachorrinho, por favor quem achou ele me devolve...",
@@ -1847,7 +1908,7 @@ const INITIAL_PETS = [
     "age": "4 Ano(s)",
     "gender": "Macho",
     "state": "GO",
-    "city": "Capital",
+    "city": "Goiânia",
     "address": "Centro",
     "date": "2026-07-29",
     "description": "• Nome: *TODINHO* — Shih Tzu, macho, pequeno porte, muito dócil e amigável • Sumiu: segunda-feira, *29/06*, às *14h24* (dia do jogo Brasil x Japão) • De onde: setor *NOVA JERUSALÉM*, próximo à Av. Mutunópolis • Visto depois: região do *Centro*, andando desorientado *COMO RECONHECER (o que não muda com o pelo sujo):* • Os dentinhos de baixo ficam pra fora, aparecendo mesmo de boca fechada • Orelhas escuras, quase pretas, caídas • Máscara escura no focinho e em volta",
@@ -1916,7 +1977,7 @@ const INITIAL_PETS = [
     "age": "4 Mes(es)",
     "gender": "Fêmea",
     "state": "TO",
-    "city": "Capital",
+    "city": "Palmas",
     "address": "Rua está assustada",
     "date": "2026-07-28",
     "description": "Poloca tem uma lesão no olho direito, bem pequena está em tratamento, tem bastante pelo e dócil, porém acredito que se ela estiver na rua está assustada.",
@@ -1985,7 +2046,7 @@ const INITIAL_PETS = [
     "age": "2 Ano(s)",
     "gender": "Fêmea",
     "state": "PB",
-    "city": "Capital",
+    "city": "João Pessoa",
     "address": "Centro",
     "date": "2026-07-27",
     "description": "Fêmea, dócil, tava com um lacinho na cabeça, branco com creme",
@@ -2008,7 +2069,7 @@ const INITIAL_PETS = [
     "age": "Não informada",
     "gender": "Macho",
     "state": "MA",
-    "city": "Capital",
+    "city": "São Luís",
     "address": "Centro",
     "date": "2026-07-27",
     "description": "Cachorro de porte médio, Encontrado por volta de 11 hrs ,do dia 26/07/2026 Entre Pedro Neiva de Santana e Antônio de Miranda.",
@@ -2031,7 +2092,7 @@ const INITIAL_PETS = [
     "age": "1 Ano(s)",
     "gender": "Fêmea",
     "state": "ES",
-    "city": "Capital",
+    "city": "Vitória",
     "address": "Centro",
     "date": "2026-07-27",
     "description": "Uma gata pequena branca e cinza com a parte de cima cinza em formado de ossinhos e olhos verdes (ela é medrosa com pessoas e tenta se esconder)",
@@ -2169,7 +2230,7 @@ const INITIAL_PETS = [
     "age": "6 Mes(es)",
     "gender": "Fêmea",
     "state": "CE",
-    "city": "Capital",
+    "city": "Fortaleza",
     "address": "Centro",
     "date": "2026-07-26",
     "description": "Ela é uma cachorra perdida na região de cajazeiras PB ela é uma fêmea média tem +- 6 ou mais meses de idade ela tem as orelhas meio bege e ela é branca , nessa foto ela está pequena mais ela já cresceu",
@@ -2261,7 +2322,7 @@ const INITIAL_PETS = [
     "age": "4 Ano(s)",
     "gender": "Fêmea",
     "state": "RS",
-    "city": "Capital",
+    "city": "Porto Alegre",
     "address": "Centro",
     "date": "2026-07-25",
     "description": "Gata preta dócil, tem um cicatriz na barriga",
@@ -2445,7 +2506,7 @@ const INITIAL_PETS = [
     "age": "6 Ano(s)",
     "gender": "Fêmea",
     "state": "RS",
-    "city": "Capital",
+    "city": "Porto Alegre",
     "address": "Centro",
     "date": "2026-07-24",
     "description": "Preta com as patas e embaixo do rosto marrom. Porte médio",
@@ -2583,7 +2644,7 @@ const INITIAL_PETS = [
     "age": "Não informada",
     "gender": "Fêmea",
     "state": "GO",
-    "city": "Capital",
+    "city": "Goiânia",
     "address": "Rua A-15",
     "date": "2026-07-23",
     "description": "foi encontrada no setor Novo Horizonte perto da Rua A-15, há mais ou menos 15 dias. aparenta ser um cachorro novinho.",
@@ -2675,7 +2736,7 @@ const INITIAL_PETS = [
     "age": "3 Ano(s)",
     "gender": "Fêmea",
     "state": "PA",
-    "city": "Capital",
+    "city": "Belém",
     "address": "Centro",
     "date": "2026-07-23",
     "description": "Paulina é uma siamês bicolor (Snowshoe), castrada 🩵 Olhos azuis bem marcantes. 🤎 Pelagem clara com máscara marrom-escura no rosto. 🤍 Mancha branca em formato de faixa no focinho, descendo até o nariz rosa. 🧦 Patinhas brancas (como se estivesse usando 'meias'). 🐈 Cauda escura. Obs: desaparecida desde o dia 03/07/2026",
@@ -2744,7 +2805,7 @@ const INITIAL_PETS = [
     "age": "2 Ano(s)",
     "gender": "Fêmea",
     "state": "RS",
-    "city": "Capital",
+    "city": "Porto Alegre",
     "address": "Centro",
     "date": "2026-07-22",
     "description": "Bem mansa,brincalhona porte pequeno",
@@ -2976,7 +3037,8 @@ async function singleNominatimQuery(query, timeoutMs = 2200) {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
+    // Trava a busca EXCLUSIVAMENTE dentro do Brasil (countrycodes=br) para evitar resultados na Argentina / Posadas
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&countrycodes=br`;
     const res = await fetch(url, { headers, signal: controller.signal });
     clearTimeout(timeoutId);
     if (res.ok) {
@@ -2984,8 +3046,11 @@ async function singleNominatimQuery(query, timeoutMs = 2200) {
       if (data && data.length > 0 && data[0].lat && data[0].lon) {
         const latVal = parseFloat(data[0].lat);
         const lonVal = parseFloat(data[0].lon);
+        // Valida se as coordenadas estão estritamente dentro do território brasileiro (Lat: -34 a +6, Lng: -75 a -34)
         if (Number.isFinite(latVal) && Number.isFinite(lonVal)) {
-          return { lat: latVal, lng: lonVal };
+          if (latVal >= -34.0 && latVal <= 6.0 && lonVal >= -75.0 && lonVal <= -34.0) {
+            return { lat: latVal, lng: lonVal };
+          }
         }
       }
     }
@@ -2996,8 +3061,13 @@ async function singleNominatimQuery(query, timeoutMs = 2200) {
 }
 
 async function fetchGeocodeCoordinates(address = "", city = "", state = "") {
-  const cleanState = (state || "").trim();
-  const cleanCity = (city || "").trim();
+  let cleanState = (state || "").trim();
+  let cleanCity = (city || "").trim();
+
+  // Resolve automaticamente "Capital" para o nome verdadeiro da Capital do estado (ex: CE -> Fortaleza, SP -> São Paulo, etc.)
+  if (!cleanCity || cleanCity.toLowerCase() === "capital") {
+    cleanCity = getCapitalCityForState(cleanState);
+  }
   const rawAddress = (address || "").trim();
 
   if (rawAddress && cleanCity && cleanState) {
@@ -3065,11 +3135,18 @@ async function retroactiveGeocodePets() {
   let updated = false;
 
   for (let pet of petsData) {
+    if (pet.city && pet.city.trim().toLowerCase() === "capital") {
+      pet.city = getCapitalCityForState(pet.state);
+      updated = true;
+    }
+
     const isDefaultSecoCoords = (pet.lat === -23.5505 && pet.lng === -46.6333);
+    // Detecta coordenadas errôneas em Posadas / Argentina (Lat: -27.3, Lng: -55.8)
+    const isPosadasArgentina = (pet.lat < -27.1 && pet.lat > -27.6 && pet.lng < -55.7 && pet.lng > -56.2);
     const cityChanged = !pet.geocodedCity || pet.geocodedCity !== pet.city;
     const addressChanged = !pet.geocodedAddress || pet.geocodedAddress !== pet.address;
 
-    if (cityChanged || addressChanged || isDefaultSecoCoords) {
+    if (cityChanged || addressChanged || isDefaultSecoCoords || isPosadasArgentina) {
       const coords = await fetchGeocodeCoordinates(pet.address, pet.city, pet.state);
       if (coords && (coords.lat !== pet.lat || coords.lng !== pet.lng)) {
         pet.lat = coords.lat;
@@ -3095,6 +3172,12 @@ async function retroactiveGeocodePets() {
 // --- LOCALSTORAGE & GLOBAL CLOUD PERSISTENCE ---
 function sanitizePetObject(pet) {
   if (!pet) return pet;
+
+  // Converte "Capital" para o nome real da capital do estado (ex: CE -> Fortaleza, SP -> São Paulo, etc.)
+  if (pet.city && (pet.city.trim().toLowerCase() === "capital" || pet.city.trim() === "")) {
+    pet.city = getCapitalCityForState(pet.state);
+  }
+
   if (pet.address && pet.address.toLowerCase().includes("petmapa")) {
     pet.address = pet.address.replace(/Registrado via PetMapa em [A-Z]{2}/gi, "")
                              .replace(/Registrado via PetMapa/gi, "")
@@ -3114,15 +3197,18 @@ function sanitizePetObject(pet) {
 
 function loadPetsFromStorage() {
   const saved = localStorage.getItem("pet_searchers_portal_data_v8");
+  const editedMap = getEditedPetsMap();
+  const editedList = Object.values(editedMap);
+
   if (saved) {
     try {
       const localPets = JSON.parse(saved);
-      petsData = deduplicatePets([...localPets, ...INITIAL_PETS]).map(sanitizePetObject);
+      petsData = deduplicatePets([...editedList, ...localPets, ...INITIAL_PETS]).map(sanitizePetObject);
     } catch (e) {
-      petsData = INITIAL_PETS.map(sanitizePetObject);
+      petsData = deduplicatePets([...editedList, ...INITIAL_PETS]).map(sanitizePetObject);
     }
   } else {
-    petsData = INITIAL_PETS.map(sanitizePetObject);
+    petsData = deduplicatePets([...editedList, ...INITIAL_PETS]).map(sanitizePetObject);
   }
   savePetsToStorage();
 }
@@ -4083,7 +4169,8 @@ async function handleFormSubmit(e) {
     if (editPetId) {
       targetPet = petsData.find(p => p.id === editPetId);
       if (targetPet) {
-        Object.assign(targetPet, { name, type, species, breed, color, age, gender, date, state, city, address, description, contactName, contactPhone, photo, lat: geoCoords.lat, lng: geoCoords.lng, geocodedCity: city, geocodedAddress: address });
+        Object.assign(targetPet, { name, type, species, breed, color, age, gender, date, state, city, address, description, contactName, contactPhone, photo, lat: geoCoords.lat, lng: geoCoords.lng, geocodedCity: city, geocodedAddress: address, lastModifiedAt: new Date().toISOString() });
+        saveEditedPet(targetPet);
       }
     } else {
       targetPet = {
@@ -4107,11 +4194,13 @@ async function handleFormSubmit(e) {
         matchConfidence: "97%",
         createdAt: new Date().toISOString(),
         lastRenewedAt: new Date().toISOString(),
+        lastModifiedAt: new Date().toISOString(),
         lat: geoCoords.lat,
         lng: geoCoords.lng,
         geocodedCity: city,
         geocodedAddress: address
       };
+      saveEditedPet(targetPet);
       petsData.unshift(targetPet);
     }
 
@@ -4615,6 +4704,8 @@ async function adminChangeStatus(petId, newStatus) {
   const pet = petsData.find(p => p.id === petId);
   if (pet) {
     pet.type = newStatus;
+    pet.lastModifiedAt = new Date().toISOString();
+    saveEditedPet(pet);
     savePetsToStorage();
     await savePetToFirebase(pet);
     renderApp();
@@ -4638,6 +4729,7 @@ async function adminDeletePet(petId) {
   const pet = petsData.find(p => p.id === petId);
   if (pet && confirm(`⚠️ Tem certeza que deseja excluir o cadastro de "${pet.name}"?`)) {
     markPetAsDeleted(petId);
+    removeEditedPet(petId);
     petsData = petsData.filter(p => p.id !== petId);
     savePetsToStorage();
     renderApp();
