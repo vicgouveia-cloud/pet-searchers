@@ -45,15 +45,14 @@ function listenToFirebasePets() {
         cloudPets.push({ id: docSnap.id, ...docSnap.data() });
       });
 
-      if (cloudPets.length > 0) {
-        cloudPets.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-        const deletedSet = getDeletedPetIds();
-        const filteredPets = cloudPets.filter(p => !deletedSet.has(p.id));
-        petsData = deduplicatePets(filteredPets);
-        savePetsToStorage();
-        renderApp();
-        console.log("🔥 Sincronizado em tempo real com Firebase Firestore:", petsData.length, "pets.");
-      }
+      const deletedSet = getDeletedPetIds();
+      const filteredPets = cloudPets.filter(p => !deletedSet.has(p.id));
+
+      // Importante: Mescla a nuvem com os 120 pets de INITIAL_PETS para nunca sobrescrever ou perder a base completa
+      petsData = deduplicatePets([...filteredPets, ...petsData, ...INITIAL_PETS]);
+      savePetsToStorage();
+      renderApp();
+      console.log("🔥 Sincronizado em tempo real com Firebase Firestore:", petsData.length, "pets.");
     }, (err) => {
       if (err && (err.code === "permission-denied" || (err.message && err.message.includes("permission-denied")))) {
         console.info("ℹ️ Firestore aguardando permissão no Firebase Console.");
