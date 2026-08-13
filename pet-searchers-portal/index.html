@@ -144,6 +144,42 @@
         background-color: #ffffff !important;
       }
 
+      #posterArea .bg-\[\#E52421\]:first-child {
+        padding-top: 1.5rem !important;
+        padding-bottom: 1.25rem !important;
+      }
+
+      #posterArea h1 {
+        font-size: 3.8rem !important;
+        line-height: 1 !important;
+      }
+
+      #posterArea .grid {
+        padding: 1.75rem !important;
+        gap: 1.5rem !important;
+        flex: 1 !important;
+      }
+
+      #posterArea #posterImgContainer {
+        min-height: 380px !important;
+        max-height: none !important;
+      }
+
+      #posterArea #posterPetName {
+        font-size: 2.5rem !important;
+        line-height: 1.1 !important;
+      }
+
+      #posterArea .bg-\[\#E52421\]:last-child {
+        padding-top: 1.25rem !important;
+        padding-bottom: 1.25rem !important;
+      }
+
+      #posterArea #posterContactPhone {
+        font-size: 2.2rem !important;
+        line-height: 1.1 !important;
+      }
+
       #posterArea * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
@@ -838,7 +874,7 @@
           <!-- Right Column: Pet Details (5 cols out of 12) -->
           <div class="sm:col-span-5 flex flex-col justify-between h-full space-y-2 text-xs sm:text-sm">
             <div>
-              <h2 id="posterPetName" class="text-2xl sm:text-3xl font-black text-[#E52421] uppercase tracking-tight leading-tight line-clamp-2">NOME DO PET</h2>
+              <h2 id="posterPetName" class="text-xl sm:text-2xl font-black text-[#E52421] uppercase tracking-tight leading-snug break-words">NOME DO PET</h2>
               
               <!-- Key Data Badges Grid -->
               <div class="mt-2 space-y-1 text-[11px] sm:text-xs text-gray-900">
@@ -858,7 +894,7 @@
               <!-- Description Paragraph -->
               <div>
                 <strong class="text-[10px] uppercase tracking-wider text-gray-500 block mb-0.5">Último Local Avistado:</strong>
-                <p id="posterDesc" class="text-[11px] sm:text-xs leading-snug text-gray-800 font-medium line-clamp-3">
+                <p id="posterDesc" class="text-[11px] sm:text-xs leading-snug text-gray-800 font-medium">
                   Visto pela última vez próximo ao local...
                 </p>
               </div>
@@ -867,18 +903,18 @@
 
         </div>
 
-        <!-- Bottom Red Banner -->
-        <div class="bg-[#E52421] text-white p-6 text-center space-y-3">
-          <p class="text-xs sm:text-sm font-black uppercase tracking-widest text-white">
+        <!-- Bottom Red Banner (Rodapé Compacto com Telefone com Metade do Tamanho) -->
+        <div class="bg-[#E52421] text-white py-2 px-3 text-center space-y-0.5 flex-shrink-0">
+          <p class="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-white">
             SE VIU OU TEM QUALQUER INFORMAÇÃO, ENTRE EM CONTATO IMEDIATAMENTE:
           </p>
           
-          <div class="flex items-center justify-center gap-4 sm:gap-6 pt-1">
-            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white p-1.5 flex items-center justify-center shadow-lg flex-shrink-0 border-2 border-white">
+          <div class="flex items-center justify-center gap-2 pt-0.5">
+            <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white p-0.5 flex items-center justify-center shadow flex-shrink-0 border border-white">
               <img src="assets/logo.jpg" alt="Pet Searchers Logo" class="w-full h-full object-contain"/>
             </div>
 
-            <div id="posterContactPhone" class="text-3xl sm:text-5xl font-black tracking-wider text-white drop-shadow-md">
+            <div id="posterContactPhone" class="text-base sm:text-xl font-black tracking-wider text-white drop-shadow">
               (11) 97607-7509
             </div>
           </div>
@@ -898,10 +934,10 @@
         <span class="material-symbols-outlined text-xl">close</span>
       </button>
 
-      <!-- Photo Hero -->
-      <div class="h-60 w-full relative bg-surface-container">
-        <img id="detailImg" src="" alt="Pet" class="w-full h-full object-cover"/>
-        <span id="detailBadge" class="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md flex items-center gap-1">
+      <!-- Photo Hero (Moldura 1:1 Quadrada com Imagem Inteira sem cortes via object-contain) -->
+      <div class="w-full aspect-square relative bg-slate-900 flex items-center justify-center p-2 rounded-t-2xl">
+        <img id="detailImg" src="" alt="Pet" class="w-full h-full object-contain rounded-xl shadow-md cursor-pointer" onclick="if(window.currentDetailPetId) openImageLightbox(window.currentDetailPetId)"/>
+        <span id="detailBadge" class="absolute top-4 left-4 z-10 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md flex items-center gap-1">
           Status
         </span>
       </div>
