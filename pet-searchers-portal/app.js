@@ -3812,7 +3812,7 @@ async function retroactiveGeocodePets() {
 
 // --- LOCALSTORAGE & GLOBAL CLOUD PERSISTENCE ---
 function loadPetsFromStorage() {
-  const saved = localStorage.getItem("pet_searchers_portal_data_v14");
+  const saved = localStorage.getItem("pet_searchers_portal_data_v15");
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
@@ -3827,7 +3827,7 @@ function loadPetsFromStorage() {
 }
 
 function savePetsToStorage() {
-  localStorage.setItem("pet_searchers_portal_data_v14", JSON.stringify(petsData));
+  localStorage.setItem("pet_searchers_portal_data_v15", JSON.stringify(petsData));
 }
 
 function deduplicatePets(pets) {
@@ -5247,3 +5247,26 @@ function exportBackupCSV() {
   link.click();
   link.remove();
 }
+
+
+window.filterByStatusLegend = function(status) {
+  if (!status) {
+    currentActiveFilters.status = "";
+  } else if (currentActiveFilters.status === status) {
+    currentActiveFilters.status = "";
+  } else {
+    currentActiveFilters.status = status;
+  }
+  renderApp();
+};
+
+
+window.addEventListener("storage", (e) => {
+  loadPetsFromStorage();
+  renderApp();
+});
+
+window.addEventListener("focus", () => {
+  loadPetsFromStorage();
+  renderApp();
+});
