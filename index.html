@@ -858,7 +858,7 @@
       </div>
 
       <!-- PRINTABLE & EXPORTABLE AREA (Standard High-Impact Red Header/Footer Poster Layout 4:5) -->
-      <div id="posterArea" class="bg-white text-gray-900 overflow-hidden shadow-xl rounded-2xl border border-gray-200 flex flex-col justify-between w-full aspect-[4/5] max-w-[480px] sm:max-w-[500px] mx-auto min-h-[580px]">
+      <div id="posterArea" class="bg-white text-gray-900 overflow-hidden shadow-2xl rounded-2xl border border-gray-200 flex flex-col justify-between w-full aspect-[4/5] max-w-[540px] sm:max-w-[580px] mx-auto min-h-[620px] flex-shrink-0">
         
         <!-- Top Red Header -->
         <div class="bg-[#E52421] text-white text-center py-4 px-5 space-y-0.5 flex-shrink-0">
@@ -866,38 +866,38 @@
           <p id="posterDateSubtext" class="text-xs sm:text-sm font-extrabold tracking-widest uppercase text-white/95 pt-0.5">DESDE SEXTA-FEIRA 01/05</p>
         </div>
 
-        <!-- Middle Content (Photo 7 cols = ~60% width, Text 5 cols) -->
+        <!-- Middle Content (Photo 6 cols = 50% width, Text 6 cols = 50% width) -->
         <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 p-4 sm:p-5 items-stretch bg-white flex-1 overflow-hidden">
           
-          <!-- Left Column: Pet Image (Prominent 7 cols out of 12) -->
-          <div id="posterImgContainer" class="sm:col-span-7 h-full min-h-[220px] max-h-[380px] w-full rounded-xl overflow-hidden border border-gray-300 shadow-sm bg-gray-50 flex items-center justify-center relative">
+          <!-- Left Column: Pet Image (Prominent 6 cols out of 12) -->
+          <div id="posterImgContainer" class="sm:col-span-6 h-full min-h-[240px] w-full rounded-xl overflow-hidden border border-gray-300 shadow-sm bg-gray-50 flex items-center justify-center relative">
             <img id="posterImg" src="" alt="Foto do Pet" class="w-full h-full object-cover rounded-xl"/>
           </div>
 
-          <!-- Right Column: Pet Details (5 cols out of 12) -->
-          <div class="sm:col-span-5 flex flex-col justify-between h-full space-y-2 text-xs sm:text-sm">
+          <!-- Right Column: Pet Details (6 cols out of 12) -->
+          <div class="sm:col-span-6 flex flex-col justify-between h-full space-y-1.5 text-xs">
             <div>
-              <h2 id="posterPetName" class="text-xl sm:text-2xl font-black text-[#E52421] uppercase tracking-tight leading-snug break-words">NOME DO PET</h2>
+              <h2 id="posterPetName" class="text-xl sm:text-2xl font-black text-[#E52421] uppercase tracking-tight leading-none break-words mb-2">NOME DO PET</h2>
               
               <!-- Key Data Badges Grid -->
-              <div class="mt-2 space-y-1 text-[11px] sm:text-xs text-gray-900">
-                <div class="bg-gray-100 p-1.5 rounded-lg border border-gray-200"><strong class="text-[#E52421] block text-[10px] uppercase">Idade</strong> <span id="posterAge">Não informada</span></div>
-                <div class="bg-gray-100 p-1.5 rounded-lg border border-gray-200"><strong class="text-[#E52421] block text-[10px] uppercase">Cor Predominante</strong> <span id="posterColor">Preto</span></div>
-                <div class="bg-gray-100 p-1.5 rounded-lg border border-gray-200"><strong class="text-[#E52421] block text-[10px] uppercase">Raça / Porte</strong> <span id="posterBreed">SRD</span></div>
+              <div class="space-y-1 text-[10px] sm:text-[11px] text-gray-900">
+                <div class="bg-gray-100 p-1.5 rounded-lg border border-gray-200"><strong class="text-[#E52421] block text-[9px] uppercase tracking-wider">Idade</strong> <span id="posterAge" class="font-semibold">Não informada</span></div>
+                <div class="bg-gray-100 p-1.5 rounded-lg border border-gray-200"><strong class="text-[#E52421] block text-[9px] uppercase tracking-wider">Cor Predominante</strong> <span id="posterColor" class="font-semibold">Preto</span></div>
+                <div class="bg-gray-100 p-1.5 rounded-lg border border-gray-200"><strong class="text-[#E52421] block text-[9px] uppercase tracking-wider">Raça / Porte</strong> <span id="posterBreed" class="font-semibold">SRD</span></div>
               </div>
 
               <!-- Special Markings Alert Box -->
-              <div id="posterMarkingRow" class="mt-2 bg-red-50 border border-red-200 rounded-lg p-2 text-[11px] font-semibold text-gray-900 leading-snug">
+              <div id="posterMarkingRow" class="mt-1.5 bg-red-50 border border-red-200 rounded-lg p-1.5 text-[10px] sm:text-[11px] font-medium text-gray-900 leading-tight">
                 ⚠️ <strong class="text-[#E52421]">Observação de Saúde:</strong> <span id="posterMarkings">Detalhes especiais</span>
               </div>
 
               <!-- Thick Red Divider Line -->
-              <div class="h-1 bg-[#E52421] w-full my-2 rounded-full"></div>
+              <div class="h-1 bg-[#E52421] w-full my-1.5 rounded-full"></div>
 
               <!-- Description Paragraph -->
               <div>
-                <strong class="text-[10px] uppercase tracking-wider text-gray-500 block mb-0.5">Último Local Avistado:</strong>
-                <p id="posterDesc" class="text-[11px] sm:text-xs leading-snug text-gray-800 font-medium">
+                <strong class="text-[9px] uppercase tracking-wider text-gray-500 block mb-0.5">Último Local Avistado:</strong>
+                <p id="posterDesc" class="text-[10px] sm:text-[11px] leading-snug text-gray-800 font-normal">
                   Visto pela última vez próximo ao local...
                 </p>
               </div>
