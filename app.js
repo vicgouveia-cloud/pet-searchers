@@ -4124,37 +4124,47 @@ function updateMapMarkers(filteredPets) {
   if (!leafletMap) return;
 
   Object.keys(mapMarkers).forEach(id => {
-    leafletMap.removeLayer(mapMarkers[id]);
+    try {
+      leafletMap.removeLayer(mapMarkers[id]);
+    } catch(e){}
   });
   mapMarkers = {};
 
   const bounds = L.latLngBounds();
+  let validMarkerCount = 0;
 
   filteredPets.forEach(pet => {
-    if (!pet.lat || !pet.lng) return;
+    if (!pet || pet.lat == null || pet.lng == null || isNaN(pet.lat) || isNaN(pet.lng)) return;
+
+    const statusVal = String(pet.type || pet.status || "").trim();
+    const isEncontrado = statusVal.includes("Encontrado") || statusVal.includes("Dono") || statusVal.includes("Reencontrado") || statusVal.includes("Adotado");
+    const isProcurado = statusVal === "Procurado";
 
     let markerClass = "marker-sighted";
-    let iconSymbol = "visibility";
+    let iconHtmlContent = `<span class="material-symbols-outlined text-sm">visibility</span>`;
+    let badgeColor = "bg-sky-500";
+    let badgeText = "Avistado";
 
-    if (pet.type === "Procurado") {
+    if (isProcurado) {
       markerClass = "marker-lost";
-      iconSymbol = "warning";
-    } else if (pet.type === "Encontrado" || pet.type === "Encontrado") {
+      iconHtmlContent = `<span class="material-symbols-outlined text-sm">warning</span>`;
+      badgeColor = "bg-[#E52421]";
+      badgeText = "Procurado";
+    } else if (isEncontrado) {
       markerClass = "marker-found";
-      iconSymbol = "task_alt";
+      iconHtmlContent = `<span class="text-base leading-none">🫂</span>`;
+      badgeColor = "bg-green-600";
+      badgeText = "Encontrado";
     }
 
     const customIcon = L.divIcon({
       className: 'custom-leaflet-pin',
-      html: `<div class="custom-marker ${markerClass}">
-              <span class="material-symbols-outlined text-sm">${iconSymbol}</span>
+      html: `<div class="custom-marker ${markerClass} flex items-center justify-center">
+              ${iconHtmlContent}
             </div>`,
       iconSize: [38, 38],
       iconAnchor: [19, 19]
     });
-
-    const isResolved = pet.type === "Encontrado" || pet.type === "Encontrado pelo dono" || pet.type === "Dono encontrado";
-    const badgeColor = isResolved ? 'bg-green-600' : (pet.type === 'Procurado' ? 'bg-[#E52421]' : 'bg-sky-500');
 
     const popupHtml = `
       <div class="w-56 overflow-hidden">
@@ -4172,16 +4182,23 @@ function updateMapMarkers(filteredPets) {
       </div>
     `;
 
-    const marker = L.marker([pet.lat, pet.lng], { icon: customIcon })
-      .addTo(leafletMap)
-      .bindPopup(popupHtml);
+    try {
+      const marker = L.marker([pet.lat, pet.lng], { icon: customIcon })
+        .addTo(leafletMap)
+        .bindPopup(popupHtml);
 
-    mapMarkers[pet.id] = marker;
-    bounds.extend([pet.lat, pet.lng]);
+      mapMarkers[pet.id] = marker;
+      bounds.extend([pet.lat, pet.lng]);
+      validMarkerCount++;
+    } catch(err) {
+      console.warn("Erro ao adicionar marcador para pet", pet.id, err);
+    }
   });
 
-  if (filteredPets.length > 0) {
-    leafletMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+  if (validMarkerCount > 0 && bounds.isValid()) {
+    try {
+      leafletMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+    } catch(e){}
   }
 }
 
