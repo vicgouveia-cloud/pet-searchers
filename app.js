@@ -4153,7 +4153,7 @@ function updateMapMarkers(filteredPets) {
       iconAnchor: [19, 19]
     });
 
-    const isResolved = pet.type === "Encontrado" || pet.type === "Encontrado";
+    const isResolved = pet.type === "Encontrado" || pet.type === "Encontrado pelo dono" || pet.type === "Dono encontrado";
     const badgeColor = isResolved ? 'bg-green-600' : (pet.type === 'Procurado' ? 'bg-[#E52421]' : 'bg-sky-500');
 
     const popupHtml = `
@@ -4376,7 +4376,7 @@ function createPetCardHtml(pet) {
         </div>
         
         <div class="absolute top-3 left-3 ${badgeBg} px-3 py-1 rounded-full text-xs font-bold shadow-md flex items-center gap-1">
-          <span class="material-symbols-outlined text-sm">${statusIcon}</span> ${pet.type}
+          ${isResolved ? `<span class="text-sm">🫂</span>` : `<span class="material-symbols-outlined text-sm">${statusIcon}</span>`} ${pet.type}
         </div>
 
         <div class="absolute top-3 right-3 bg-primary/95 text-on-primary backdrop-blur-md px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-md flex items-center gap-1">
