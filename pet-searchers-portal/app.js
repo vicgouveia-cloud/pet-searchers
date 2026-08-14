@@ -4139,7 +4139,7 @@ function updateMapMarkers(filteredPets) {
     if (pet.type === "Procurado") {
       markerClass = "marker-lost";
       iconSymbol = "warning";
-    } else if (pet.type === "Encontrado pelo dono" || pet.type === "Dono encontrado") {
+    } else if (pet.type === "Encontrado" || pet.type === "Encontrado") {
       markerClass = "marker-found";
       iconSymbol = "task_alt";
     }
@@ -4153,7 +4153,7 @@ function updateMapMarkers(filteredPets) {
       iconAnchor: [19, 19]
     });
 
-    const isResolved = pet.type === "Encontrado pelo dono" || pet.type === "Dono encontrado";
+    const isResolved = pet.type === "Encontrado" || pet.type === "Encontrado";
     const badgeColor = isResolved ? 'bg-green-600' : (pet.type === 'Procurado' ? 'bg-[#E52421]' : 'bg-sky-500');
 
     const popupHtml = `
@@ -4281,8 +4281,8 @@ function renderApp() {
   // Ordena rigorosamente por ordem de inclusão (dos últimos incluídos para os primeiros)
   petsData.forEach(p => {
     if (p.name && p.name.toLowerCase().includes("desconhecido")) {
-      p.type = "Encontrado pelo dono";
-      p.status = "Encontrado pelo dono";
+      p.type = "Encontrado";
+      p.status = "Encontrado";
     }
   });
   petsData.forEach(p => {
@@ -4316,8 +4316,8 @@ function renderApp() {
     if (currentActiveFilters.state && pet.state !== currentActiveFilters.state) return false;
     if (currentActiveFilters.city && pet.city !== currentActiveFilters.city) return false;
     if (currentActiveFilters.status) {
-      if (currentActiveFilters.status === "Encontrado pelo dono" || currentActiveFilters.status === "Dono encontrado" || currentActiveFilters.status === "Reencontrado") {
-        if (pet.type !== "Encontrado pelo dono" && pet.type !== "Dono encontrado") return false;
+      if (currentActiveFilters.status === "Encontrado" || currentActiveFilters.status === "Encontrado" || currentActiveFilters.status === "Reencontrado") {
+        if (pet.type !== "Encontrado" && pet.type !== "Encontrado") return false;
       } else if (pet.type !== currentActiveFilters.status) {
         return false;
       }
@@ -4348,8 +4348,8 @@ function renderApp() {
 
 // --- PET CARD HTML TEMPLATE (COM BOTÃO DETALHES COMPLETOS VISÍVEL) ---
 function createPetCardHtml(pet) {
-  const isFoundOwner = pet.type === "Encontrado pelo dono";
-  const isFoundPet = pet.type === "Dono encontrado";
+  const isFoundOwner = pet.type === "Encontrado";
+  const isFoundPet = pet.type === "Encontrado";
   const isResolved = isFoundOwner || isFoundPet;
 
   let badgeBg = "bg-sky-500 text-white font-bold";
@@ -4912,7 +4912,7 @@ function openDetailModal(petId) {
   if (pet.type === "Procurado") {
     badge.className = "absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md flex items-center gap-1 bg-[#E52421]";
     badge.innerHTML = `<span class="material-symbols-outlined text-sm">warning</span> PROCURADO`;
-  } else if (pet.type === "Encontrado pelo dono" || pet.type === "Dono encontrado") {
+  } else if (pet.type === "Encontrado" || pet.type === "Encontrado") {
     badge.className = "absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md flex items-center gap-1 bg-green-600";
     badge.innerHTML = `<span class="material-symbols-outlined text-sm">task_alt</span> ${pet.type.toUpperCase()}`;
   } else {
@@ -4921,7 +4921,7 @@ function openDetailModal(petId) {
   }
 
   const detailBox = document.getElementById("detailMaintenanceBox");
-  if (pet.isRenewalWindow && pet.type !== "Encontrado pelo dono" && pet.type !== "Dono encontrado") {
+  if (pet.isRenewalWindow && pet.type !== "Encontrado" && pet.type !== "Encontrado") {
     detailBox.classList.remove("hidden");
     document.getElementById("btnDetailRenewPet").onclick = () => {
       document.getElementById("detailModal").classList.add("hidden");
@@ -5068,8 +5068,8 @@ function renderAdminDashboardTable() {
   const total = petsData.length;
   const lostCount = petsData.filter(p => p.type === "Procurado").length;
   const sightedCount = petsData.filter(p => p.type === "Avistado").length;
-  const resolvedCount = petsData.filter(p => p.type === "Encontrado pelo dono" || p.type === "Dono encontrado").length;
-  const expiringCount = petsData.filter(p => p.isRenewalWindow && p.type !== "Encontrado pelo dono" && p.type !== "Dono encontrado").length;
+  const resolvedCount = petsData.filter(p => p.type === "Encontrado" || p.type === "Encontrado").length;
+  const expiringCount = petsData.filter(p => p.isRenewalWindow && p.type !== "Encontrado" && p.type !== "Encontrado").length;
 
   document.getElementById("kpiTotalPets").textContent = total;
   document.getElementById("kpiLostPets").textContent = lostCount;
@@ -5108,14 +5108,14 @@ function renderAdminDashboardTable() {
     
     if (pet.type === "Procurado") {
       statusPill = `<span class="px-2 py-0.5 rounded bg-red-100 text-red-700 font-bold">Procurado</span>`;
-    } else if (pet.type === "Encontrado pelo dono") {
+    } else if (pet.type === "Encontrado") {
       statusPill = `<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 font-bold">🟢 Encontrado pelo dono</span>`;
-    } else if (pet.type === "Dono encontrado") {
+    } else if (pet.type === "Encontrado") {
       statusPill = `<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 font-bold">🟢 Dono encontrado</span>`;
     }
 
     let validityBadge = `<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 font-semibold">🟢 Ativo (${pet.daysRemaining}d)</span>`;
-    if (pet.type === "Encontrado pelo dono" || pet.type === "Dono encontrado") {
+    if (pet.type === "Encontrado" || pet.type === "Encontrado") {
       validityBadge = `<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 font-bold">🎉 Reencontrado</span>`;
     } else if (pet.isRenewalWindow) {
       validityBadge = `<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-bold">⚠️ Requer Renovação (${pet.daysRemaining}d)</span>`;
@@ -5148,8 +5148,8 @@ function renderAdminDashboardTable() {
             <select onchange="adminChangeStatus('${pet.id}', this.value)" class="px-2 py-1 rounded-lg text-[11px] font-bold border border-outline-variant bg-white text-primary outline-none cursor-pointer">
               <option value="Procurado" ${pet.type === 'Procurado' ? 'selected' : ''}>Procurado (Perdido)</option>
               <option value="Avistado" ${pet.type === 'Avistado' ? 'selected' : ''}>Avistado (Encontrado)</option>
-              <option value="Encontrado pelo dono" ${pet.type === 'Encontrado pelo dono' ? 'selected' : ''}>🟢 Encontrado pelo dono</option>
-              <option value="Dono encontrado" ${pet.type === 'Dono encontrado' ? 'selected' : ''}>🟢 Dono encontrado</option>
+              <option value="Encontrado" ${pet.type === 'Encontrado pelo dono' ? 'selected' : ''}>🟢 Encontrado pelo dono</option>
+              <option value="Encontrado" ${pet.type === 'Dono encontrado' ? 'selected' : ''}>🟢 Dono encontrado</option>
             </select>
 
             <button onclick="adminRenewPet('${pet.id}')" class="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-xs" title="Renovar +30 Dias">
@@ -5270,3 +5270,27 @@ window.addEventListener("focus", () => {
   loadPetsFromStorage();
   renderApp();
 });
+
+
+function formatPhoneValue(raw) {
+  if (!raw) return "";
+  let digits = raw.replace(/\D/g, "");
+  if (digits.length > 11) digits = digits.slice(0, 11);
+  if (digits.length === 0) return "";
+  if (digits.length <= 2) return "(" + digits;
+  if (digits.length <= 6) return "(" + digits.slice(0, 2) + ") " + digits.slice(2);
+  if (digits.length <= 10) return "(" + digits.slice(0, 2) + ") " + digits.slice(2, 6) + "-" + digits.slice(6);
+  return "(" + digits.slice(0, 2) + ") " + digits.slice(2, 7) + "-" + digits.slice(7, 11);
+}
+
+function initPhoneMasks() {
+  const phoneInputs = document.querySelectorAll('input[type="tel"], input[id*="Phone"], input[name*="Phone"], input[id*="Contact"], #iptPhone, #adminEditPhone');
+  phoneInputs.forEach(input => {
+    input.addEventListener("input", (e) => {
+      e.target.value = formatPhoneValue(e.target.value);
+    });
+    input.addEventListener("blur", (e) => {
+      e.target.value = formatPhoneValue(e.target.value);
+    });
+  });
+}
