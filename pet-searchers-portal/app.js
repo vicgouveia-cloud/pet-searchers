@@ -3812,7 +3812,7 @@ async function retroactiveGeocodePets() {
 
 // --- LOCALSTORAGE & GLOBAL CLOUD PERSISTENCE ---
 function loadPetsFromStorage() {
-  const saved = localStorage.getItem("pet_searchers_portal_data_v16");
+  const saved = localStorage.getItem("pet_searchers_portal_data_v17");
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
@@ -3827,7 +3827,7 @@ function loadPetsFromStorage() {
 }
 
 function savePetsToStorage() {
-  localStorage.setItem("pet_searchers_portal_data_v16", JSON.stringify(petsData));
+  localStorage.setItem("pet_searchers_portal_data_v17", JSON.stringify(petsData));
 }
 
 function deduplicatePets(pets) {
@@ -4162,7 +4162,7 @@ function updateMapMarkers(filteredPets) {
         <div class="p-3 space-y-1">
           <div class="flex items-center justify-between">
             <span class="font-bold text-sm text-primary truncate">${pet.name}</span>
-            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold text-white ${badgeColor}">${pet.type}</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold text-white ${badgeColor}">${badgeText}</span>
           </div>
           <p class="text-[11px] text-gray-600 line-clamp-1">${pet.address}, ${pet.city} - ${pet.state}</p>
           <button onclick="openDetailModal('${pet.id}')" class="mt-2 w-full py-1.5 bg-primary text-white rounded text-xs font-bold hover:bg-primary-container transition-colors">
