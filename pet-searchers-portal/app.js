@@ -3812,7 +3812,7 @@ async function retroactiveGeocodePets() {
 
 // --- LOCALSTORAGE & GLOBAL CLOUD PERSISTENCE ---
 function loadPetsFromStorage() {
-  const saved = localStorage.getItem("pet_searchers_portal_data_v17");
+  const saved = localStorage.getItem("pet_searchers_portal_data_v18");
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
@@ -3827,7 +3827,7 @@ function loadPetsFromStorage() {
 }
 
 function savePetsToStorage() {
-  localStorage.setItem("pet_searchers_portal_data_v17", JSON.stringify(petsData));
+  localStorage.setItem("pet_searchers_portal_data_v18", JSON.stringify(petsData));
 }
 
 function deduplicatePets(pets) {
@@ -4333,9 +4333,19 @@ function renderApp() {
     if (currentActiveFilters.state && pet.state !== currentActiveFilters.state) return false;
     if (currentActiveFilters.city && pet.city !== currentActiveFilters.city) return false;
     if (currentActiveFilters.status) {
-      if (currentActiveFilters.status === "Encontrado" || currentActiveFilters.status === "Encontrado" || currentActiveFilters.status === "Reencontrado") {
-        if (pet.type !== "Encontrado" && pet.type !== "Encontrado") return false;
-      } else if (pet.type !== currentActiveFilters.status) {
+      const target = currentActiveFilters.status.trim();
+      const petType = (pet.type || pet.status || "").trim();
+
+      if (target === "Reencontrado" || target === "Reencontrado 🎉") {
+        const isResolved = petType.includes("Encontrado") || petType.includes("Dono") || petType.includes("Reencontrado") || petType.includes("Adotado");
+        if (!isResolved) return false;
+      } else if (target === "Encontrado pelo dono" || target === "Encontrado") {
+        const isEncontradoDono = petType === "Encontrado pelo dono" || petType === "Encontrado" || petType.includes("Encontrado");
+        if (!isEncontradoDono) return false;
+      } else if (target === "Dono encontrado") {
+        const isDonoEncontrado = petType === "Dono encontrado" || petType.includes("Dono");
+        if (!isDonoEncontrado) return false;
+      } else if (petType !== target) {
         return false;
       }
     }
