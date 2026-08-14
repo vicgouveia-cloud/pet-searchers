@@ -3812,7 +3812,7 @@ async function retroactiveGeocodePets() {
 
 // --- LOCALSTORAGE & GLOBAL CLOUD PERSISTENCE ---
 function loadPetsFromStorage() {
-  const saved = localStorage.getItem("pet_searchers_portal_data_v15");
+  const saved = localStorage.getItem("pet_searchers_portal_data_v16");
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
@@ -3827,7 +3827,7 @@ function loadPetsFromStorage() {
 }
 
 function savePetsToStorage() {
-  localStorage.setItem("pet_searchers_portal_data_v15", JSON.stringify(petsData));
+  localStorage.setItem("pet_searchers_portal_data_v16", JSON.stringify(petsData));
 }
 
 function deduplicatePets(pets) {
@@ -4376,7 +4376,7 @@ function createPetCardHtml(pet) {
         </div>
         
         <div class="absolute top-3 left-3 ${badgeBg} px-3 py-1 rounded-full text-xs font-bold shadow-md flex items-center gap-1">
-          ${isResolved ? `<span class="text-sm">🫂</span>` : `<span class="material-symbols-outlined text-sm">${statusIcon}</span>`} ${pet.type}
+          ${isResolved ? `<span class="text-sm">🫂</span>` : `<span class="material-symbols-outlined text-sm">${statusIcon}</span>`} ${isResolved ? "Encontrado" : pet.type}
         </div>
 
         <div class="absolute top-3 right-3 bg-primary/95 text-on-primary backdrop-blur-md px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-md flex items-center gap-1">
