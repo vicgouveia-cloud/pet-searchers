@@ -937,10 +937,10 @@
         <span class="material-symbols-outlined text-xl block">close</span>
       </button>
 
-      <!-- Photo Hero (Moldura 1:1 Quadrada com Imagem Inteira sem cortes via object-contain) -->
-      <div class="w-full aspect-square max-h-[320px] sm:max-h-[360px] relative bg-slate-900 flex items-center justify-center p-2 rounded-t-2xl flex-shrink-0 border-b border-outline-variant/30">
+      <!-- Photo Hero (Moldura compacta h-48 sm:h-56 com object-contain para garantir total visibilidade das informações) -->
+      <div class="w-full h-48 sm:h-56 relative bg-slate-900 flex items-center justify-center p-2 rounded-t-2xl flex-shrink-0 border-b border-outline-variant/30">
         <img id="detailImg" src="" alt="Pet" class="w-full h-full object-contain rounded-xl shadow-md cursor-pointer" onclick="if(window.currentDetailPetId) openImageLightbox(window.currentDetailPetId)" title="Clique para ampliar em tela cheia"/>
-        <span id="detailBadge" class="absolute top-4 left-4 z-10 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md flex items-center gap-1">
+        <span id="detailBadge" class="absolute top-3 left-3 z-10 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md flex items-center gap-1">
           Status
         </span>
       </div>
