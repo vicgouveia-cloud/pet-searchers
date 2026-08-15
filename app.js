@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v66 carregado - filtro Próximos a mim com raio selecionável");
+console.log("✅ Pet Searchers app.js BUILD v67 carregado - edições persistentes, proximidade refinada e cartaz 4:5");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -20,6 +20,10 @@ const firebaseConfig = {
 
 let db = null;
 let firestoreSDK = null;
+
+// Fotos alteradas no painel ficam protegidas em memória até o Firestore
+// confirmar a mesma versão. Isso evita que um snapshot antigo reverta a foto.
+const pendingEditedPhotos = new Map();
 
 // Base de dados inicial opcional.
 // A versão anterior referenciava INITIAL_PETS sem declarar a variável,
@@ -171,10 +175,87 @@ function migrateOversizedLocalStorage() {
   }
 }
 
+
+async function compressDataUrlForFirestore(dataUrl, maxBytes = 700000) {
+  if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) {
+    return dataUrl;
+  }
+
+  // Já está em tamanho seguro.
+  if (dataUrl.length <= maxBytes) return dataUrl;
+
+  return new Promise((resolve) => {
+    const img = new Image();
+
+    img.onload = () => {
+      try {
+        let width = img.naturalWidth || img.width;
+        let height = img.naturalHeight || img.height;
+        const maxDimension = 1400;
+
+        if (width > maxDimension || height > maxDimension) {
+          const scale = Math.min(maxDimension / width, maxDimension / height);
+          width = Math.max(1, Math.round(width * scale));
+          height = Math.max(1, Math.round(height * scale));
+        }
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d", { alpha: false });
+
+        const attempts = [
+          { scale: 1.00, quality: 0.84 },
+          { scale: 0.92, quality: 0.78 },
+          { scale: 0.84, quality: 0.72 },
+          { scale: 0.76, quality: 0.66 },
+          { scale: 0.68, quality: 0.60 },
+          { scale: 0.60, quality: 0.55 }
+        ];
+
+        let best = dataUrl;
+
+        for (const attempt of attempts) {
+          const w = Math.max(1, Math.round(width * attempt.scale));
+          const h = Math.max(1, Math.round(height * attempt.scale));
+          canvas.width = w;
+          canvas.height = h;
+
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+
+          const candidate = canvas.toDataURL("image/jpeg", attempt.quality);
+          best = candidate;
+
+          if (candidate.length <= maxBytes) {
+            resolve(candidate);
+            return;
+          }
+        }
+
+        resolve(best);
+      } catch (err) {
+        console.warn("Não foi possível otimizar a foto para o Firestore:", err);
+        resolve(dataUrl);
+      }
+    };
+
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+function protectPendingEditedPhoto(pet) {
+  if (!pet || !pet.id) return;
+  if (typeof pet.photo === "string" && pet.photo) {
+    pendingEditedPhotos.set(pet.id, pet.photo);
+  }
+}
+
 function saveEditedPet(pet) {
   if (!pet || !pet.id) return false;
 
-  pet.lastModifiedAt = pet.lastModifiedAt || new Date().toISOString();
+  pet.lastModifiedAt = new Date().toISOString();
+  protectPendingEditedPhoto(pet);
 
   const map = getEditedPetsMap();
   const previous = map[pet.id] || {};
@@ -222,16 +303,25 @@ function listenToFirebasePets() {
       // Aplica edições salvas do Administrador nos registros vindos da nuvem
       const mergedCloudPets = filteredPets.map(cloudPet => {
         const localEdit = editedMap[cloudPet.id];
-        if (localEdit) {
-          return { ...cloudPet, ...localEdit };
+        let merged = localEdit ? { ...cloudPet, ...localEdit } : { ...cloudPet };
+
+        const pendingPhoto = pendingEditedPhotos.get(cloudPet.id);
+        if (pendingPhoto) {
+          // Enquanto o snapshot da nuvem ainda não trouxer a foto nova,
+          // mantemos a alteração do administrador na tela.
+          if (cloudPet.photo === pendingPhoto) {
+            pendingEditedPhotos.delete(cloudPet.id);
+          } else {
+            merged.photo = pendingPhoto;
+          }
         }
-        return cloudPet;
+
+        return merged;
       });
 
-      const editedList = Object.values(editedMap).filter(p => !deletedSet.has(p.id));
-
-      // Prioridade absoluta: Edições do Administrador > Nuvem Mesclada > petsData Atual > INITIAL_PETS
-      petsData = deduplicatePets([...editedList, ...mergedCloudPets, ...petsData, ...INITIAL_PETS]).map(sanitizePetObject);
+      // O registro mesclado já incorpora a edição local e preserva fotos pendentes.
+      // Ele deve ter prioridade sobre caches antigos.
+      petsData = deduplicatePets([...mergedCloudPets, ...petsData, ...INITIAL_PETS]).map(sanitizePetObject);
       savePetsToStorage();
       renderApp();
       console.log("🔥 Sincronizado em tempo real com Firebase Firestore:", petsData.length, "pets.");
@@ -249,13 +339,25 @@ function listenToFirebasePets() {
 
 async function savePetToFirebase(pet)
 {
-  if (!db || !firestoreSDK) return false;
+  if (!db || !firestoreSDK || !pet || !pet.id) return false;
+
   try {
     let petToSave = { ...pet };
-    if (petToSave.photo && petToSave.photo.length > 450000 && petToSave.photo.startsWith("data:image/")) {
-      petToSave.photo = getRandomDefaultPhoto(petToSave.species);
+
+    if (petToSave.photo && typeof petToSave.photo === "string" && petToSave.photo.startsWith("data:image/")) {
+      petToSave.photo = await compressDataUrlForFirestore(petToSave.photo, 700000);
+
+      // Mantém a mesma versão em memória e protegida até o snapshot confirmar.
+      pet.photo = petToSave.photo;
+      pendingEditedPhotos.set(pet.id, petToSave.photo);
     }
-    await firestoreSDK.setDoc(firestoreSDK.doc(db, "pets", petToSave.id), petToSave);
+
+    await firestoreSDK.setDoc(
+      firestoreSDK.doc(db, "pets", petToSave.id),
+      petToSave,
+      { merge: true }
+    );
+
     console.log("✅ Pet gravado no Firebase Firestore com sucesso:", petToSave.name);
     return true;
   } catch (e) {
@@ -1226,6 +1328,26 @@ function clearAllPetFilters() {
   renderApp();
 }
 
+
+function openNearbyRadiusDropdown() {
+  const select = document.getElementById("nearbyRadiusSelect");
+  if (!select) return;
+
+  try {
+    select.focus({ preventScroll: true });
+  } catch (_) {
+    select.focus();
+  }
+
+  // Chromium/Edge modernos suportam showPicker() em selects.
+  // Se não estiver disponível, o foco já deixa o controle pronto para uso.
+  try {
+    if (typeof select.showPicker === "function") {
+      select.showPicker();
+    }
+  } catch (_) {}
+}
+
 function activateNearbyFilter() {
   const btn = document.getElementById("btnNearbyPets");
 
@@ -1248,7 +1370,7 @@ function activateNearbyFilter() {
 
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = `<span class="material-symbols-outlined text-sm animate-spin">progress_activity</span> Localizando (${currentActiveFilters.nearbyRadiusKm} km)...`;
+    btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">progress_activity</span> Localizando...';
   }
 
   navigator.geolocation.getCurrentPosition(
@@ -1261,17 +1383,18 @@ function activateNearbyFilter() {
 
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = `<span class="material-symbols-outlined text-sm">my_location</span> Próximos a mim (${currentActiveFilters.nearbyRadiusKm} km)`;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span> Próximos a mim';
         btn.setAttribute("aria-pressed", "true");
         btn.classList.remove("bg-surface-container", "text-primary");
         btn.classList.add("ring-2", "ring-primary", "bg-primary", "text-white");
       }
       renderApp();
+      setTimeout(openNearbyRadiusDropdown, 120);
     },
     err => {
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = `<span class="material-symbols-outlined text-sm">my_location</span> Próximos a mim (${currentActiveFilters.nearbyRadiusKm} km)`;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span> Próximos a mim';
       }
       alert(err && err.code === 1
         ? "Permita o acesso à sua localização no navegador para usar o filtro Próximos a mim."
@@ -1298,7 +1421,7 @@ function ensureAdvancedFilterControls() {
       <div class="flex items-center gap-1.5">
         <button id="btnNearbyPets" type="button" aria-pressed="false"
           class="px-3.5 py-2 rounded-xl bg-surface-container text-primary hover:bg-surface-container-high font-bold text-xs transition-all flex items-center gap-1.5 border border-outline-variant/40">
-          <span class="material-symbols-outlined text-sm">my_location</span> Próximos a mim (10 km)
+          <span class="material-symbols-outlined text-sm">my_location</span> Próximos a mim
         </button>
 
         <select id="nearbyRadiusSelect"
@@ -1340,7 +1463,7 @@ function ensureAdvancedFilterControls() {
 
     const btn = document.getElementById("btnNearbyPets");
     if (btn) {
-      btn.innerHTML = `<span class="material-symbols-outlined text-sm">my_location</span> Próximos a mim (${currentActiveFilters.nearbyRadiusKm} km)`;
+      btn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span> Próximos a mim';
     }
 
     // Se o filtro já estiver ativo, reaplica imediatamente com o novo raio.
@@ -1916,7 +2039,7 @@ function createPetCardHtml(pet) {
           
           ${pet.type === 'Procurado' ? `
             <button onclick="event.stopPropagation(); generatePosterModal('${pet.id}')" class="col-span-2 py-2 px-3 rounded-xl bg-red-50 hover:bg-red-100 text-[#E52421] font-bold text-xs transition-colors flex items-center justify-center gap-1 border border-red-200">
-              <span class="material-symbols-outlined text-sm">print</span> Cartaz para Impressão PDF
+              <span class="material-symbols-outlined text-sm">print</span> Cartaz para compartilhamento
             </button>
           ` : ''}
         </div>
@@ -2356,6 +2479,82 @@ function getRandomDefaultPhoto(species) {
   return "https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=800&q=80";
 }
 
+
+function replacePosterLabelText(root, fromText, toText) {
+  if (!root) return;
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+
+  nodes.forEach(node => {
+    if (node.nodeValue && node.nodeValue.toLowerCase().includes(fromText.toLowerCase())) {
+      node.nodeValue = node.nodeValue.replace(new RegExp(fromText, "gi"), toText);
+    }
+  });
+}
+
+function getCommonAncestor(elements) {
+  const list = elements.filter(Boolean);
+  if (!list.length) return null;
+
+  let node = list[0];
+  while (node && node !== document.body) {
+    if (list.every(el => node.contains(el))) return node;
+    node = node.parentElement;
+  }
+  return null;
+}
+
+function applyPosterLayoutAdjustments() {
+  const posterArea = document.getElementById("posterArea");
+  const posterImg = document.getElementById("posterImg");
+  if (!posterArea || !posterImg) return;
+
+  // Moldura da foto em 4:5, preservando a imagem inteira.
+  const frame = posterImg.parentElement;
+  if (frame) {
+    frame.style.aspectRatio = "4 / 5";
+    frame.style.overflow = "hidden";
+    frame.style.display = "flex";
+    frame.style.alignItems = "center";
+    frame.style.justifyContent = "center";
+    frame.style.background = "#ffffff";
+  }
+
+  posterImg.style.width = "100%";
+  posterImg.style.height = "100%";
+  posterImg.style.maxWidth = "100%";
+  posterImg.style.maxHeight = "100%";
+  posterImg.style.objectFit = "contain";
+  posterImg.style.objectPosition = "center";
+  posterImg.style.background = "#ffffff";
+
+  // Área dos dados 27,5% menor na largura em relação ao bloco atual.
+  const infoElements = [
+    document.getElementById("posterAge"),
+    document.getElementById("posterColor"),
+    document.getElementById("posterBreed"),
+    document.getElementById("posterMarkings")
+  ];
+
+  let infoPanel = getCommonAncestor(infoElements);
+
+  // Evita pegar o poster inteiro como ancestral comum; sobe/baixa para um bloco útil.
+  if (infoPanel === posterArea && infoElements[0]) {
+    infoPanel = infoElements[0].parentElement?.parentElement || infoElements[0].parentElement;
+  }
+
+  if (infoPanel && infoPanel !== posterArea) {
+    infoPanel.style.width = "72.5%";
+    infoPanel.style.maxWidth = "72.5%";
+    infoPanel.style.boxSizing = "border-box";
+  }
+
+  replacePosterLabelText(posterArea, "Observação de Saúde", "Observações");
+  replacePosterLabelText(posterArea, "Observação de saúde", "Observações");
+}
+
 // --- POSTER GENERATOR MODAL ---
 function generatePosterModal(petId) {
   const pet = petsData.find(p => p.id === petId);
@@ -2374,6 +2573,8 @@ function generatePosterModal(petId) {
   document.getElementById("posterDesc").textContent = `${pet.name} foi visto pela última vez em ${pet.address}, ${pet.city} - ${pet.state}. Por favor, se tiver qualquer informação, entre em contato imediatamente!`;
   document.getElementById("posterContactPhone").textContent = pet.contactPhone;
 
+  applyPosterLayoutAdjustments();
+
   const posterModal = document.getElementById("posterModal");
   posterModal.classList.remove("hidden");
   posterModal.scrollTop = 0;
@@ -2386,6 +2587,8 @@ async function downloadPosterJPG() {
   const petName = (petNameElem ? petNameElem.textContent.trim() : "pet").toLowerCase().replace(/\s+/g, "_");
 
   if (!posterArea) return;
+
+  applyPosterLayoutAdjustments();
 
   const originalContent = btnDownload ? btnDownload.innerHTML : "";
   if (btnDownload) {
