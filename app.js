@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v78 carregado - PDF A4 nativo em página única sem jsPDF");
+console.log("✅ Pet Searchers app.js BUILD v79 carregado - cartazes no padrão visual aprovado para JPG 4x5 e PDF A4");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -3177,18 +3177,15 @@ function getPosterLogoSource() {
   return candidates.length ? candidates[0].src : "";
 }
 
+
 function ensureUnifiedPosterStyles() {
   if (document.getElementById("petSearchersUnifiedPosterStyles")) return;
 
   const style = document.createElement("style");
   style.id = "petSearchersUnifiedPosterStyles";
   style.textContent = `
+    #posterArea.ps-social-poster,
     #posterArea.ps-a4-poster {
-      width: 794px !important;
-      height: 1123px !important;
-      max-width: 794px !important;
-      min-width: 794px !important;
-      min-height: 1123px !important;
       box-sizing: border-box !important;
       margin: 0 auto !important;
       padding: 0 !important;
@@ -3197,9 +3194,28 @@ function ensureUnifiedPosterStyles() {
       color: #111827 !important;
       font-family: Arial, Helvetica, sans-serif !important;
       display: grid !important;
-      grid-template-rows: 18% 68% 14% !important;
       border: 0 !important;
       box-shadow: none !important;
+    }
+
+    /* JPG para compartilhamento: proporção exata 4:5 */
+    #posterArea.ps-social-poster {
+      width: 800px !important;
+      height: 1000px !important;
+      min-width: 800px !important;
+      max-width: 800px !important;
+      min-height: 1000px !important;
+      grid-template-rows: 17% 66% 17% !important;
+    }
+
+    /* PDF para impressão: uma página A4 */
+    #posterArea.ps-a4-poster {
+      width: 794px !important;
+      height: 1123px !important;
+      min-width: 794px !important;
+      max-width: 794px !important;
+      min-height: 1123px !important;
+      grid-template-rows: 17% 66% 17% !important;
     }
 
     #posterArea .ps-poster-header {
@@ -3210,61 +3226,60 @@ function ensureUnifiedPosterStyles() {
       justify-content: center;
       align-items: center;
       text-align: center;
+      padding: 18px 30px 20px;
       box-sizing: border-box;
-      padding: 19px 28px 22px;
     }
 
     #posterArea .ps-poster-title {
-      font-size: 58px;
-      line-height: .94;
+      font-size: 60px;
+      line-height: .95;
       font-weight: 900;
-      letter-spacing: .5px;
-      margin: -5px 0 18px;
+      letter-spacing: .3px;
+      margin: -2px 0 12px;
       text-transform: uppercase;
     }
 
     #posterArea .ps-poster-date {
-      min-width: 430px;
-      padding: 10px 28px;
-      border-top: 2px solid rgba(255,255,255,.92);
-      border-bottom: 2px solid rgba(255,255,255,.92);
-      font-size: 18px;
-      line-height: 1.3;
-      font-weight: 800;
-      letter-spacing: .8px;
+      width: 66%;
+      padding: 8px 12px;
+      border-top: 2px solid rgba(255,255,255,.95);
+      border-bottom: 2px solid rgba(255,255,255,.95);
+      font-size: 17px;
+      line-height: 1.25;
+      font-weight: 900;
+      letter-spacing: .6px;
       text-transform: uppercase;
+      box-sizing: border-box;
     }
 
     #posterArea .ps-poster-body {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 34px 32px 24px;
-      box-sizing: border-box;
       background: #ffffff;
+      padding: 28px 34px 24px;
+      box-sizing: border-box;
     }
 
     #posterArea .ps-poster-center {
       width: 94%;
       display: grid;
-      grid-template-columns: minmax(0, 60%) minmax(0, 40%);
-      gap: 34px;
+      grid-template-columns: minmax(0, 64%) minmax(0, 36%);
+      gap: 26px;
       align-items: center;
-      transform: translateY(18px);
+      justify-content: center;
       box-sizing: border-box;
     }
 
+    /* Moldura 35% maior que o padrão anterior, sem invadir o painel lateral. */
     #posterArea .ps-photo-shell {
       width: 100%;
-      max-width: 100%;
-      justify-self: stretch;
-      margin-right: 0;
       aspect-ratio: 4 / 5;
       border: 2px solid #d1d5db;
       border-radius: 14px;
       overflow: hidden;
       background: #ffffff;
-      box-shadow: 0 2px 7px rgba(0,0,0,.08);
+      box-shadow: 0 2px 7px rgba(0,0,0,.09);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -3285,33 +3300,33 @@ function ensureUnifiedPosterStyles() {
     #posterArea .ps-info-column {
       min-width: 0;
       width: 100%;
+      padding-left: 2px;
       box-sizing: border-box;
-      padding-left: 14px;
-      transform: translateX(4px);
     }
 
     #posterArea .ps-pet-name {
       color: #ef1717;
       font-size: 34px;
-      line-height: 1.02;
+      line-height: 1;
       font-weight: 900;
-      margin: 0 0 15px;
+      margin: 0 0 14px;
       text-transform: uppercase;
       overflow-wrap: anywhere;
     }
 
     #posterArea .ps-info-box {
-      background: #f4f5f7;
-      border: 1px solid #d8dbe0;
+      width: 100%;
+      background: #f5f6f7;
+      border: 1px solid #d7dbe0;
       border-radius: 10px;
-      padding: 10px 11px 9px;
+      padding: 9px 10px 8px;
       margin-bottom: 8px;
       box-sizing: border-box;
     }
 
     #posterArea .ps-info-label {
       color: #ef1717;
-      font-size: 11px;
+      font-size: 10px;
       line-height: 1.1;
       font-weight: 900;
       text-transform: uppercase;
@@ -3321,14 +3336,14 @@ function ensureUnifiedPosterStyles() {
     #posterArea .ps-info-value {
       color: #111827;
       font-size: 13px;
-      line-height: 1.3;
+      line-height: 1.28;
       font-weight: 700;
       overflow-wrap: anywhere;
     }
 
     #posterArea .ps-observation {
-      background: #fff4f2;
-      border: 1.5px solid #f3a29a;
+      background: #fff7f5;
+      border: 1.5px solid #ef6c63;
     }
 
     #posterArea .ps-observation .ps-info-value {
@@ -3337,22 +3352,23 @@ function ensureUnifiedPosterStyles() {
 
     #posterArea .ps-last-seen {
       border-top: 4px solid #ef1717;
-      margin-top: 8px;
-      padding-top: 11px;
+      margin-top: 10px;
+      padding-top: 12px;
     }
 
     #posterArea .ps-last-title {
-      color: #6b7280;
+      color: #374151;
       font-size: 11px;
+      line-height: 1.1;
       font-weight: 900;
       text-transform: uppercase;
       margin-bottom: 7px;
     }
 
     #posterArea .ps-last-text {
-      color: #1f2937;
-      font-size: 13px;
-      line-height: 1.42;
+      color: #111827;
+      font-size: 12.5px;
+      line-height: 1.4;
       font-weight: 500;
       overflow-wrap: anywhere;
     }
@@ -3363,24 +3379,23 @@ function ensureUnifiedPosterStyles() {
       display: flex;
       flex-direction: column;
       justify-content: center;
-      box-sizing: border-box;
-      padding: 12px 34px 14px;
       text-align: center;
+      padding: 12px 28px 12px;
+      box-sizing: border-box;
     }
 
     #posterArea .ps-footer-call {
       font-size: 14px;
-      line-height: 1.25;
+      line-height: 1.2;
       font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: .15px;
-      margin-bottom: 8px;
+      margin-bottom: 7px;
     }
 
     #posterArea .ps-footer-divider {
+      width: 76%;
       height: 2px;
-      background: rgba(255,255,255,.88);
-      width: 78%;
+      background: rgba(255,255,255,.94);
       margin: 0 auto 9px;
     }
 
@@ -3388,16 +3403,16 @@ function ensureUnifiedPosterStyles() {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 24px;
-      min-height: 54px;
+      gap: 18px;
       width: 100%;
+      min-height: 52px;
     }
 
     #posterArea .ps-footer-logo {
-      width: 58px !important;
-      height: 58px !important;
+      width: 54px !important;
+      height: 54px !important;
       object-fit: contain !important;
-      border-radius: 9px;
+      border-radius: 8px;
       background: #ffffff;
       padding: 3px;
       box-sizing: border-box;
@@ -3408,38 +3423,59 @@ function ensureUnifiedPosterStyles() {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 11px;
+      gap: 10px;
+      min-width: 0;
     }
 
     #posterArea .ps-wa {
-      width: 36px;
-      height: 36px;
+      width: 34px;
+      height: 34px;
       border: 3px solid #ffffff;
       border-radius: 50%;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
+      font-size: 20px;
       line-height: 1;
       font-weight: 900;
       box-sizing: border-box;
+      flex: 0 0 auto;
     }
 
     #posterArea .ps-footer-phone {
       color: #ffffff;
-      font-size: 29px;
+      font-size: 30px;
       line-height: 1;
       font-weight: 900;
-      letter-spacing: .5px;
+      letter-spacing: .3px;
       white-space: nowrap;
     }
 
     #posterArea .ps-footer-bottom {
       font-size: 14px;
-      line-height: 1.2;
+      line-height: 1.15;
       font-weight: 900;
       margin-top: 7px;
       text-transform: uppercase;
+    }
+
+    /* Pequenos ajustes proporcionais para o A4, mantendo exatamente a mesma aparência. */
+    #posterArea.ps-a4-poster .ps-poster-body {
+      padding-top: 32px;
+      padding-bottom: 28px;
+    }
+
+    #posterArea.ps-a4-poster .ps-poster-center {
+      grid-template-columns: minmax(0, 64%) minmax(0, 36%);
+      gap: 28px;
+    }
+
+    #posterArea.ps-a4-poster .ps-photo-shell {
+      width: 100%;
+    }
+
+    #posterArea.ps-a4-poster .ps-pet-name {
+      font-size: 35px;
     }
 
     @media print {
@@ -3486,7 +3522,7 @@ function ensureUnifiedPosterStyles() {
   document.head.appendChild(style);
 }
 
-function buildUnifiedPoster(pet) {
+function buildUnifiedPoster(pet, format = "social") {
   const posterArea = document.getElementById("posterArea");
   if (!posterArea || !pet) return;
 
@@ -3506,7 +3542,10 @@ function buildUnifiedPoster(pet) {
   const phone = escapePetHtml(pet.contactPhone || "Telefone não informado");
   const dateText = escapePetHtml(getFormattedPosterDate(pet.date));
 
-  posterArea.className = "ps-a4-poster";
+  const normalizedFormat = format === "a4" ? "a4" : "social";
+  posterArea.dataset.posterFormat = normalizedFormat;
+  posterArea.className = normalizedFormat === "a4" ? "ps-a4-poster" : "ps-social-poster";
+
   posterArea.innerHTML = `
     <section class="ps-poster-header">
       <div class="ps-poster-title">PROCURA-SE</div>
@@ -3569,7 +3608,7 @@ function buildUnifiedPoster(pet) {
 
 function applyPosterLayoutAdjustments() {
   const pet = petsData.find(p => p.id === currentPosterPetId);
-  if (pet) buildUnifiedPoster(pet);
+  if (pet) buildUnifiedPoster(pet, "social");
 }
 
 
@@ -3587,8 +3626,10 @@ function fitPosterPreviewInModal() {
   if (!posterArea || !posterModal) return;
 
   const modalCard = posterModal.firstElementChild || posterModal;
+  const isA4 = posterArea.dataset.posterFormat === "a4";
+  const baseWidth = isA4 ? 794 : 800;
+  const baseHeight = isA4 ? 1123 : 1000;
 
-  // Primeiro restaura medidas conhecidas do cartaz. O zoom será somente visual.
   posterArea.style.zoom = "1";
   posterArea.style.marginLeft = "auto";
   posterArea.style.marginRight = "auto";
@@ -3610,10 +3651,7 @@ function fitPosterPreviewInModal() {
       )
     );
 
-    // Usa a distância real do topo do cartão até o começo do cartaz.
     const controlsHeight = Math.max(0, posterRect.top - cardRect.top);
-
-    // Reserva espaço para safe-area e uma margem confortável abaixo.
     const availableHeight = Math.max(
       240,
       viewportHeight
@@ -3623,8 +3661,8 @@ function fitPosterPreviewInModal() {
         - 24
     );
 
-    const scaleByWidth = availableWidth / 794;
-    const scaleByHeight = availableHeight / 1123;
+    const scaleByWidth = availableWidth / baseWidth;
+    const scaleByHeight = availableHeight / baseHeight;
     const scale = Math.max(0.18, Math.min(1, scaleByWidth, scaleByHeight));
 
     posterArea.style.zoom = String(scale);
@@ -3639,7 +3677,6 @@ function fitPosterPreviewInModal() {
       posterArea.parentElement.style.boxSizing = "border-box";
     }
 
-    // Mantém sempre o cabeçalho do pop-up acessível.
     try {
       modalCard.scrollTo({ top: 0, left: 0, behavior: "auto" });
       posterModal.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -3655,7 +3692,7 @@ function generatePosterModal(petId) {
   if (!pet) return;
 
   currentPosterPetId = petId;
-  buildUnifiedPoster(pet);
+  buildUnifiedPoster(pet, "social");
 
   const posterModal = document.getElementById("posterModal");
   if (posterModal) {
@@ -3692,19 +3729,22 @@ function getCurrentPosterFileBase() {
   return `cartaz_procura_se_${sanitizePosterFileName(petName)}`;
 }
 
-function createPosterExportClone() {
+
+function createPosterExportClone(format = "social") {
   const posterArea = document.getElementById("posterArea");
   if (!posterArea) return null;
 
-  // Exportamos uma cópia fora da tela. Assim a pré-visualização do usuário
-  // permanece enquadrada e não "explode" para 794x1123 ao tocar em Download.
+  const isA4 = format === "a4";
+  const width = isA4 ? 794 : 800;
+  const height = isA4 ? 1123 : 1000;
+
   const holder = document.createElement("div");
   holder.setAttribute("aria-hidden", "true");
   holder.style.position = "fixed";
   holder.style.left = "-10000px";
   holder.style.top = "0";
-  holder.style.width = "794px";
-  holder.style.height = "1123px";
+  holder.style.width = `${width}px`;
+  holder.style.height = `${height}px`;
   holder.style.overflow = "hidden";
   holder.style.pointerEvents = "none";
   holder.style.opacity = "0";
@@ -3714,11 +3754,11 @@ function createPosterExportClone() {
   const clone = posterArea.cloneNode(true);
   clone.removeAttribute("style");
   clone.style.zoom = "1";
-  clone.style.width = "794px";
-  clone.style.height = "1123px";
-  clone.style.maxWidth = "794px";
-  clone.style.minWidth = "794px";
-  clone.style.minHeight = "1123px";
+  clone.style.width = `${width}px`;
+  clone.style.height = `${height}px`;
+  clone.style.maxWidth = `${width}px`;
+  clone.style.minWidth = `${width}px`;
+  clone.style.minHeight = `${height}px`;
   clone.style.margin = "0";
   clone.style.transform = "none";
 
@@ -3727,23 +3767,31 @@ function createPosterExportClone() {
 
   return {
     element: clone,
+    width,
+    height,
     cleanup: () => holder.remove()
   };
 }
 
-async function renderPosterExportCanvas() {
+async function renderPosterExportCanvas(format = "social") {
   if (typeof html2canvas === "undefined") {
     throw new Error("Biblioteca html2canvas não foi carregada.");
   }
 
   const pet = petsData.find(p => p.id === currentPosterPetId);
-  if (pet) buildUnifiedPoster(pet);
+  if (!pet) throw new Error("Pet do cartaz não encontrado.");
 
-  const exportClone = createPosterExportClone();
+  const posterArea = document.getElementById("posterArea");
+  const previousFormat = posterArea?.dataset.posterFormat === "a4" ? "a4" : "social";
+
+  // Monta o formato solicitado, clona e imediatamente devolve a prévia ao formato anterior.
+  buildUnifiedPoster(pet, format);
+  const exportClone = createPosterExportClone(format);
+  buildUnifiedPoster(pet, previousFormat);
+
   if (!exportClone) throw new Error("Área do cartaz não encontrada.");
 
   try {
-    // Espera imagens/fontes do clone estabilizarem.
     const images = Array.from(exportClone.element.querySelectorAll("img"));
     await Promise.all(images.map(img => {
       if (img.complete) return Promise.resolve();
@@ -3754,16 +3802,19 @@ async function renderPosterExportCanvas() {
       });
     }));
 
+    const isA4 = format === "a4";
+    const scale = isA4 ? 2 : 1.35; // social: 800x1000 -> 1080x1350 exatos
+
     return await html2canvas(exportClone.element, {
-      scale: 2,
+      scale,
       useCORS: true,
       allowTaint: true,
       backgroundColor: "#ffffff",
       logging: false,
-      width: 794,
-      height: 1123,
-      windowWidth: 794,
-      windowHeight: 1123
+      width: exportClone.width,
+      height: exportClone.height,
+      windowWidth: exportClone.width,
+      windowHeight: exportClone.height
     });
   } finally {
     exportClone.cleanup();
@@ -3946,7 +3997,7 @@ async function downloadPosterPDF() {
   }
 
   try {
-    const canvas = await renderPosterExportCanvas();
+    const canvas = await renderPosterExportCanvas("a4");
     const jpegBytes = await canvasToJpegBytes(canvas, 0.94);
 
     // O PDF é criado localmente, sem CDN e sem jsPDF.
@@ -3983,7 +4034,7 @@ async function downloadPosterJPG() {
   }
 
   try {
-    const canvas = await renderPosterExportCanvas();
+    const canvas = await renderPosterExportCanvas("social");
 
     const blob = await new Promise((resolve, reject) => {
       canvas.toBlob(
@@ -4019,6 +4070,8 @@ window.addEventListener("beforeprint", () => {
 });
 
 window.addEventListener("afterprint", () => {
+  const pet = petsData.find(p => p.id === currentPosterPetId);
+  if (pet) buildUnifiedPoster(pet, "social");
   setTimeout(fitPosterPreviewInModal, 30);
 });
 
