@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v79 carregado - cartazes no padrão visual aprovado para JPG 4x5 e PDF A4");
+console.log("✅ Pet Searchers app.js BUILD v80 carregado - foto do cartaz preservada sem distorção no JPG e PDF");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -3773,6 +3773,54 @@ function createPosterExportClone(format = "social") {
   };
 }
 
+async function lockPosterPhotoAspectRatioForExport(root) {
+  const img = root?.querySelector("#posterImg");
+  const shell = img?.closest(".ps-photo-shell");
+  if (!img || !shell) return;
+
+  // Aguarda a dimensão natural real da fotografia.
+  if (!img.complete || !img.naturalWidth || !img.naturalHeight) {
+    await new Promise(resolve => {
+      const done = () => resolve();
+      img.addEventListener("load", done, { once: true });
+      img.addEventListener("error", done, { once: true });
+      setTimeout(done, 1800);
+    });
+  }
+
+  const naturalWidth = img.naturalWidth || 1;
+  const naturalHeight = img.naturalHeight || 1;
+  const shellWidth = shell.clientWidth || shell.getBoundingClientRect().width || 1;
+  const shellHeight = shell.clientHeight || shell.getBoundingClientRect().height || 1;
+
+  // Matemática de contain: encosta primeiro na borda mais próxima,
+  // sem recortar, esticar ou alterar a proporção original.
+  const containScale = Math.min(shellWidth / naturalWidth, shellHeight / naturalHeight);
+  const fittedWidth = Math.max(1, naturalWidth * containScale);
+  const fittedHeight = Math.max(1, naturalHeight * containScale);
+
+  shell.style.display = "flex";
+  shell.style.alignItems = "center";
+  shell.style.justifyContent = "center";
+  shell.style.overflow = "hidden";
+  shell.style.background = "#ffffff";
+
+  // Dimensões explícitas são usadas na exportação para que o html2canvas
+  // não precise interpretar object-fit. Isso elimina a distorção no JPG/PDF.
+  img.style.setProperty("width", `${fittedWidth}px`, "important");
+  img.style.setProperty("height", `${fittedHeight}px`, "important");
+  img.style.setProperty("max-width", "none", "important");
+  img.style.setProperty("max-height", "none", "important");
+  img.style.setProperty("min-width", "0", "important");
+  img.style.setProperty("min-height", "0", "important");
+  img.style.setProperty("object-fit", "fill", "important");
+  img.style.setProperty("object-position", "center", "important");
+  img.style.setProperty("flex", "0 0 auto", "important");
+  img.style.setProperty("display", "block", "important");
+  img.style.setProperty("margin", "0", "important");
+  img.style.setProperty("transform", "none", "important");
+}
+
 async function renderPosterExportCanvas(format = "social") {
   if (typeof html2canvas === "undefined") {
     throw new Error("Biblioteca html2canvas não foi carregada.");
@@ -3801,6 +3849,9 @@ async function renderPosterExportCanvas(format = "social") {
         setTimeout(resolve, 1200);
       });
     }));
+
+    // Trava a fotografia nas proporções originais antes da captura.
+    await lockPosterPhotoAspectRatioForExport(exportClone.element);
 
     const isA4 = format === "a4";
     const scale = isA4 ? 2 : 1.35; // social: 800x1000 -> 1080x1350 exatos
