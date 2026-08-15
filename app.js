@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v86 carregado - localização do usuário no mapa com legenda posicionadora");
+console.log("✅ Pet Searchers app.js BUILD v87 carregado - botão Minha localização para centralizar o mapa");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -5587,5 +5587,151 @@ window.getRandomDefaultPhoto = getRandomDefaultPhoto;
     document.addEventListener("DOMContentLoaded", bootV86, { once: true });
   } else {
     bootV86();
+  }
+})();
+
+
+// === v87 BOTÃO DE CENTRALIZAÇÃO DA LOCALIZAÇÃO ===
+(() => {
+  function findResetTextNodeV87() {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const value = String(walker.currentNode.nodeValue || "").replace(/\s+/g, " ").trim().toLowerCase();
+      if (value === "resetar visão") return walker.currentNode;
+    }
+    return null;
+  }
+
+  function findResetControlV87() {
+    const textNode = findResetTextNodeV87();
+    if (!textNode) return null;
+    const el = textNode.parentElement;
+    if (!el) return null;
+    return el.closest("button, a, [role='button']") || el;
+  }
+
+  function centerUserV87() {
+    if (typeof window.positionMapAtUserV86 === "function") {
+      window.positionMapAtUserV86(true);
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      alert("Seu navegador não disponibiliza geolocalização.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(pos => {
+      const lat = Number(pos.coords.latitude);
+      const lng = Number(pos.coords.longitude);
+      if (typeof leafletMap !== "undefined" && leafletMap) {
+        try {
+          leafletMap.setView([lat, lng], 15, { animate: true });
+          setTimeout(() => leafletMap.invalidateSize(), 80);
+        } catch (_) {}
+      }
+    }, err => {
+      alert(err?.code === 1
+        ? "Permita o acesso à localização no navegador para centralizar o mapa."
+        : "Não foi possível obter sua localização neste momento.");
+    }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
+  }
+
+  function installLegendButtonV87() {
+    if (document.getElementById("btnCenterUserLocationV87")) return true;
+    const resetControl = findResetControlV87();
+    if (!resetControl || !resetControl.parentElement) return false;
+
+    const row = resetControl.parentElement;
+    row.style.setProperty("display", "flex", "important");
+    row.style.setProperty("align-items", "center", "important");
+    row.style.setProperty("gap", "10px", "important");
+    row.style.setProperty("flex-wrap", "wrap", "important");
+    row.style.setProperty("overflow", "visible", "important");
+
+    const btn = document.createElement("button");
+    btn.id = "btnCenterUserLocationV87";
+    btn.type = "button";
+    btn.title = "Centralizar e aproximar o mapa na sua localização";
+    btn.innerHTML = '<span style="font-size:14px;line-height:1">📍</span><span>Minha localização</span>';
+    btn.style.cssText = [
+      "display:inline-flex !important",
+      "visibility:visible !important",
+      "opacity:1 !important",
+      "align-items:center !important",
+      "justify-content:center !important",
+      "gap:5px !important",
+      "min-height:30px !important",
+      "height:30px !important",
+      "padding:4px 10px !important",
+      "border:1px solid #bfdbfe !important",
+      "border-radius:8px !important",
+      "background:#eff6ff !important",
+      "color:#075985 !important",
+      "font:inherit !important",
+      "font-size:11px !important",
+      "font-weight:700 !important",
+      "white-space:nowrap !important",
+      "cursor:pointer !important",
+      "position:relative !important",
+      "z-index:999999 !important",
+      "pointer-events:auto !important"
+    ].join(";");
+    btn.addEventListener("click", centerUserV87);
+
+    resetControl.insertAdjacentElement("afterend", btn);
+    console.log("📍 v87: botão 'Minha localização' adicionado ao lado de 'Resetar Visão'.");
+    return true;
+  }
+
+  function installLeafletFallbackV87() {
+    if (document.getElementById("psMapLocateFallbackV87")) return true;
+    if (typeof L === "undefined" || typeof leafletMap === "undefined" || !leafletMap) return false;
+
+    const LocateControl = L.Control.extend({
+      options: { position: "topleft" },
+      onAdd: function() {
+        const div = L.DomUtil.create("div", "leaflet-bar");
+        div.id = "psMapLocateFallbackV87";
+        div.innerHTML = '<a href="#" title="Minha localização" aria-label="Minha localização" style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;font-size:18px;text-decoration:none;background:#fff;color:#075985;">📍</a>';
+        const a = div.querySelector("a");
+        L.DomEvent.disableClickPropagation(div);
+        L.DomEvent.on(a, "click", function(e) {
+          L.DomEvent.preventDefault(e);
+          centerUserV87();
+        });
+        return div;
+      }
+    });
+
+    try {
+      leafletMap.addControl(new LocateControl());
+      console.log("📍 v87: controle de localização também disponível no mapa.");
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function bootV87() {
+    installLegendButtonV87();
+    installLeafletFallbackV87();
+
+    const observer = new MutationObserver(() => {
+      installLegendButtonV87();
+      installLeafletFallbackV87();
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+
+    [100, 300, 700, 1500, 3000].forEach(ms => setTimeout(() => {
+      installLegendButtonV87();
+      installLeafletFallbackV87();
+    }, ms));
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootV87, { once: true });
+  } else {
+    bootV87();
   }
 })();
