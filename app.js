@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v75 carregado - rolagem do formulário preservada e prévia do cartaz ajustada ao mobile");
+console.log("✅ Pet Searchers app.js BUILD v76 carregado - prévia estável e downloads JPG/PDF dedicados");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -2458,13 +2458,20 @@ function ensureMobileResponsiveStyles() {
         transform: none !important;
         width: min(100%, 720px) !important;
         max-width: calc(100vw - 16px) !important;
-        max-height: none !important;
+        max-height: calc(100dvh - max(20px, env(safe-area-inset-top)) - max(20px, env(safe-area-inset-bottom))) !important;
         height: auto !important;
         min-height: 0 !important;
         margin: 0 auto !important;
         border-radius: 18px !important;
         box-sizing: border-box !important;
-        overflow: visible !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+
+      #posterModal > div > * {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
       }
 
       #posterModal #posterArea {
@@ -2832,11 +2839,23 @@ function initModalEvents() {
     petFormElem.addEventListener("submit", handleFormSubmit);
   }
 
-  document.getElementById("btnPrintPoster")?.addEventListener("click", () => {
-    const pet = petsData.find(p => p.id === currentPosterPetId);
-    if (pet) buildUnifiedPoster(pet);
-    setTimeout(() => window.print(), 80);
-  });
+  const btnDownloadPDF = document.getElementById("btnPrintPoster");
+  if (btnDownloadPDF) {
+    btnDownloadPDF.addEventListener("click", downloadPosterPDF);
+
+    // Mantém o ID existente para não exigir alteração do index.html,
+    // mas o botão agora faz download do PDF A4 diretamente.
+    const textNode = Array.from(btnDownloadPDF.childNodes).find(n => n.nodeType === Node.TEXT_NODE);
+    if (textNode) {
+      textNode.nodeValue = textNode.nodeValue
+        .replace(/Imprimir\s*Cartaz\s*A4/gi, "Baixar Cartaz PDF A4")
+        .replace(/Imprimir/gi, "Baixar PDF");
+    } else if ((btnDownloadPDF.textContent || "").match(/Imprimir/i)) {
+      btnDownloadPDF.innerHTML = btnDownloadPDF.innerHTML
+        .replace(/Imprimir\s*Cartaz\s*A4/gi, "Baixar Cartaz PDF A4")
+        .replace(/Imprimir/gi, "Baixar PDF");
+    }
+  }
 
   const btnDownloadJPG = document.getElementById("btnDownloadPosterJPG");
   if (btnDownloadJPG) {
@@ -3554,53 +3573,65 @@ function fitPosterPreviewInModal() {
   const posterModal = document.getElementById("posterModal");
   if (!posterArea || !posterModal) return;
 
+  const modalCard = posterModal.firstElementChild || posterModal;
+
+  // Primeiro restaura medidas conhecidas do cartaz. O zoom será somente visual.
   posterArea.style.zoom = "1";
   posterArea.style.marginLeft = "auto";
   posterArea.style.marginRight = "auto";
 
   requestAnimationFrame(() => {
-    const viewportWidth = window.visualViewport?.width || window.innerWidth || 390;
-    const viewportHeight = window.visualViewport?.height || window.innerHeight || 700;
+    const vv = window.visualViewport;
+    const viewportWidth = vv?.width || window.innerWidth || 390;
+    const viewportHeight = vv?.height || window.innerHeight || 700;
 
-    const modalCard = posterModal.firstElementChild || posterModal;
-
-    // Mede tudo o que aparece antes do cartaz (título, explicação e botões).
-    const posterRect = posterArea.getBoundingClientRect();
     const cardRect = modalCard.getBoundingClientRect();
-    const spaceAbovePoster = Math.max(0, posterRect.top - cardRect.top);
+    const posterRect = posterArea.getBoundingClientRect();
 
-    const horizontalPadding = viewportWidth <= 430 ? 24 : 40;
-    const availableWidth = Math.max(240, Math.min(
-      (modalCard.clientWidth || viewportWidth) - 24,
-      viewportWidth - horizontalPadding
-    ));
+    const sideSafe = viewportWidth <= 430 ? 22 : 36;
+    const availableWidth = Math.max(
+      220,
+      Math.min(
+        viewportWidth - sideSafe,
+        (modalCard.clientWidth || cardRect.width || viewportWidth) - 24
+      )
+    );
 
-    // Reserva também safe-area e pequena margem inferior.
+    // Usa a distância real do topo do cartão até o começo do cartaz.
+    const controlsHeight = Math.max(0, posterRect.top - cardRect.top);
+
+    // Reserva espaço para safe-area e uma margem confortável abaixo.
     const availableHeight = Math.max(
-      260,
-      viewportHeight - spaceAbovePoster - 34
+      240,
+      viewportHeight
+        - Math.max(cardRect.top, 0)
+        - controlsHeight
+        - Math.max(24, vv?.offsetTop || 0)
+        - 24
     );
 
     const scaleByWidth = availableWidth / 794;
     const scaleByHeight = availableHeight / 1123;
-
-    // Em celular, priorizamos caber totalmente na tela.
-    const scale = Math.max(0.22, Math.min(1, scaleByWidth, scaleByHeight));
+    const scale = Math.max(0.18, Math.min(1, scaleByWidth, scaleByHeight));
 
     posterArea.style.zoom = String(scale);
     posterArea.style.marginLeft = "auto";
     posterArea.style.marginRight = "auto";
 
     if (posterArea.parentElement) {
-      posterArea.parentElement.style.overflow = "visible";
+      posterArea.parentElement.style.width = "100%";
+      posterArea.parentElement.style.maxWidth = "100%";
+      posterArea.parentElement.style.overflow = "hidden";
       posterArea.parentElement.style.textAlign = "center";
       posterArea.parentElement.style.boxSizing = "border-box";
     }
 
-    // O topo do pop-up deve permanecer acessível após o cálculo.
+    // Mantém sempre o cabeçalho do pop-up acessível.
     try {
+      modalCard.scrollTo({ top: 0, left: 0, behavior: "auto" });
       posterModal.scrollTo({ top: 0, left: 0, behavior: "auto" });
     } catch (_) {
+      modalCard.scrollTop = 0;
       posterModal.scrollTop = 0;
     }
   });
@@ -3632,54 +3663,223 @@ window.addEventListener("resize", () => {
   }
 });
 
-async function downloadPosterJPG() {
+
+function sanitizePosterFileName(name) {
+  return String(name || "pet")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "") || "pet";
+}
+
+function getCurrentPosterFileBase() {
+  const pet = petsData.find(p => p.id === currentPosterPetId);
+  const petName = pet?.name || document.getElementById("posterPetName")?.textContent || "pet";
+  return `cartaz_procura_se_${sanitizePosterFileName(petName)}`;
+}
+
+function createPosterExportClone() {
   const posterArea = document.getElementById("posterArea");
-  const btnDownload = document.getElementById("btnDownloadPosterJPG");
-  const petNameElem = document.getElementById("posterPetName");
-  const petName = (petNameElem ? petNameElem.textContent.trim() : "pet").toLowerCase().replace(/\s+/g, "_");
+  if (!posterArea) return null;
 
-  if (!posterArea) return;
+  // Exportamos uma cópia fora da tela. Assim a pré-visualização do usuário
+  // permanece enquadrada e não "explode" para 794x1123 ao tocar em Download.
+  const holder = document.createElement("div");
+  holder.setAttribute("aria-hidden", "true");
+  holder.style.position = "fixed";
+  holder.style.left = "-10000px";
+  holder.style.top = "0";
+  holder.style.width = "794px";
+  holder.style.height = "1123px";
+  holder.style.overflow = "hidden";
+  holder.style.pointerEvents = "none";
+  holder.style.opacity = "0";
+  holder.style.zIndex = "-1";
+  holder.style.background = "#ffffff";
 
-  const posterPet = petsData.find(p => p.id === currentPosterPetId);
-  if (posterPet) buildUnifiedPoster(posterPet);
+  const clone = posterArea.cloneNode(true);
+  clone.removeAttribute("style");
+  clone.style.zoom = "1";
+  clone.style.width = "794px";
+  clone.style.height = "1123px";
+  clone.style.maxWidth = "794px";
+  clone.style.minWidth = "794px";
+  clone.style.minHeight = "1123px";
+  clone.style.margin = "0";
+  clone.style.transform = "none";
 
-  // A prévia pode estar reduzida para caber no modal.
-  // O JPG deve sempre ser capturado no tamanho A4 lógico completo.
-  resetPosterPreviewScale();
+  holder.appendChild(clone);
+  document.body.appendChild(holder);
 
-  const originalContent = btnDownload ? btnDownload.innerHTML : "";
-  if (btnDownload) {
-    btnDownload.disabled = true;
-    btnDownload.innerHTML = `<span class="material-symbols-outlined text-base animate-spin">progress_activity</span> Gerando JPG...`;
+  return {
+    element: clone,
+    cleanup: () => holder.remove()
+  };
+}
+
+async function renderPosterExportCanvas() {
+  if (typeof html2canvas === "undefined") {
+    throw new Error("Biblioteca html2canvas não foi carregada.");
   }
 
+  const pet = petsData.find(p => p.id === currentPosterPetId);
+  if (pet) buildUnifiedPoster(pet);
+
+  const exportClone = createPosterExportClone();
+  if (!exportClone) throw new Error("Área do cartaz não encontrada.");
+
   try {
-    if (typeof html2canvas === "undefined") {
-      throw new Error("Biblioteca html2canvas não foi carregada.");
-    }
-    const canvas = await html2canvas(posterArea, {
+    // Espera imagens/fontes do clone estabilizarem.
+    const images = Array.from(exportClone.element.querySelectorAll("img"));
+    await Promise.all(images.map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise(resolve => {
+        img.addEventListener("load", resolve, { once: true });
+        img.addEventListener("error", resolve, { once: true });
+        setTimeout(resolve, 1200);
+      });
+    }));
+
+    return await html2canvas(exportClone.element, {
       scale: 2,
       useCORS: true,
       allowTaint: true,
       backgroundColor: "#ffffff",
-      logging: false
+      logging: false,
+      width: 794,
+      height: 1123,
+      windowWidth: 794,
+      windowHeight: 1123
+    });
+  } finally {
+    exportClone.cleanup();
+  }
+}
+
+function triggerBlobDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  // Safari precisa que a URL continue válida por alguns segundos
+  // enquanto exibe a confirmação nativa de download.
+  setTimeout(() => URL.revokeObjectURL(url), 15000);
+}
+
+async function ensureJsPdfLoaded() {
+  if (window.jspdf?.jsPDF) return window.jspdf.jsPDF;
+
+  const existing = document.querySelector('script[data-pet-searchers-jspdf="1"]');
+  if (existing) {
+    await new Promise((resolve, reject) => {
+      if (window.jspdf?.jsPDF) return resolve();
+      existing.addEventListener("load", resolve, { once: true });
+      existing.addEventListener("error", reject, { once: true });
+      setTimeout(() => window.jspdf?.jsPDF ? resolve() : reject(new Error("Timeout jsPDF")), 8000);
+    });
+    return window.jspdf?.jsPDF;
+  }
+
+  await new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js";
+    script.async = true;
+    script.dataset.petSearchersJspdf = "1";
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+    setTimeout(() => window.jspdf?.jsPDF ? resolve() : reject(new Error("Timeout jsPDF")), 8000);
+  });
+
+  if (!window.jspdf?.jsPDF) {
+    throw new Error("jsPDF não foi carregado.");
+  }
+  return window.jspdf.jsPDF;
+}
+
+async function downloadPosterPDF() {
+  const btn = document.getElementById("btnPrintPoster");
+  const originalContent = btn ? btn.innerHTML : "";
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-symbols-outlined text-base animate-spin">progress_activity</span> Gerando PDF...';
+  }
+
+  try {
+    const canvas = await renderPosterExportCanvas();
+    const jsPDF = await ensureJsPdfLoaded();
+
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+      compress: true
     });
 
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
-    const link = document.createElement("a");
-    link.download = `cartaz_procura_se_${petName}.jpg`;
-    link.href = dataUrl;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    const imgData = canvas.toDataURL("image/jpeg", 0.94);
+    pdf.addImage(imgData, "JPEG", 0, 0, 210, 297, undefined, "FAST");
+
+    const blob = pdf.output("blob");
+    triggerBlobDownload(blob, `${getCurrentPosterFileBase()}.pdf`);
+  } catch (err) {
+    console.error("Erro ao gerar PDF do cartaz:", err);
+
+    // Fallback: mantém a opção de impressão caso a biblioteca externa
+    // não possa ser carregada no navegador do usuário.
+    const usePrint = confirm("Não foi possível gerar o PDF diretamente. Deseja abrir a opção de impressão para salvar como PDF?");
+    if (usePrint) {
+      const pet = petsData.find(p => p.id === currentPosterPetId);
+      if (pet) buildUnifiedPoster(pet);
+      setTimeout(() => window.print(), 60);
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalContent;
+    }
+    setTimeout(fitPosterPreviewInModal, 30);
+  }
+}
+
+async function downloadPosterJPG() {
+  const btnDownload = document.getElementById("btnDownloadPosterJPG");
+  const originalContent = btnDownload ? btnDownload.innerHTML : "";
+
+  if (btnDownload) {
+    btnDownload.disabled = true;
+    btnDownload.innerHTML = '<span class="material-symbols-outlined text-base animate-spin">progress_activity</span> Gerando JPG...';
+  }
+
+  try {
+    const canvas = await renderPosterExportCanvas();
+
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        result => result ? resolve(result) : reject(new Error("Falha ao criar JPG.")),
+        "image/jpeg",
+        0.94
+      );
+    });
+
+    triggerBlobDownload(blob, `${getCurrentPosterFileBase()}.jpg`);
   } catch (err) {
     console.error("Erro ao gerar JPG do cartaz:", err);
-    alert("⚠️ Não foi possível gerar a imagem em JPG automaticamente. Utilize a opção de PDF A4 para imprimir ou salvar o mesmo cartaz.");
+    alert("⚠️ Não foi possível gerar a imagem JPG automaticamente.");
   } finally {
     if (btnDownload) {
       btnDownload.disabled = false;
       btnDownload.innerHTML = originalContent;
     }
+
+    // A prévia nunca é ampliada durante o download, mas recalculamos
+    // por segurança em casos de mudança de viewport no Safari.
     setTimeout(fitPosterPreviewInModal, 30);
   }
 }
@@ -4191,4 +4391,5 @@ window.adminRenewPet = adminRenewPet;
 window.adminEditPet = adminEditPet;
 window.adminDeletePet = adminDeletePet;
 window.downloadPosterJPG = downloadPosterJPG;
+window.downloadPosterPDF = downloadPosterPDF;
 window.getRandomDefaultPhoto = getRandomDefaultPhoto;
