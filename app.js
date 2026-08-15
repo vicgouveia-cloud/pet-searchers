@@ -20,6 +20,12 @@ const firebaseConfig = {
 let db = null;
 let firestoreSDK = null;
 
+// Base de dados inicial opcional.
+// A versão anterior referenciava INITIAL_PETS sem declarar a variável,
+// causando "ReferenceError: INITIAL_PETS is not defined" durante a inicialização.
+// Os dados reais continuam vindo do localStorage/Firebase quando disponíveis.
+const INITIAL_PETS = [];
+
 async function initFirebaseConnection() {
   try {
     const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
