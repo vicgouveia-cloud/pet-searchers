@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v74 carregado - cabeçalho mobile com safe-area e título sem corte");
+console.log("✅ Pet Searchers app.js BUILD v75 carregado - rolagem do formulário preservada e prévia do cartaz ajustada ao mobile");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -1812,7 +1812,7 @@ window.addEventListener("orientationchange", () => {
     enhanceMapLayout();
     const reportModal = document.getElementById("reportModal");
     if (reportModal && !reportModal.classList.contains("hidden")) {
-      prepareReportModalForViewport();
+      prepareReportModalForViewport({ restoreScroll: false });
     }
   }, 180);
 });
@@ -1823,9 +1823,11 @@ window.addEventListener("resize", () => {
 
 if (window.visualViewport) {
   window.visualViewport.addEventListener("resize", () => {
+    // O teclado do iOS altera visualViewport várias vezes.
+    // Preservamos o scroll atual e apenas mantemos o modal dentro da viewport.
     const reportModal = document.getElementById("reportModal");
     if (reportModal && !reportModal.classList.contains("hidden")) {
-      prepareReportModalForViewport();
+      ensureMobileResponsiveStyles();
     }
   });
 }
@@ -2422,6 +2424,53 @@ function ensureMobileResponsiveStyles() {
         resize: vertical;
       }
 
+      /* PRÉ-VISUALIZAÇÃO DO CARTAZ
+         O pop-up inteiro fica dentro da viewport real do celular, incluindo
+         safe-area, título, botões e o início do cartaz. */
+      #posterModal {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100vw !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        display: flex !important;
+        align-items: flex-start !important;
+        justify-content: center !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior: contain !important;
+        box-sizing: border-box !important;
+        padding:
+          max(10px, env(safe-area-inset-top))
+          8px
+          max(12px, env(safe-area-inset-bottom)) !important;
+      }
+
+      #posterModal.hidden {
+        display: none !important;
+      }
+
+      #posterModal > div {
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        transform: none !important;
+        width: min(100%, 720px) !important;
+        max-width: calc(100vw - 16px) !important;
+        max-height: none !important;
+        height: auto !important;
+        min-height: 0 !important;
+        margin: 0 auto !important;
+        border-radius: 18px !important;
+        box-sizing: border-box !important;
+        overflow: visible !important;
+      }
+
+      #posterModal #posterArea {
+        transform-origin: top center !important;
+      }
+
       #photoPlaceholder,
       #photoPreviewContainer {
         width: 100% !important;
@@ -2541,6 +2590,17 @@ function ensureMobileResponsiveStyles() {
         border-radius: 16px !important;
       }
 
+      #posterModal {
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+        padding-top: max(12px, env(safe-area-inset-top)) !important;
+      }
+
+      #posterModal > div {
+        max-width: calc(100vw - 12px) !important;
+        border-radius: 16px !important;
+      }
+
       #map {
         border-radius: 14px !important;
       }
@@ -2621,37 +2681,67 @@ function optimizeMobileTopHeader() {
   }
 }
 
-function prepareReportModalForViewport() {
+let reportModalScrollBound = false;
+const REPORT_MODAL_SCROLL_KEY = "pet_searchers_report_modal_scroll_v1";
+
+function getSavedReportModalScroll() {
+  try {
+    const value = Number(sessionStorage.getItem(REPORT_MODAL_SCROLL_KEY) || "0");
+    return Number.isFinite(value) && value >= 0 ? value : 0;
+  } catch (_) {
+    return 0;
+  }
+}
+
+function saveReportModalScroll() {
+  const reportModal = document.getElementById("reportModal");
+  if (!reportModal) return;
+
+  try {
+    sessionStorage.setItem(REPORT_MODAL_SCROLL_KEY, String(Math.max(0, reportModal.scrollTop || 0)));
+  } catch (_) {}
+}
+
+function bindReportModalScrollPersistence() {
+  const reportModal = document.getElementById("reportModal");
+  if (!reportModal || reportModalScrollBound) return;
+
+  reportModalScrollBound = true;
+
+  // Salva continuamente a posição real escolhida pelo usuário.
+  reportModal.addEventListener("scroll", () => {
+    saveReportModalScroll();
+  }, { passive: true });
+
+  // Mantém a posição mesmo ao sair da página e voltar pelo histórico do navegador.
+  window.addEventListener("pagehide", saveReportModalScroll);
+  window.addEventListener("beforeunload", saveReportModalScroll);
+}
+
+function prepareReportModalForViewport(options = {}) {
   const reportModal = document.getElementById("reportModal");
   if (!reportModal) return;
 
   ensureMobileResponsiveStyles();
+  bindReportModalScrollPersistence();
 
-  // O modal pode ter um wrapper interno com overflow próprio.
-  // Garantimos que todos os possíveis containers voltem ao topo.
-  try {
-    reportModal.scrollTop = 0;
-    reportModal.scrollTo({ top: 0, left: 0, behavior: "auto" });
-  } catch (_) {
-    reportModal.scrollTop = 0;
-  }
+  const restoreScroll = options.restoreScroll !== false;
 
-  const form = document.getElementById("petForm");
-  let node = form ? form.parentElement : null;
-  let depth = 0;
+  // Importante no iOS:
+  // NÃO reposicionamos o formulário quando o teclado abre/fecha ou quando
+  // o usuário altera um campo. Só restauramos a posição ao abrir o modal.
+  if (restoreScroll) {
+    const savedTop = getSavedReportModalScroll();
 
-  while (node && node !== reportModal && depth < 5) {
-    try {
-      if (node.scrollHeight > node.clientHeight) {
-        node.scrollTop = 0;
+    requestAnimationFrame(() => {
+      try {
+        reportModal.scrollTo({ top: savedTop, left: 0, behavior: "auto" });
+      } catch (_) {
+        reportModal.scrollTop = savedTop;
       }
-    } catch (_) {}
-    node = node.parentElement;
-    depth += 1;
+    });
   }
 
-  // Recalcula o Leaflet depois que modal fecha/abre em Safari para não
-  // deixar medidas antigas influenciando o layout da página.
   setTimeout(() => {
     try { leafletMap?.invalidateSize(); } catch (_) {}
   }, 120);
@@ -2682,6 +2772,7 @@ function initModalEvents() {
 
   document.querySelectorAll(".btnCloseModal").forEach(btn => {
     btn.addEventListener("click", () => {
+      saveReportModalScroll();
       reportModal?.classList.add("hidden");
       setTimeout(() => {
         enhanceMapLayout();
@@ -2800,8 +2891,7 @@ function openReportModal(type, editPetId = null) {
 
   // No mobile, o formulário é alinhado pelo topo e todo o conteúdo
   // fica acessível por rolagem, incluindo o campo da foto.
-  prepareReportModalForViewport();
-  setTimeout(prepareReportModalForViewport, 80);
+  prepareReportModalForViewport({ restoreScroll: true });
 }
 
 function setReportFormType(type) {
@@ -2930,6 +3020,7 @@ async function handleFormSubmit(e) {
       document.getElementById("photoPlaceholder").classList.remove("hidden");
       document.getElementById("photoPreviewContainer").classList.add("hidden");
       document.getElementById("imgPreview").src = "";
+      saveReportModalScroll();
       document.getElementById("reportModal").classList.add("hidden");
     } catch (uiErr) {
       console.warn("Erro ao resetar modal:", uiErr);
@@ -3463,52 +3554,54 @@ function fitPosterPreviewInModal() {
   const posterModal = document.getElementById("posterModal");
   if (!posterArea || !posterModal) return;
 
-  // Em impressão/JPG o cartaz permanece em 794x1123.
-  // Aqui reduzimos SOMENTE a pré-visualização para caber completamente no pop-up.
   posterArea.style.zoom = "1";
+  posterArea.style.marginLeft = "auto";
+  posterArea.style.marginRight = "auto";
 
   requestAnimationFrame(() => {
-    const modalRect = posterModal.getBoundingClientRect();
+    const viewportWidth = window.visualViewport?.width || window.innerWidth || 390;
+    const viewportHeight = window.visualViewport?.height || window.innerHeight || 700;
 
-    // Procura a área interna que realmente contém o cartaz.
-    let host = posterArea.parentElement;
-    while (
-      host &&
-      host !== posterModal &&
-      host.clientWidth >= posterModal.clientWidth - 4
-    ) {
-      host = host.parentElement;
-    }
-    if (!host || host === document.body) host = posterArea.parentElement || posterModal;
+    const modalCard = posterModal.firstElementChild || posterModal;
 
-    const hostWidth = Math.max(
+    // Mede tudo o que aparece antes do cartaz (título, explicação e botões).
+    const posterRect = posterArea.getBoundingClientRect();
+    const cardRect = modalCard.getBoundingClientRect();
+    const spaceAbovePoster = Math.max(0, posterRect.top - cardRect.top);
+
+    const horizontalPadding = viewportWidth <= 430 ? 24 : 40;
+    const availableWidth = Math.max(240, Math.min(
+      (modalCard.clientWidth || viewportWidth) - 24,
+      viewportWidth - horizontalPadding
+    ));
+
+    // Reserva também safe-area e pequena margem inferior.
+    const availableHeight = Math.max(
       260,
-      Math.min(
-        (host.clientWidth || modalRect.width) - 28,
-        window.innerWidth - 52
-      )
+      viewportHeight - spaceAbovePoster - 34
     );
 
-    // Reserva espaço para cabeçalho, botões e margens do modal.
-    const hostHeight = Math.max(
-      320,
-      Math.min(
-        window.innerHeight * 0.68,
-        Math.max(320, modalRect.height - 150)
-      )
-    );
+    const scaleByWidth = availableWidth / 794;
+    const scaleByHeight = availableHeight / 1123;
 
-    const scaleByWidth = hostWidth / 794;
-    const scaleByHeight = hostHeight / 1123;
-    const scale = Math.max(0.28, Math.min(1, scaleByWidth, scaleByHeight));
+    // Em celular, priorizamos caber totalmente na tela.
+    const scale = Math.max(0.22, Math.min(1, scaleByWidth, scaleByHeight));
 
     posterArea.style.zoom = String(scale);
     posterArea.style.marginLeft = "auto";
     posterArea.style.marginRight = "auto";
 
     if (posterArea.parentElement) {
-      posterArea.parentElement.style.overflow = "auto";
+      posterArea.parentElement.style.overflow = "visible";
       posterArea.parentElement.style.textAlign = "center";
+      posterArea.parentElement.style.boxSizing = "border-box";
+    }
+
+    // O topo do pop-up deve permanecer acessível após o cálculo.
+    try {
+      posterModal.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    } catch (_) {
+      posterModal.scrollTop = 0;
     }
   });
 }
@@ -3523,8 +3616,12 @@ function generatePosterModal(petId) {
   const posterModal = document.getElementById("posterModal");
   if (posterModal) {
     posterModal.classList.remove("hidden");
-    posterModal.scrollTop = 0;
-    setTimeout(fitPosterPreviewInModal, 60);
+    try {
+      posterModal.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    } catch (_) {
+      posterModal.scrollTop = 0;
+    }
+    setTimeout(fitPosterPreviewInModal, 90);
   }
 }
 
