@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v70 carregado - gerador unificado de cartaz JPG e PDF A4");
+console.log("✅ Pet Searchers app.js BUILD v71 carregado - prévia ajustada e colunas do cartaz harmonizadas");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -2615,20 +2615,20 @@ function ensureUnifiedPosterStyles() {
     }
 
     #posterArea .ps-poster-center {
-      width: 92%;
+      width: 94%;
       display: grid;
-      grid-template-columns: minmax(0, 62%) minmax(0, 38%);
-      gap: 22px;
+      grid-template-columns: minmax(0, 60%) minmax(0, 40%);
+      gap: 34px;
       align-items: center;
       transform: translateY(18px);
       box-sizing: border-box;
     }
 
     #posterArea .ps-photo-shell {
-      width: 115%;
-      max-width: 115%;
-      justify-self: end;
-      margin-right: -10%;
+      width: 100%;
+      max-width: 100%;
+      justify-self: stretch;
+      margin-right: 0;
       aspect-ratio: 4 / 5;
       border: 2px solid #d1d5db;
       border-radius: 14px;
@@ -2656,7 +2656,8 @@ function ensureUnifiedPosterStyles() {
       min-width: 0;
       width: 100%;
       box-sizing: border-box;
-      padding-left: 8px;
+      padding-left: 14px;
+      transform: translateX(4px);
     }
 
     #posterArea .ps-pet-name {
@@ -2941,6 +2942,70 @@ function applyPosterLayoutAdjustments() {
   if (pet) buildUnifiedPoster(pet);
 }
 
+
+function resetPosterPreviewScale() {
+  const posterArea = document.getElementById("posterArea");
+  if (!posterArea) return;
+  posterArea.style.zoom = "1";
+  posterArea.style.marginLeft = "auto";
+  posterArea.style.marginRight = "auto";
+}
+
+function fitPosterPreviewInModal() {
+  const posterArea = document.getElementById("posterArea");
+  const posterModal = document.getElementById("posterModal");
+  if (!posterArea || !posterModal) return;
+
+  // Em impressão/JPG o cartaz permanece em 794x1123.
+  // Aqui reduzimos SOMENTE a pré-visualização para caber completamente no pop-up.
+  posterArea.style.zoom = "1";
+
+  requestAnimationFrame(() => {
+    const modalRect = posterModal.getBoundingClientRect();
+
+    // Procura a área interna que realmente contém o cartaz.
+    let host = posterArea.parentElement;
+    while (
+      host &&
+      host !== posterModal &&
+      host.clientWidth >= posterModal.clientWidth - 4
+    ) {
+      host = host.parentElement;
+    }
+    if (!host || host === document.body) host = posterArea.parentElement || posterModal;
+
+    const hostWidth = Math.max(
+      260,
+      Math.min(
+        (host.clientWidth || modalRect.width) - 28,
+        window.innerWidth - 52
+      )
+    );
+
+    // Reserva espaço para cabeçalho, botões e margens do modal.
+    const hostHeight = Math.max(
+      320,
+      Math.min(
+        window.innerHeight * 0.68,
+        Math.max(320, modalRect.height - 150)
+      )
+    );
+
+    const scaleByWidth = hostWidth / 794;
+    const scaleByHeight = hostHeight / 1123;
+    const scale = Math.max(0.28, Math.min(1, scaleByWidth, scaleByHeight));
+
+    posterArea.style.zoom = String(scale);
+    posterArea.style.marginLeft = "auto";
+    posterArea.style.marginRight = "auto";
+
+    if (posterArea.parentElement) {
+      posterArea.parentElement.style.overflow = "auto";
+      posterArea.parentElement.style.textAlign = "center";
+    }
+  });
+}
+
 function generatePosterModal(petId) {
   const pet = petsData.find(p => p.id === petId);
   if (!pet) return;
@@ -2952,8 +3017,16 @@ function generatePosterModal(petId) {
   if (posterModal) {
     posterModal.classList.remove("hidden");
     posterModal.scrollTop = 0;
+    setTimeout(fitPosterPreviewInModal, 60);
   }
 }
+
+window.addEventListener("resize", () => {
+  const posterModal = document.getElementById("posterModal");
+  if (posterModal && !posterModal.classList.contains("hidden")) {
+    fitPosterPreviewInModal();
+  }
+});
 
 async function downloadPosterJPG() {
   const posterArea = document.getElementById("posterArea");
@@ -2965,6 +3038,10 @@ async function downloadPosterJPG() {
 
   const posterPet = petsData.find(p => p.id === currentPosterPetId);
   if (posterPet) buildUnifiedPoster(posterPet);
+
+  // A prévia pode estar reduzida para caber no modal.
+  // O JPG deve sempre ser capturado no tamanho A4 lógico completo.
+  resetPosterPreviewScale();
 
   const originalContent = btnDownload ? btnDownload.innerHTML : "";
   if (btnDownload) {
@@ -2999,12 +3076,18 @@ async function downloadPosterJPG() {
       btnDownload.disabled = false;
       btnDownload.innerHTML = originalContent;
     }
+    setTimeout(fitPosterPreviewInModal, 30);
   }
 }
 
 window.addEventListener("beforeprint", () => {
   const pet = petsData.find(p => p.id === currentPosterPetId);
   if (pet) buildUnifiedPoster(pet);
+  resetPosterPreviewScale();
+});
+
+window.addEventListener("afterprint", () => {
+  setTimeout(fitPosterPreviewInModal, 30);
 });
 
 // --- DETAIL MODAL ---
