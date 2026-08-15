@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v69 carregado - cartaz centralizado, cabeçalho refinado e rodapé alinhado");
+console.log("✅ Pet Searchers app.js BUILD v70 carregado - gerador unificado de cartaz JPG e PDF A4");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -440,6 +440,7 @@ let currentActiveFilters = {
 };
 
 let currentUserPosition = null;
+let currentPosterPetId = null;
 
 // Admin State
 let isAdminAuthenticated = false;
@@ -2238,7 +2239,9 @@ function initModalEvents() {
   }
 
   document.getElementById("btnPrintPoster")?.addEventListener("click", () => {
-    window.print();
+    const pet = petsData.find(p => p.id === currentPosterPetId);
+    if (pet) buildUnifiedPoster(pet);
+    setTimeout(() => window.print(), 80);
   });
 
   const btnDownloadJPG = document.getElementById("btnDownloadPosterJPG");
@@ -2531,222 +2534,425 @@ function findNearestAncestorContaining(parentStart, requiredElement, stopAt) {
   return null;
 }
 
-function applyPosterLayoutAdjustments() {
-  const posterArea = document.getElementById("posterArea");
-  const posterImg = document.getElementById("posterImg");
-  if (!posterArea || !posterImg) return;
 
-  const frame = posterImg.parentElement;
-
-  // Moldura fixa em 4:5.
-  // A imagem NÃO é cortada nem deformada: permanece inteira dentro da moldura.
-  if (frame) {
-    frame.style.aspectRatio = "4 / 5";
-    frame.style.width = "100%";
-    frame.style.height = "auto";
-    frame.style.overflow = "hidden";
-    frame.style.display = "flex";
-    frame.style.alignItems = "center";
-    frame.style.justifyContent = "center";
-    frame.style.background = "#ffffff";
-    frame.style.boxSizing = "border-box";
-  }
-
-  // Preserva rigorosamente a proporção original da fotografia.
-  posterImg.style.objectFit = "contain";
-  posterImg.style.objectPosition = "center";
-  posterImg.style.width = "100%";
-  posterImg.style.height = "100%";
-  posterImg.style.maxWidth = "100%";
-  posterImg.style.maxHeight = "100%";
-  posterImg.style.background = "#ffffff";
-  posterImg.style.display = "block";
-
-  // Identifica a coluna de informações.
-  const infoElements = [
-    document.getElementById("posterAge"),
-    document.getElementById("posterColor"),
-    document.getElementById("posterBreed"),
-    document.getElementById("posterMarkings")
+function getPosterLogoSource() {
+  const candidates = [
+    document.querySelector("#posterArea img[src*='logo' i]"),
+    document.querySelector("img[alt*='Pet Searchers' i]"),
+    document.querySelector("img[src*='pet-searchers' i]"),
+    document.querySelector("header img"),
+    document.querySelector("nav img")
   ].filter(Boolean);
 
-  let infoPanel = getCommonAncestor(infoElements);
-
-  if (infoPanel === posterArea && infoElements[0]) {
-    infoPanel = infoElements[0].parentElement?.parentElement || infoElements[0].parentElement;
-  }
-
-  // Encontra o contêiner comum entre a moldura da foto e a coluna de texto.
-  // Define aproximadamente 65,5% para foto e 34,5% para texto.
-  // Isso deixa a moldura pelo menos 20% mais larga e a área textual
-  // cerca de 31% mais estreita em relação a uma divisão 50/50.
-  if (frame && infoPanel && infoPanel !== posterArea) {
-    let columnsContainer = frame.parentElement;
-
-    while (
-      columnsContainer &&
-      columnsContainer !== posterArea &&
-      !columnsContainer.contains(infoPanel)
-    ) {
-      columnsContainer = columnsContainer.parentElement;
-    }
-
-    if (columnsContainer && columnsContainer !== posterArea) {
-      columnsContainer.style.display = "grid";
-      columnsContainer.style.gridTemplateColumns = "minmax(0, 65.5%) minmax(0, 34.5%)";
-      columnsContainer.style.columnGap = "14px";
-      columnsContainer.style.alignItems = "start";
-      columnsContainer.style.width = "100%";
-      columnsContainer.style.boxSizing = "border-box";
-
-      // Garante que a foto ocupe a primeira coluna e os dados a segunda.
-      let frameColumn = frame;
-      while (frameColumn.parentElement && frameColumn.parentElement !== columnsContainer) {
-        frameColumn = frameColumn.parentElement;
-      }
-
-      let infoColumn = infoPanel;
-      while (infoColumn.parentElement && infoColumn.parentElement !== columnsContainer) {
-        infoColumn = infoColumn.parentElement;
-      }
-
-      if (frameColumn && frameColumn !== columnsContainer) {
-        frameColumn.style.width = "100%";
-        frameColumn.style.maxWidth = "100%";
-        frameColumn.style.minWidth = "0";
-        frameColumn.style.gridColumn = "1";
-      }
-
-      if (infoColumn && infoColumn !== columnsContainer) {
-        infoColumn.style.width = "100%";
-        infoColumn.style.maxWidth = "100%";
-        infoColumn.style.minWidth = "0";
-        infoColumn.style.gridColumn = "2";
-      }
-    }
-
-    // Não restringe mais a coluna textual internamente a 72,5%;
-    // a redução agora é feita corretamente pela divisão das duas colunas.
-    infoPanel.style.width = "100%";
-    infoPanel.style.maxWidth = "100%";
-    infoPanel.style.boxSizing = "border-box";
-  }
-
-  // Centraliza visualmente o conjunto "foto + coluna de dados" no miolo da página.
-  // Mantém a proporção 65,5 / 34,5, mas evita que o conteúdo fique colado às laterais.
-  if (frame && infoPanel && infoPanel !== posterArea) {
-    let centeredColumns = frame.parentElement;
-
-    while (
-      centeredColumns &&
-      centeredColumns !== posterArea &&
-      !centeredColumns.contains(infoPanel)
-    ) {
-      centeredColumns = centeredColumns.parentElement;
-    }
-
-    if (centeredColumns && centeredColumns !== posterArea) {
-      centeredColumns.style.marginLeft = "auto";
-      centeredColumns.style.marginRight = "auto";
-      centeredColumns.style.marginTop = "18px";
-      centeredColumns.style.marginBottom = "18px";
-      centeredColumns.style.width = "92%";
-      centeredColumns.style.maxWidth = "92%";
-      centeredColumns.style.justifySelf = "center";
-      centeredColumns.style.alignSelf = "center";
-    }
-  }
-
-  // Cabeçalho: "PROCURA-SE" levemente mais alto e com melhor respiro
-  // em relação à linha "DESDE ...".
-  const posterDateSubtext = document.getElementById("posterDateSubtext");
-  const procuraSeEl =
-    findPosterElementByText(posterArea, "PROCURA-SE") ||
-    findPosterElementByText(posterArea, "Procura-se");
-
-  if (procuraSeEl) {
-    procuraSeEl.style.transform = "translateY(-7px)";
-    procuraSeEl.style.lineHeight = "1";
-    procuraSeEl.style.marginBottom = "8px";
-  }
-
-  if (posterDateSubtext) {
-    posterDateSubtext.style.marginTop = "7px";
-    posterDateSubtext.style.lineHeight = "1.45";
-    posterDateSubtext.style.display = "block";
-  }
-
-  if (procuraSeEl && posterDateSubtext) {
-    const headerBlock = getCommonAncestor([procuraSeEl, posterDateSubtext]);
-    if (headerBlock && headerBlock !== posterArea) {
-      headerBlock.style.paddingTop = "14px";
-      headerBlock.style.paddingBottom = "14px";
-      headerBlock.style.boxSizing = "border-box";
-    }
-  }
-
-  // Rodapé: alinha verticalmente o logo Pet Searchers com o número de telefone.
-  const phoneEl = document.getElementById("posterContactPhone");
-  if (phoneEl) {
-    let footerCandidate = phoneEl.parentElement;
-
-    while (
-      footerCandidate &&
-      footerCandidate !== posterArea &&
-      !footerCandidate.querySelector("img")
-    ) {
-      footerCandidate = footerCandidate.parentElement;
-    }
-
-    if (footerCandidate && footerCandidate !== posterArea) {
-      footerCandidate.style.display = "flex";
-      footerCandidate.style.alignItems = "center";
-      footerCandidate.style.justifyContent = "space-between";
-      footerCandidate.style.gap = "12px";
-      footerCandidate.style.boxSizing = "border-box";
-
-      const footerLogo = footerCandidate.querySelector("img");
-      if (footerLogo) {
-        footerLogo.style.alignSelf = "center";
-        footerLogo.style.marginTop = "0";
-        footerLogo.style.marginBottom = "0";
-        footerLogo.style.verticalAlign = "middle";
-      }
-
-      phoneEl.style.alignSelf = "center";
-      phoneEl.style.marginTop = "0";
-      phoneEl.style.marginBottom = "0";
-      phoneEl.style.lineHeight = "1.2";
-    }
-  }
-
-  replacePosterLabelText(posterArea, "Observação de Saúde", "Observações");
-  replacePosterLabelText(posterArea, "Observação de saúde", "Observações");
+  return candidates.length ? candidates[0].src : "";
 }
 
-// --- POSTER GENERATOR MODAL ---
+function ensureUnifiedPosterStyles() {
+  if (document.getElementById("petSearchersUnifiedPosterStyles")) return;
+
+  const style = document.createElement("style");
+  style.id = "petSearchersUnifiedPosterStyles";
+  style.textContent = `
+    #posterArea.ps-a4-poster {
+      width: 794px !important;
+      height: 1123px !important;
+      max-width: 794px !important;
+      min-width: 794px !important;
+      min-height: 1123px !important;
+      box-sizing: border-box !important;
+      margin: 0 auto !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      background: #ffffff !important;
+      color: #111827 !important;
+      font-family: Arial, Helvetica, sans-serif !important;
+      display: grid !important;
+      grid-template-rows: 18% 68% 14% !important;
+      border: 0 !important;
+      box-shadow: none !important;
+    }
+
+    #posterArea .ps-poster-header {
+      background: #ef1717;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      box-sizing: border-box;
+      padding: 19px 28px 22px;
+    }
+
+    #posterArea .ps-poster-title {
+      font-size: 58px;
+      line-height: .94;
+      font-weight: 900;
+      letter-spacing: .5px;
+      margin: -5px 0 18px;
+      text-transform: uppercase;
+    }
+
+    #posterArea .ps-poster-date {
+      min-width: 430px;
+      padding: 10px 28px;
+      border-top: 2px solid rgba(255,255,255,.92);
+      border-bottom: 2px solid rgba(255,255,255,.92);
+      font-size: 18px;
+      line-height: 1.3;
+      font-weight: 800;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+    }
+
+    #posterArea .ps-poster-body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 34px 32px 24px;
+      box-sizing: border-box;
+      background: #ffffff;
+    }
+
+    #posterArea .ps-poster-center {
+      width: 92%;
+      display: grid;
+      grid-template-columns: minmax(0, 62%) minmax(0, 38%);
+      gap: 22px;
+      align-items: center;
+      transform: translateY(18px);
+      box-sizing: border-box;
+    }
+
+    #posterArea .ps-photo-shell {
+      width: 115%;
+      max-width: 115%;
+      justify-self: end;
+      margin-right: -10%;
+      aspect-ratio: 4 / 5;
+      border: 2px solid #d1d5db;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #ffffff;
+      box-shadow: 0 2px 7px rgba(0,0,0,.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+
+    #posterArea .ps-photo-shell img {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      object-fit: contain !important;
+      object-position: center !important;
+      background: #ffffff !important;
+      display: block !important;
+    }
+
+    #posterArea .ps-info-column {
+      min-width: 0;
+      width: 100%;
+      box-sizing: border-box;
+      padding-left: 8px;
+    }
+
+    #posterArea .ps-pet-name {
+      color: #ef1717;
+      font-size: 34px;
+      line-height: 1.02;
+      font-weight: 900;
+      margin: 0 0 15px;
+      text-transform: uppercase;
+      overflow-wrap: anywhere;
+    }
+
+    #posterArea .ps-info-box {
+      background: #f4f5f7;
+      border: 1px solid #d8dbe0;
+      border-radius: 10px;
+      padding: 10px 11px 9px;
+      margin-bottom: 8px;
+      box-sizing: border-box;
+    }
+
+    #posterArea .ps-info-label {
+      color: #ef1717;
+      font-size: 11px;
+      line-height: 1.1;
+      font-weight: 900;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    #posterArea .ps-info-value {
+      color: #111827;
+      font-size: 13px;
+      line-height: 1.3;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    #posterArea .ps-observation {
+      background: #fff4f2;
+      border: 1.5px solid #f3a29a;
+    }
+
+    #posterArea .ps-observation .ps-info-value {
+      font-weight: 500;
+    }
+
+    #posterArea .ps-last-seen {
+      border-top: 4px solid #ef1717;
+      margin-top: 8px;
+      padding-top: 11px;
+    }
+
+    #posterArea .ps-last-title {
+      color: #6b7280;
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+
+    #posterArea .ps-last-text {
+      color: #1f2937;
+      font-size: 13px;
+      line-height: 1.42;
+      font-weight: 500;
+      overflow-wrap: anywhere;
+    }
+
+    #posterArea .ps-poster-footer {
+      background: #ef1717;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      box-sizing: border-box;
+      padding: 12px 34px 14px;
+      text-align: center;
+    }
+
+    #posterArea .ps-footer-call {
+      font-size: 14px;
+      line-height: 1.25;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .15px;
+      margin-bottom: 8px;
+    }
+
+    #posterArea .ps-footer-divider {
+      height: 2px;
+      background: rgba(255,255,255,.88);
+      width: 78%;
+      margin: 0 auto 9px;
+    }
+
+    #posterArea .ps-footer-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      min-height: 54px;
+      width: 100%;
+    }
+
+    #posterArea .ps-footer-logo {
+      width: 58px !important;
+      height: 58px !important;
+      object-fit: contain !important;
+      border-radius: 9px;
+      background: #ffffff;
+      padding: 3px;
+      box-sizing: border-box;
+      flex: 0 0 auto;
+    }
+
+    #posterArea .ps-footer-phone-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 11px;
+    }
+
+    #posterArea .ps-wa {
+      width: 36px;
+      height: 36px;
+      border: 3px solid #ffffff;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      line-height: 1;
+      font-weight: 900;
+      box-sizing: border-box;
+    }
+
+    #posterArea .ps-footer-phone {
+      color: #ffffff;
+      font-size: 29px;
+      line-height: 1;
+      font-weight: 900;
+      letter-spacing: .5px;
+      white-space: nowrap;
+    }
+
+    #posterArea .ps-footer-bottom {
+      font-size: 14px;
+      line-height: 1.2;
+      font-weight: 900;
+      margin-top: 7px;
+      text-transform: uppercase;
+    }
+
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 0;
+      }
+
+      html, body {
+        width: 210mm !important;
+        height: 297mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+      }
+
+      body * {
+        visibility: hidden !important;
+      }
+
+      #posterArea,
+      #posterArea * {
+        visibility: visible !important;
+      }
+
+      #posterArea.ps-a4-poster {
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 210mm !important;
+        height: 297mm !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        transform: none !important;
+        page-break-after: avoid !important;
+        break-after: avoid-page !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function buildUnifiedPoster(pet) {
+  const posterArea = document.getElementById("posterArea");
+  if (!posterArea || !pet) return;
+
+  ensureUnifiedPosterStyles();
+
+  const photo = getPetPhoto(pet);
+  const logoSrc = getPosterLogoSource();
+  const name = escapePetHtml(pet.name || "PET");
+  const age = escapePetHtml(pet.age || "Não informada");
+  const color = escapePetHtml(pet.color || "Não especificada");
+  const breed = escapePetHtml(pet.breed || "Não informada");
+  const observations = escapePetHtml(pet.description || "Sem observações adicionais.");
+  const addressText = [pet.address, pet.city, pet.state].filter(Boolean).join(", ");
+  const lastSeen = escapePetHtml(
+    `${pet.name || "O pet"} foi visto pela última vez em ${addressText || "local não informado"}. Por favor, se tiver qualquer informação, entre em contato imediatamente!`
+  );
+  const phone = escapePetHtml(pet.contactPhone || "Telefone não informado");
+  const dateText = escapePetHtml(getFormattedPosterDate(pet.date));
+
+  posterArea.className = "ps-a4-poster";
+  posterArea.innerHTML = `
+    <section class="ps-poster-header">
+      <div class="ps-poster-title">PROCURA-SE</div>
+      <div class="ps-poster-date">${dateText}</div>
+    </section>
+
+    <section class="ps-poster-body">
+      <div class="ps-poster-center">
+        <div class="ps-photo-shell">
+          <img id="posterImg"
+               src="${escapePetHtml(photo)}"
+               alt="${name}"
+               onerror="this.onerror=null;this.src=getRandomDefaultPhoto('${escapePetHtml(pet.species || "Cachorro")}');">
+        </div>
+
+        <div class="ps-info-column">
+          <h2 id="posterPetName" class="ps-pet-name">${name}</h2>
+
+          <div class="ps-info-box">
+            <div class="ps-info-label">Idade</div>
+            <div id="posterAge" class="ps-info-value">${age}</div>
+          </div>
+
+          <div class="ps-info-box">
+            <div class="ps-info-label">Cor predominante</div>
+            <div id="posterColor" class="ps-info-value">${color}</div>
+          </div>
+
+          <div class="ps-info-box">
+            <div class="ps-info-label">Raça / Porte</div>
+            <div id="posterBreed" class="ps-info-value">${breed}</div>
+          </div>
+
+          <div class="ps-info-box ps-observation">
+            <div class="ps-info-value">⚠️ <strong style="color:#ef1717">Observações:</strong> <span id="posterMarkings">${observations}</span></div>
+          </div>
+
+          <div class="ps-last-seen">
+            <div class="ps-last-title">Último local avistado:</div>
+            <div id="posterDesc" class="ps-last-text">${lastSeen}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="ps-poster-footer">
+      <div class="ps-footer-call">Se viu ou tem qualquer informação, entre em contato imediatamente:</div>
+      <div class="ps-footer-divider"></div>
+      <div class="ps-footer-row">
+        ${logoSrc ? `<img class="ps-footer-logo" src="${escapePetHtml(logoSrc)}" alt="Pet Searchers">` : ""}
+        <div class="ps-footer-phone-wrap">
+          <span class="ps-wa">☎</span>
+          <span id="posterContactPhone" class="ps-footer-phone">${phone}</span>
+        </div>
+      </div>
+      <div class="ps-footer-bottom">A sua informação pode fazer toda a diferença! 🐾</div>
+    </footer>
+  `;
+}
+
+function applyPosterLayoutAdjustments() {
+  const pet = petsData.find(p => p.id === currentPosterPetId);
+  if (pet) buildUnifiedPoster(pet);
+}
+
 function generatePosterModal(petId) {
   const pet = petsData.find(p => p.id === petId);
   if (!pet) return;
 
-  const posterImg = document.getElementById("posterImg");
-  posterImg.onerror = () => { posterImg.src = getRandomDefaultPhoto(pet.species); };
-  posterImg.src = getPetPhoto(pet);
-  document.getElementById("posterPetName").textContent = pet.name;
-  document.getElementById("posterDateSubtext").textContent = getFormattedPosterDate(pet.date);
-  document.getElementById("posterAge").textContent = pet.age || "Não informada";
-  document.getElementById("posterColor").textContent = pet.color;
-  document.getElementById("posterBreed").textContent = pet.breed;
-  document.getElementById("posterMarkings").textContent = pet.description || "Possui características únicas e atende pelo nome.";
-  
-  document.getElementById("posterDesc").textContent = `${pet.name} foi visto pela última vez em ${pet.address}, ${pet.city} - ${pet.state}. Por favor, se tiver qualquer informação, entre em contato imediatamente!`;
-  document.getElementById("posterContactPhone").textContent = pet.contactPhone;
-
-  applyPosterLayoutAdjustments();
+  currentPosterPetId = petId;
+  buildUnifiedPoster(pet);
 
   const posterModal = document.getElementById("posterModal");
-  posterModal.classList.remove("hidden");
-  posterModal.scrollTop = 0;
+  if (posterModal) {
+    posterModal.classList.remove("hidden");
+    posterModal.scrollTop = 0;
+  }
 }
 
 async function downloadPosterJPG() {
@@ -2757,7 +2963,8 @@ async function downloadPosterJPG() {
 
   if (!posterArea) return;
 
-  applyPosterLayoutAdjustments();
+  const posterPet = petsData.find(p => p.id === currentPosterPetId);
+  if (posterPet) buildUnifiedPoster(posterPet);
 
   const originalContent = btnDownload ? btnDownload.innerHTML : "";
   if (btnDownload) {
@@ -2786,7 +2993,7 @@ async function downloadPosterJPG() {
     link.remove();
   } catch (err) {
     console.error("Erro ao gerar JPG do cartaz:", err);
-    alert("⚠️ Não foi possível gerar a imagem em JPG automaticamente. Utilize a opção 'Imprimir Cartaz A4' para imprimir ou salvar como PDF.");
+    alert("⚠️ Não foi possível gerar a imagem em JPG automaticamente. Utilize a opção de PDF A4 para imprimir ou salvar o mesmo cartaz.");
   } finally {
     if (btnDownload) {
       btnDownload.disabled = false;
@@ -2794,6 +3001,11 @@ async function downloadPosterJPG() {
     }
   }
 }
+
+window.addEventListener("beforeprint", () => {
+  const pet = petsData.find(p => p.id === currentPosterPetId);
+  if (pet) buildUnifiedPoster(pet);
+});
 
 // --- DETAIL MODAL ---
 function closePetFullDetailModal() {
