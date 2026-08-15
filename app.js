@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v92 carregado - painel 3+2 posicionado por coordenadas reais");
+console.log("✅ Pet Searchers app.js BUILD v93 carregado - menu do mapa final 3+2 sem duplicações");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -1992,10 +1992,10 @@ function locateUserOnMap() {
         try {
           userMapLocationAccuracyLayer = L.circle([lat, lng], {
             radius: accuracy,
-            color: "#2563eb",
+            color: "#6667AB",
             weight: 1,
             opacity: 0.65,
-            fillColor: "#60a5fa",
+            fillColor: "#8B8CC7",
             fillOpacity: 0.11,
             interactive: false
           }).addTo(leafletMap);
@@ -2004,7 +2004,7 @@ function locateUserOnMap() {
             radius: 7,
             color: "#ffffff",
             weight: 3,
-            fillColor: "#2563eb",
+            fillColor: "#6667AB",
             fillOpacity: 1
           }).addTo(leafletMap);
 
@@ -2026,19 +2026,19 @@ function locateUserOnMap() {
       if (btn) {
         btn.disabled = false;
         btn.setAttribute("aria-busy", "false");
-        btn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span><span>Me localize</span>';
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span><span>Minha localização</span>';
       }
     },
     error => {
       if (btn) {
         btn.disabled = false;
         btn.setAttribute("aria-busy", "false");
-        btn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span><span>Me localize</span>';
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span><span>Minha localização</span>';
       }
 
       let message = "Não foi possível obter sua localização neste momento.";
       if (error?.code === 1) {
-        message = "Permita o acesso à localização no navegador para usar o botão Me localize.";
+        message = "Permita o acesso à localização no navegador para usar o botão Minha localização.";
       } else if (error?.code === 3) {
         message = "A localização demorou mais do que o esperado. Tente novamente.";
       }
@@ -2142,7 +2142,7 @@ function ensureMapLegendLayout() {
     locateBtn.type = "button";
     locateBtn.className = "ps-map-locate-btn";
     locateBtn.setAttribute("aria-label", "Posicionar o mapa na minha localização aproximada");
-    locateBtn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span><span>Me localize</span>';
+    locateBtn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span><span>Minha localização</span>';
     locateBtn.addEventListener("click", locateUserOnMap);
   }
 
@@ -2194,7 +2194,7 @@ function forceInsertMapLocateButton() {
   btn.type = "button";
   btn.title = "Posicionar o mapa na minha localização aproximada";
   btn.setAttribute("aria-label", "Me localize");
-  btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:15px;line-height:1">my_location</span><span>Me localize</span>';
+  btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:15px;line-height:1">my_location</span><span>Minha localização</span>';
   btn.style.cssText = [
     "display:inline-flex !important",
     "visibility:visible !important",
@@ -2243,72 +2243,317 @@ function installMapLocateButtonObserver() {
   [100, 300, 800, 1500, 3000].forEach(ms => setTimeout(forceInsertMapLocateButton, ms));
 }
 
+function resetMapLegendAndViewFinal() {
+  currentActiveFilters.status = "";
+  syncStatusFilterUI();
+  renderApp();
+
+  if (leafletMap) {
+    try {
+      leafletMap.setView([-14.2350, -51.9253], 4, { animate: true });
+    } catch (_) {}
+  }
+}
+
+function getSmallestCommonAncestorFinal(elements) {
+  const valid = elements.filter(Boolean);
+  if (!valid.length) return null;
+
+  let node = valid[0];
+  while (node && node !== document.body) {
+    if (valid.every(el => node.contains(el))) return node;
+    node = node.parentElement;
+  }
+  return null;
+}
+
+function findMapLegendCardFinal() {
+  const statusButtons = getMapLegendFilterElements();
+  const resetText = getMapLegendResetElement();
+  if (statusButtons.length < 3 || !resetText) return null;
+
+  const resetControl = resetText.closest?.("button, a, [role='button']") || resetText;
+  let card = getSmallestCommonAncestorFinal([...statusButtons, resetControl]);
+  if (!card) return null;
+
+  // Sobe somente até o cartão branco compacto da legenda.
+  let candidate = card;
+  while (candidate.parentElement && candidate.parentElement !== document.body) {
+    const rect = candidate.getBoundingClientRect();
+    if (rect.width >= 280 && rect.width <= 760 && rect.height >= 45 && rect.height <= 220) {
+      card = candidate;
+      break;
+    }
+
+    const parent = candidate.parentElement;
+    if (![...statusButtons, resetControl].every(el => parent.contains(el))) break;
+    candidate = parent;
+    card = candidate;
+  }
+
+  return card;
+}
+
+function ensureFinalMapLegendStyles() {
+  if (document.getElementById("ps-final-map-legend-style")) return;
+
+  const style = document.createElement("style");
+  style.id = "ps-final-map-legend-style";
+  style.textContent = `
+    .ps-final-map-legend {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 12px 16px;
+      box-sizing: border-box;
+    }
+
+    .ps-final-map-status-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      align-items: center;
+      justify-items: center;
+    }
+
+    .ps-final-map-actions-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(135px, 175px));
+      gap: 14px;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .ps-final-status-btn {
+      border: 0;
+      background: transparent;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 28px;
+      padding: 4px 6px;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+
+    .ps-final-status-btn:hover {
+      background: #f8fafc;
+    }
+
+    .ps-final-status-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 999px;
+      flex: 0 0 11px;
+    }
+
+    .ps-final-action-btn {
+      width: 100%;
+      min-height: 38px;
+      padding: 8px 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border-radius: 10px;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      box-sizing: border-box;
+    }
+
+    .ps-final-reset-btn {
+      color: #475569;
+      background: #ffffff;
+      border: 1px solid #d8dee7;
+    }
+
+    .ps-final-location-btn {
+      color: #6667AB;
+      background: #F3F1FB;
+      border: 1px solid #C9C5EE;
+    }
+
+    .ps-final-location-btn:hover {
+      background: #EAE8F8;
+      border-color: #6667AB;
+    }
+
+    .ps-final-leaflet-locate {
+      border: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+    }
+
+    .ps-final-leaflet-locate a {
+      width: 34px !important;
+      height: 34px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      border-radius: 50% !important;
+      background: #6667AB !important;
+      color: #fff !important;
+      text-decoration: none !important;
+      box-shadow: 0 2px 7px rgba(102,103,171,.35) !important;
+      font-size: 18px !important;
+    }
+
+    @media (max-width: 520px) {
+      .ps-final-map-legend {
+        gap: 8px;
+        padding: 9px 9px;
+      }
+
+      .ps-final-map-status-row {
+        gap: 3px;
+      }
+
+      .ps-final-status-btn {
+        gap: 4px;
+        padding: 3px 2px;
+        font-size: 10px;
+      }
+
+      .ps-final-status-dot {
+        width: 9px;
+        height: 9px;
+        flex-basis: 9px;
+      }
+
+      .ps-final-map-actions-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+      }
+
+      .ps-final-action-btn {
+        min-height: 34px;
+        padding: 6px 5px;
+        font-size: 10px;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function installSingleLeafletLocationControlFinal() {
+  if (!leafletMap || typeof L === "undefined") return false;
+  if (document.getElementById("psFinalLeafletLocate")) return true;
+
+  // Remove qualquer controle de localização residual criado por versões anteriores.
+  document.querySelectorAll(
+    "#psMapLocateFallbackV87, #btnMapLocateMe, #btnMapLocateMeV85, #btnCenterUserLocationV87, #btnUserPositionV86"
+  ).forEach(el => {
+    try { el.remove(); } catch (_) {}
+  });
+
+  const LocateControl = L.Control.extend({
+    options: { position: "topleft" },
+    onAdd: function() {
+      const div = L.DomUtil.create("div", "leaflet-control ps-final-leaflet-locate");
+      div.id = "psFinalLeafletLocate";
+      div.innerHTML = '<a href="#" title="Minha localização" aria-label="Minha localização"><span class="material-symbols-outlined" style="font-size:19px">my_location</span></a>';
+      const link = div.querySelector("a");
+      L.DomEvent.disableClickPropagation(div);
+      L.DomEvent.on(link, "click", function(e) {
+        L.DomEvent.preventDefault(e);
+        locateUserOnMap();
+      });
+      return div;
+    }
+  });
+
+  try {
+    leafletMap.addControl(new LocateControl());
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function buildFinalMapLegend() {
+  ensureFinalMapLegendStyles();
+
+  const card = findMapLegendCardFinal();
+  if (!card) return false;
+  if (card.dataset.finalLegendBuilt === "1") return true;
+
+  // Remove completamente o conteúdo antigo do quadro. Assim não ficam botões,
+  // wrappers ou linhas verticais escondidos atrás do novo layout.
+  card.innerHTML = "";
+  card.dataset.finalLegendBuilt = "1";
+  card.style.boxSizing = "border-box";
+  card.style.height = "auto";
+  card.style.minHeight = "0";
+  card.style.overflow = "visible";
+
+  const shell = document.createElement("div");
+  shell.className = "ps-final-map-legend";
+
+  const statusRow = document.createElement("div");
+  statusRow.className = "ps-final-map-status-row";
+
+  const statusSpecs = [
+    { status: "Procurado", label: "Procurado", color: "#EF2222" },
+    { status: "Avistado", label: "Avistado", color: "#159BD3" },
+    { status: "Reencontrado", label: "Reencontrado 🎉", color: "#169C48" }
+  ];
+
+  statusSpecs.forEach(item => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "ps-final-status-btn";
+    btn.style.color = item.color;
+    btn.innerHTML = `<span class="ps-final-status-dot" style="background:${item.color}"></span><span>${item.label}</span>`;
+    btn.addEventListener("click", () => applyStatusFilterFromLegend(item.status));
+    statusRow.appendChild(btn);
+  });
+
+  const actionsRow = document.createElement("div");
+  actionsRow.className = "ps-final-map-actions-row";
+
+  const resetBtn = document.createElement("button");
+  resetBtn.type = "button";
+  resetBtn.className = "ps-final-action-btn ps-final-reset-btn";
+  resetBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px">restart_alt</span><span>Resetar Visão</span>';
+  resetBtn.addEventListener("click", resetMapLegendAndViewFinal);
+
+  const locationBtn = document.createElement("button");
+  locationBtn.id = "btnMapLocateMe";
+  locationBtn.type = "button";
+  locationBtn.className = "ps-final-action-btn ps-final-location-btn";
+  locationBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px">location_on</span><span>Minha localização</span>';
+  locationBtn.addEventListener("click", locateUserOnMap);
+
+  actionsRow.append(resetBtn, locationBtn);
+  shell.append(statusRow, actionsRow);
+  card.appendChild(shell);
+
+  installSingleLeafletLocationControlFinal();
+  console.log("🎯 v93: quadro antigo substituído por menu final 3+2, sem botões duplicados.");
+  return true;
+}
+
 function bindMapLegendFilters() {
-  getMapLegendFilterElements().forEach(btn => {
-    if (btn.dataset.legendFilterBound === "1") return;
-    btn.dataset.legendFilterBound = "1";
+  // O quadro antigo é substituído integralmente pelo layout final.
+  if (buildFinalMapLegend()) return;
 
-    const activate = () => {
-      const status = btn.dataset.legendStatus;
-      if (status) applyStatusFilterFromLegend(status);
-    };
-
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      activate();
-    });
-
-    btn.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        activate();
-      }
-    });
+  const observer = new MutationObserver(() => {
+    if (buildFinalMapLegend()) observer.disconnect();
   });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
 
-  // "Resetar Visão" da legenda superior também passa a limpar o filtro de status.
-  document.querySelectorAll("button, a, [role='button'], span, div").forEach(el => {
-    const label = (el.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
-    if (label !== "resetar visão") return;
-    if (el.dataset.legendResetBound === "1") return;
-
-    el.dataset.legendResetBound = "1";
-    el.style.cursor = "pointer";
-    el.setAttribute("role", "button");
-    el.setAttribute("tabindex", "0");
-
-    const reset = () => {
-      currentActiveFilters.status = "";
-      syncStatusFilterUI();
-      renderApp();
-
-      if (leafletMap) {
-        try {
-          leafletMap.setView([-14.2350, -51.9253], 4, { animate: true });
-        } catch (_) {}
-      }
-    };
-
-    el.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      reset();
-    });
-
-    el.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        reset();
-      }
-    });
-  });
-
-  // Organiza os três filtros e injeta "Me localize" no mesmo quadro da legenda.
-  ensureMapLegendLayout();
-  setTimeout(ensureMapLegendLayout, 150);
-  setTimeout(ensureMapLegendLayout, 600);
-  installMapLocateButtonObserver();
+  [100, 300, 700, 1500, 3000].forEach(ms => setTimeout(buildFinalMapLegend, ms));
 }
 
 window.addEventListener("orientationchange", () => {
@@ -5132,1835 +5377,16 @@ window.downloadPosterPDF = downloadPosterPDF;
 window.getRandomDefaultPhoto = getRandomDefaultPhoto;
 
 
-// === v85 FAIL-SAFE: ME LOCALIZE ===
-// Bootstrap independente das rotinas anteriores. Executa mesmo que bindMapLegendFilters
-// não seja chamado pelo HTML atual.
+// v93: garantia final após inicialização tardia do Leaflet/DOM.
 (() => {
-  const normalizeText = (el) => (el?.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
-
-  function findExactResetElement() {
-    const nodes = Array.from(document.querySelectorAll("button, a, [role='button'], span, div"));
-    const exact = nodes.filter(el => normalizeText(el) === "resetar visão");
-    if (!exact.length) return null;
-
-    // Prefere um elemento clicável; caso não exista, pega o menor elemento textual.
-    return exact.find(el => el.matches("button, a, [role='button']")) || exact.sort((a,b) => a.children.length - b.children.length)[0];
-  }
-
-  function findClickableWrapper(el) {
-    if (!el) return null;
-    const clickable = el.closest("button, a, [role='button']");
-    if (clickable) return clickable;
-
-    let node = el;
-    while (node.parentElement && node.parentElement !== document.body) {
-      const parent = node.parentElement;
-      if (normalizeText(parent) !== "resetar visão") break;
-      node = parent;
-    }
-    return node;
-  }
-
-  function locateInline() {
-    if (typeof locateUserOnMap === "function") {
-      locateUserOnMap();
-      return;
-    }
-
-    if (!navigator.geolocation) {
-      alert("Seu navegador não disponibiliza geolocalização.");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(pos => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      if (typeof leafletMap !== "undefined" && leafletMap) {
-        try { leafletMap.setView([lat, lng], 14, { animate: true }); } catch (_) {}
-      }
-    }, () => alert("Não foi possível obter sua localização."), {
-      enableHighAccuracy: false,
-      timeout: 10000,
-      maximumAge: 60000
-    });
-  }
-
-  function installLocateButtonV85() {
-    if (document.getElementById("btnMapLocateMeV85")) return true;
-
-    const resetText = findExactResetElement();
-    if (!resetText) return false;
-
-    const resetControl = findClickableWrapper(resetText);
-    if (!resetControl || !resetControl.parentElement) return false;
-
-    const row = resetControl.parentElement;
-
-    // Força a própria linha onde Resetar Visão já aparece a aceitar o novo botão.
-    row.style.setProperty("display", "flex", "important");
-    row.style.setProperty("align-items", "center", "important");
-    row.style.setProperty("justify-content", "flex-start", "important");
-    row.style.setProperty("flex-wrap", "wrap", "important");
-    row.style.setProperty("gap", "8px", "important");
-    row.style.setProperty("width", "100%", "important");
-    row.style.setProperty("max-width", "100%", "important");
-    row.style.setProperty("overflow", "visible", "important");
-    row.style.setProperty("box-sizing", "border-box", "important");
-
-    // Não altera o funcionamento do Resetar Visão existente.
-    resetControl.style.setProperty("flex", "0 0 auto", "important");
-
-    const btn = document.createElement("button");
-    btn.id = "btnMapLocateMeV85";
-    btn.type = "button";
-    btn.title = "Centralizar o mapa na minha localização aproximada";
-    btn.setAttribute("aria-label", "Me localize");
-    btn.innerHTML = '<span aria-hidden="true" style="font-size:15px;line-height:1">◎</span><span>Me localize</span>';
-    btn.style.cssText = [
-      "display:inline-flex !important",
-      "visibility:visible !important",
-      "opacity:1 !important",
-      "align-items:center !important",
-      "justify-content:center !important",
-      "gap:5px !important",
-      "flex:0 0 auto !important",
-      "min-width:94px !important",
-      "max-width:none !important",
-      "min-height:30px !important",
-      "height:30px !important",
-      "padding:4px 10px !important",
-      "margin:0 !important",
-      "border:1px solid #bfdbfe !important",
-      "border-radius:8px !important",
-      "background:#eff6ff !important",
-      "color:#075985 !important",
-      "font-family:inherit !important",
-      "font-size:11px !important",
-      "font-weight:700 !important",
-      "line-height:1 !important",
-      "white-space:nowrap !important",
-      "cursor:pointer !important",
-      "position:relative !important",
-      "z-index:2147483646 !important",
-      "pointer-events:auto !important"
-    ].join(";");
-    btn.addEventListener("click", locateInline);
-
-    resetControl.insertAdjacentElement("afterend", btn);
-    console.log("📍 v85: 'Me localize' adicionado ao lado de 'Resetar Visão'.");
-    return true;
-  }
-
-  function boot() {
-    if (installLocateButtonV85()) return;
-
-    const observer = new MutationObserver(() => {
-      if (installLocateButtonV85()) observer.disconnect();
-    });
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-
-    let attempts = 0;
-    const timer = setInterval(() => {
-      attempts += 1;
-      if (installLocateButtonV85() || attempts >= 40) clearInterval(timer);
-    }, 250);
-  }
-
+  const boot = () => {
+    buildFinalMapLegend();
+    installSingleLeafletLocationControlFinal();
+  };
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot, { once: true });
   } else {
     boot();
   }
-})();
-
-
-// === v86 LOCALIZAÇÃO DO USUÁRIO + LEGENDA POSICIONADORA ===
-(() => {
-  let psUserMarkerV86 = null;
-  let psUserAccuracyV86 = null;
-  let psUserCoordsV86 = null;
-  let psLocationWatchIdV86 = null;
-
-  const normalize = (s) => String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
-
-  function getLeafTextElement(label) {
-    const target = normalize(label);
-    const nodes = Array.from(document.querySelectorAll("button, a, [role='button'], span, div, p"));
-    return nodes
-      .filter(el => normalize(el.textContent) === target)
-      .sort((a, b) => a.children.length - b.children.length)[0] || null;
-  }
-
-  function getCommonAncestorV86(elements) {
-    const els = elements.filter(Boolean);
-    if (!els.length) return null;
-    let node = els[0];
-    while (node && node !== document.body) {
-      if (els.every(el => node.contains(el))) return node;
-      node = node.parentElement;
-    }
-    return null;
-  }
-
-  function findLegendCardV86() {
-    const procurado = getLeafTextElement("Procurado");
-    const avistado = getLeafTextElement("Avistado");
-    const reencontrado = Array.from(document.querySelectorAll("button, a, [role='button'], span, div, p"))
-      .filter(el => normalize(el.textContent).startsWith("reencontrado"))
-      .sort((a, b) => a.children.length - b.children.length)[0] || null;
-    const reset = getLeafTextElement("Resetar Visão");
-
-    if (!procurado || !avistado || !reencontrado || !reset) return null;
-
-    let card = getCommonAncestorV86([procurado, avistado, reencontrado, reset]);
-    if (!card) return null;
-
-    // Se o ancestral for grande demais, desce para um filho que ainda contenha os 4 controles.
-    let changed = true;
-    while (changed) {
-      changed = false;
-      for (const child of Array.from(card.children || [])) {
-        if ([procurado, avistado, reencontrado, reset].every(el => child.contains(el))) {
-          card = child;
-          changed = true;
-          break;
-        }
-      }
-    }
-
-    return card;
-  }
-
-  function ensureLegendStylesV86() {
-    if (document.getElementById("ps-location-v86-style")) return;
-    const style = document.createElement("style");
-    style.id = "ps-location-v86-style";
-    style.textContent = `
-      .ps-location-row-v86 {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 8px;
-        margin-top: 8px;
-        padding-top: 8px;
-        border-top: 1px solid rgba(148,163,184,.28);
-        box-sizing: border-box;
-      }
-      .ps-location-button-v86 {
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        gap: 6px !important;
-        min-height: 32px !important;
-        padding: 6px 10px !important;
-        border-radius: 8px !important;
-        border: 1px solid #bfdbfe !important;
-        background: #eff6ff !important;
-        color: #075985 !important;
-        font: inherit !important;
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        white-space: nowrap !important;
-        cursor: pointer !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        position: relative !important;
-        z-index: 9999 !important;
-      }
-      .ps-location-dot-v86 {
-        width: 10px;
-        height: 10px;
-        border-radius: 999px;
-        background: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37,99,235,.18);
-        flex: 0 0 auto;
-      }
-      .ps-location-status-v86 {
-        font-size: 10px;
-        color: #64748b;
-        line-height: 1.2;
-      }
-      .ps-user-location-marker-v86 {
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        background: #2563eb;
-        border: 3px solid #ffffff;
-        box-shadow: 0 2px 8px rgba(15,23,42,.28);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 15px;
-        font-weight: 900;
-      }
-      @media (max-width: 520px) {
-        .ps-location-row-v86 { gap: 6px; }
-        .ps-location-button-v86 {
-          min-height: 30px !important;
-          padding: 5px 8px !important;
-          font-size: 10px !important;
-        }
-        .ps-location-status-v86 { display: none; }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  function ensureLocationLegendV86() {
-    ensureLegendStylesV86();
-    if (document.getElementById("btnUserPositionV86")) return true;
-
-    const card = findLegendCardV86();
-    if (!card) return false;
-
-    card.style.setProperty("overflow", "visible", "important");
-    card.style.setProperty("height", "auto", "important");
-    card.style.setProperty("min-height", "0", "important");
-    card.style.setProperty("box-sizing", "border-box", "important");
-
-    const row = document.createElement("div");
-    row.className = "ps-location-row-v86";
-
-    const btn = document.createElement("button");
-    btn.id = "btnUserPositionV86";
-    btn.type = "button";
-    btn.className = "ps-location-button-v86";
-    btn.title = "Centralizar e aproximar o mapa na minha localização";
-    btn.innerHTML = '<span class="ps-location-dot-v86" aria-hidden="true"></span><span>Minha localização</span>';
-    btn.addEventListener("click", () => positionMapAtUserV86(true));
-
-    const status = document.createElement("span");
-    status.id = "userPositionStatusV86";
-    status.className = "ps-location-status-v86";
-    status.textContent = "Centralizar mapa";
-
-    row.appendChild(btn);
-    row.appendChild(status);
-    card.appendChild(row);
-
-    console.log("📍 v86: legenda 'Minha localização' adicionada ao quadro do mapa.");
-    return true;
-  }
-
-  function userIconV86() {
-    if (typeof L === "undefined") return null;
-    return L.divIcon({
-      className: "ps-user-location-icon-wrapper-v86",
-      html: '<div class="ps-user-location-marker-v86" title="Sua localização aproximada">⌖</div>',
-      iconSize: [28, 28],
-      iconAnchor: [14, 14]
-    });
-  }
-
-  function updateUserMarkerV86(lat, lng, accuracy) {
-    if (typeof leafletMap === "undefined" || !leafletMap || typeof L === "undefined") return;
-
-    psUserCoordsV86 = { lat, lng, accuracy };
-    currentUserPosition = { lat, lng };
-
-    if (!psUserMarkerV86) {
-      const icon = userIconV86();
-      psUserMarkerV86 = icon
-        ? L.marker([lat, lng], { icon, zIndexOffset: 2500, interactive: true }).addTo(leafletMap)
-        : L.circleMarker([lat, lng], { radius: 8, color: "#fff", weight: 3, fillColor: "#2563eb", fillOpacity: 1 }).addTo(leafletMap);
-      psUserMarkerV86.bindTooltip("Sua localização aproximada", { direction: "top", offset: [0, -14] });
-    } else {
-      psUserMarkerV86.setLatLng([lat, lng]);
-    }
-
-    if (psUserAccuracyV86) {
-      try { leafletMap.removeLayer(psUserAccuracyV86); } catch (_) {}
-    }
-    psUserAccuracyV86 = L.circle([lat, lng], {
-      radius: Math.max(20, Number(accuracy) || 100),
-      color: "#2563eb",
-      weight: 1,
-      opacity: .45,
-      fillColor: "#60a5fa",
-      fillOpacity: .08,
-      interactive: false
-    }).addTo(leafletMap);
-
-    const status = document.getElementById("userPositionStatusV86");
-    if (status) status.textContent = "Posição encontrada";
-  }
-
-  function zoomForAccuracyV86(accuracy) {
-    const a = Number(accuracy) || 1000;
-    if (a <= 50) return 17;
-    if (a <= 150) return 16;
-    if (a <= 400) return 15;
-    if (a <= 1200) return 14;
-    if (a <= 3500) return 13;
-    return 12;
-  }
-
-  function centerOnStoredUserV86() {
-    if (!psUserCoordsV86 || typeof leafletMap === "undefined" || !leafletMap) return false;
-    leafletMap.setView(
-      [psUserCoordsV86.lat, psUserCoordsV86.lng],
-      zoomForAccuracyV86(psUserCoordsV86.accuracy),
-      { animate: true }
-    );
-    setTimeout(() => { try { leafletMap.invalidateSize(); } catch (_) {} }, 80);
-    return true;
-  }
-
-  function positionMapAtUserV86(forceRefresh = false) {
-    ensureLocationLegendV86();
-
-    if (!forceRefresh && centerOnStoredUserV86()) return;
-
-    const status = document.getElementById("userPositionStatusV86");
-    if (status) status.textContent = "Localizando...";
-
-    if (!navigator.geolocation) {
-      if (status) status.textContent = "Geolocalização indisponível";
-      alert("Seu navegador não disponibiliza geolocalização.");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const lat = Number(pos.coords.latitude);
-        const lng = Number(pos.coords.longitude);
-        const accuracy = Number(pos.coords.accuracy) || 100;
-        updateUserMarkerV86(lat, lng, accuracy);
-        centerOnStoredUserV86();
-      },
-      err => {
-        if (status) status.textContent = "Clique para permitir localização";
-        if (forceRefresh) {
-          const msg = err?.code === 1
-            ? "Permita o acesso à localização no navegador para posicionar o mapa."
-            : "Não foi possível obter sua localização neste momento.";
-          alert(msg);
-        }
-      },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
-    );
-  }
-
-  function startLocationTrackingV86() {
-    if (!navigator.geolocation || psLocationWatchIdV86 !== null) return;
-
-    // Tenta mostrar o ponto no mapa assim que houver permissão disponível.
-    const start = () => {
-      try {
-        psLocationWatchIdV86 = navigator.geolocation.watchPosition(
-          pos => updateUserMarkerV86(
-            Number(pos.coords.latitude),
-            Number(pos.coords.longitude),
-            Number(pos.coords.accuracy) || 100
-          ),
-          () => {},
-          { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
-        );
-      } catch (_) {}
-    };
-
-    if (navigator.permissions?.query) {
-      navigator.permissions.query({ name: "geolocation" }).then(result => {
-        if (result.state === "granted") start();
-        result.addEventListener?.("change", () => {
-          if (result.state === "granted") start();
-        });
-      }).catch(() => {});
-    }
-  }
-
-  function bootV86() {
-    ensureLocationLegendV86();
-    startLocationTrackingV86();
-
-    const observer = new MutationObserver(() => ensureLocationLegendV86());
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-
-    [100, 300, 700, 1500, 3000].forEach(ms => setTimeout(ensureLocationLegendV86, ms));
-  }
-
-  window.positionMapAtUserV86 = positionMapAtUserV86;
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", bootV86, { once: true });
-  } else {
-    bootV86();
-  }
-})();
-
-
-// === v87 BOTÃO DE CENTRALIZAÇÃO DA LOCALIZAÇÃO ===
-(() => {
-  function findResetTextNodeV87() {
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-    while (walker.nextNode()) {
-      const value = String(walker.currentNode.nodeValue || "").replace(/\s+/g, " ").trim().toLowerCase();
-      if (value === "resetar visão") return walker.currentNode;
-    }
-    return null;
-  }
-
-  function findResetControlV87() {
-    const textNode = findResetTextNodeV87();
-    if (!textNode) return null;
-    const el = textNode.parentElement;
-    if (!el) return null;
-    return el.closest("button, a, [role='button']") || el;
-  }
-
-  function centerUserV87() {
-    if (typeof window.positionMapAtUserV86 === "function") {
-      window.positionMapAtUserV86(true);
-      return;
-    }
-
-    if (!navigator.geolocation) {
-      alert("Seu navegador não disponibiliza geolocalização.");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(pos => {
-      const lat = Number(pos.coords.latitude);
-      const lng = Number(pos.coords.longitude);
-      if (typeof leafletMap !== "undefined" && leafletMap) {
-        try {
-          leafletMap.setView([lat, lng], 15, { animate: true });
-          setTimeout(() => leafletMap.invalidateSize(), 80);
-        } catch (_) {}
-      }
-    }, err => {
-      alert(err?.code === 1
-        ? "Permita o acesso à localização no navegador para centralizar o mapa."
-        : "Não foi possível obter sua localização neste momento.");
-    }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
-  }
-
-  function installLegendButtonV87() {
-    if (document.getElementById("btnCenterUserLocationV87")) return true;
-    const resetControl = findResetControlV87();
-    if (!resetControl || !resetControl.parentElement) return false;
-
-    const row = resetControl.parentElement;
-    row.style.setProperty("display", "flex", "important");
-    row.style.setProperty("align-items", "center", "important");
-    row.style.setProperty("gap", "10px", "important");
-    row.style.setProperty("flex-wrap", "wrap", "important");
-    row.style.setProperty("overflow", "visible", "important");
-
-    const btn = document.createElement("button");
-    btn.id = "btnCenterUserLocationV87";
-    btn.type = "button";
-    btn.title = "Centralizar e aproximar o mapa na sua localização";
-    btn.innerHTML = '<span style="font-size:14px;line-height:1">📍</span><span>Minha localização</span>';
-    btn.style.cssText = [
-      "display:inline-flex !important",
-      "visibility:visible !important",
-      "opacity:1 !important",
-      "align-items:center !important",
-      "justify-content:center !important",
-      "gap:5px !important",
-      "min-height:30px !important",
-      "height:30px !important",
-      "padding:4px 10px !important",
-      "border:1px solid #bfdbfe !important",
-      "border-radius:8px !important",
-      "background:#eff6ff !important",
-      "color:#075985 !important",
-      "font:inherit !important",
-      "font-size:11px !important",
-      "font-weight:700 !important",
-      "white-space:nowrap !important",
-      "cursor:pointer !important",
-      "position:relative !important",
-      "z-index:999999 !important",
-      "pointer-events:auto !important"
-    ].join(";");
-    btn.addEventListener("click", centerUserV87);
-
-    resetControl.insertAdjacentElement("afterend", btn);
-    console.log("📍 v87: botão 'Minha localização' adicionado ao lado de 'Resetar Visão'.");
-    return true;
-  }
-
-  function installLeafletFallbackV87() {
-    if (document.getElementById("psMapLocateFallbackV87")) return true;
-    if (typeof L === "undefined" || typeof leafletMap === "undefined" || !leafletMap) return false;
-
-    const LocateControl = L.Control.extend({
-      options: { position: "topleft" },
-      onAdd: function() {
-        const div = L.DomUtil.create("div", "leaflet-bar");
-        div.id = "psMapLocateFallbackV87";
-        div.innerHTML = '<a href="#" title="Minha localização" aria-label="Minha localização" style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;font-size:18px;text-decoration:none;background:#fff;color:#075985;">📍</a>';
-        const a = div.querySelector("a");
-        L.DomEvent.disableClickPropagation(div);
-        L.DomEvent.on(a, "click", function(e) {
-          L.DomEvent.preventDefault(e);
-          centerUserV87();
-        });
-        return div;
-      }
-    });
-
-    try {
-      leafletMap.addControl(new LocateControl());
-      console.log("📍 v87: controle de localização também disponível no mapa.");
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  function bootV87() {
-    installLegendButtonV87();
-    installLeafletFallbackV87();
-
-    const observer = new MutationObserver(() => {
-      installLegendButtonV87();
-      installLeafletFallbackV87();
-    });
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-
-    [100, 300, 700, 1500, 3000].forEach(ms => setTimeout(() => {
-      installLegendButtonV87();
-      installLeafletFallbackV87();
-    }, ms));
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", bootV87, { once: true });
-  } else {
-    bootV87();
-  }
-})();
-
-
-// === v88 LEGENDA 3+2 + VERY PERI ===
-(() => {
-  const VERY_PERI = "#6667AB";
-  const VERY_PERI_SOFT = "#F0F0FA";
-  const VERY_PERI_BORDER = "#B9BAE5";
-
-  const norm = value => String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
-
-  function findByTextV88(label, startsWith = false) {
-    const wanted = norm(label);
-    const nodes = Array.from(document.querySelectorAll("button, a, [role='button'], span, div, p"));
-    return nodes
-      .filter(el => {
-        const txt = norm(el.textContent);
-        return startsWith ? txt.startsWith(wanted) : txt === wanted;
-      })
-      .sort((a,b) => a.children.length - b.children.length)[0] || null;
-  }
-
-  function controlForV88(el) {
-    if (!el) return null;
-    const clickable = el.closest("button, a, [role='button']");
-    if (clickable) return clickable;
-
-    let node = el;
-    while (node.parentElement && node.parentElement !== document.body) {
-      const p = node.parentElement;
-      if (norm(p.textContent) !== norm(el.textContent)) break;
-      node = p;
-    }
-    return node;
-  }
-
-  function commonAncestorV88(elements) {
-    const valid = elements.filter(Boolean);
-    if (!valid.length) return null;
-    let node = valid[0];
-    while (node && node !== document.body) {
-      if (valid.every(el => node.contains(el))) return node;
-      node = node.parentElement;
-    }
-    return null;
-  }
-
-  function ensureV88Styles() {
-    if (document.getElementById("ps-v88-map-legend-style")) return;
-    const style = document.createElement("style");
-    style.id = "ps-v88-map-legend-style";
-    style.textContent = `
-      .ps-map-legend-card-v88 {
-        overflow: visible !important;
-        height: auto !important;
-        min-height: 0 !important;
-        box-sizing: border-box !important;
-      }
-      .ps-map-status-row-v88 {
-        width: 100% !important;
-        display: grid !important;
-        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-        gap: 10px !important;
-        align-items: center !important;
-        justify-items: center !important;
-        box-sizing: border-box !important;
-      }
-      .ps-map-actions-row-v88 {
-        width: 100% !important;
-        display: grid !important;
-        grid-template-columns: repeat(2, minmax(0, 150px)) !important;
-        gap: 12px !important;
-        align-items: center !important;
-        justify-content: center !important;
-        margin-top: 10px !important;
-        padding-top: 10px !important;
-        border-top: 1px solid rgba(148,163,184,.22) !important;
-        box-sizing: border-box !important;
-      }
-      .ps-map-status-row-v88 > *,
-      .ps-map-actions-row-v88 > * {
-        min-width: 0 !important;
-        box-sizing: border-box !important;
-      }
-      .ps-reset-v88 {
-        border-left: 0 !important;
-        border-inline-start: 0 !important;
-        padding-left: 10px !important;
-        margin-left: 0 !important;
-      }
-      .ps-location-v88 {
-        color: ${VERY_PERI} !important;
-        background: ${VERY_PERI_SOFT} !important;
-        border: 1px solid ${VERY_PERI_BORDER} !important;
-        box-shadow: none !important;
-      }
-      .ps-location-v88:hover {
-        background: #E7E7F6 !important;
-        border-color: ${VERY_PERI} !important;
-      }
-      .ps-user-location-marker-v86 {
-        background: ${VERY_PERI} !important;
-      }
-      #psMapLocateFallbackV87 a {
-        color: #fff !important;
-        background: ${VERY_PERI} !important;
-        border-radius: 50% !important;
-        width: 34px !important;
-        height: 34px !important;
-        box-shadow: 0 2px 7px rgba(102,103,171,.35) !important;
-      }
-      #psMapLocateFallbackV87 {
-        border: 0 !important;
-        background: transparent !important;
-        box-shadow: none !important;
-      }
-      @media (max-width: 520px) {
-        .ps-map-status-row-v88 { gap: 4px !important; }
-        .ps-map-actions-row-v88 {
-          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-          gap: 7px !important;
-          margin-top: 8px !important;
-          padding-top: 8px !important;
-        }
-        .ps-map-status-row-v88 > * { font-size: 10px !important; }
-        .ps-map-actions-row-v88 > * {
-          width: 100% !important;
-          max-width: none !important;
-          justify-content: center !important;
-          font-size: 10px !important;
-        }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  function recolorLeafletUserLayersV88() {
-    try {
-      if (typeof leafletMap === "undefined" || !leafletMap) return;
-      leafletMap.eachLayer(layer => {
-        if (layer?.options?.fillColor === "#2563eb" || layer?.options?.color === "#2563eb") {
-          try {
-            layer.setStyle({ color: VERY_PERI, fillColor: VERY_PERI });
-          } catch (_) {}
-        }
-      });
-    } catch (_) {}
-  }
-
-  function removeVerticalSeparatorsV88(card, reset) {
-    if (!card || !reset) return;
-    reset.style.setProperty("border-left", "0", "important");
-    reset.style.setProperty("border-inline-start", "0", "important");
-    reset.classList.add("ps-reset-v88");
-
-    const candidates = Array.from(card.querySelectorAll("div, span"));
-    candidates.forEach(el => {
-      if (el.contains(reset) || reset.contains(el)) return;
-      const rect = el.getBoundingClientRect();
-      const style = getComputedStyle(el);
-      const isThinVertical = rect.width > 0 && rect.width <= 3 && rect.height >= 18;
-      const hasLeftBorder = parseFloat(style.borderLeftWidth || "0") > 0 && rect.width <= 8;
-      if (isThinVertical || hasLeftBorder) {
-        el.style.setProperty("display", "none", "important");
-      }
-    });
-  }
-
-  function arrangeLegendV88() {
-    ensureV88Styles();
-
-    const procurado = controlForV88(findByTextV88("Procurado"));
-    const avistado = controlForV88(findByTextV88("Avistado"));
-    const reencontrado = controlForV88(findByTextV88("Reencontrado", true));
-    const reset = controlForV88(findByTextV88("Resetar Visão"));
-    const location = document.getElementById("btnCenterUserLocationV87")
-      || document.getElementById("btnUserPositionV86")
-      || controlForV88(findByTextV88("Minha localização"));
-
-    if (!procurado || !avistado || !reencontrado || !reset || !location) return false;
-
-    const card = commonAncestorV88([procurado, avistado, reencontrado, reset, location]);
-    if (!card || card === document.body) return false;
-    card.classList.add("ps-map-legend-card-v88");
-
-    let statusRow = card.querySelector(":scope > .ps-map-status-row-v88");
-    if (!statusRow) {
-      statusRow = document.createElement("div");
-      statusRow.className = "ps-map-status-row-v88";
-      card.insertBefore(statusRow, card.firstChild);
-    }
-
-    let actionsRow = card.querySelector(":scope > .ps-map-actions-row-v88");
-    if (!actionsRow) {
-      actionsRow = document.createElement("div");
-      actionsRow.className = "ps-map-actions-row-v88";
-      card.appendChild(actionsRow);
-    }
-
-    [procurado, avistado, reencontrado].forEach(el => {
-      if (el.parentElement !== statusRow) statusRow.appendChild(el);
-    });
-    [reset, location].forEach(el => {
-      if (el.parentElement !== actionsRow) actionsRow.appendChild(el);
-    });
-
-    reset.classList.add("ps-reset-v88");
-    location.classList.add("ps-location-v88");
-    location.style.setProperty("color", VERY_PERI, "important");
-    location.style.setProperty("background", VERY_PERI_SOFT, "important");
-    location.style.setProperty("border-color", VERY_PERI_BORDER, "important");
-
-    // Troca apenas o ícone/ponto visual do botão de localização para Very Peri.
-    Array.from(location.querySelectorAll("span, i"))
-      .filter(el => norm(el.textContent) === "📍" || el.classList.contains("ps-location-dot-v86"))
-      .forEach(el => {
-        el.style.setProperty("color", VERY_PERI, "important");
-        el.style.setProperty("background", VERY_PERI, "important");
-      });
-
-    removeVerticalSeparatorsV88(card, reset);
-    recolorLeafletUserLayersV88();
-
-    console.log("🎨 v88: legenda reorganizada em 3+2 e localização alterada para Very Peri.");
-    return true;
-  }
-
-  function bootV88() {
-    arrangeLegendV88();
-    [100, 300, 700, 1500, 3000].forEach(ms => setTimeout(arrangeLegendV88, ms));
-
-    const observer = new MutationObserver(() => arrangeLegendV88());
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", bootV88, { once: true });
-  } else {
-    bootV88();
-  }
-})();
-
-
-// === v89 RECONSTRUÇÃO DEFINITIVA DO QUADRO DA LEGENDA ===
-(() => {
-  const VERY_PERI = "#6667AB";
-  const VERY_PERI_SOFT = "#F3F1FB";
-  const VERY_PERI_BORDER = "#C9C5EE";
-
-  const norm89 = value => String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
-
-  function leafByText89(label, starts = false) {
-    const wanted = norm89(label);
-    return Array.from(document.querySelectorAll("button, a, [role='button'], span, div, p"))
-      .filter(el => {
-        const txt = norm89(el.textContent);
-        return starts ? txt.startsWith(wanted) : txt === wanted;
-      })
-      .sort((a, b) => a.children.length - b.children.length)[0] || null;
-  }
-
-  function usableControl89(el, type = "") {
-    if (!el) return null;
-
-    // Para os filtros, prioriza o elemento ao qual o código anterior já ligou o filtro.
-    if (type && typeof getMapLegendFilterElements === "function") {
-      try {
-        const match = getMapLegendFilterElements()
-          .find(item => norm89(item.dataset?.legendStatus) === norm89(type));
-        if (match) return match;
-      } catch (_) {}
-    }
-
-    const clickable = el.closest("button, a, [role='button']");
-    if (clickable) return clickable;
-
-    let node = el;
-    const text = norm89(el.textContent);
-    while (node.parentElement && node.parentElement !== document.body) {
-      const p = node.parentElement;
-      if (norm89(p.textContent) !== text) break;
-      if (p.querySelectorAll("button, a, [role='button']").length > 1) break;
-      node = p;
-    }
-    return node;
-  }
-
-  function commonAncestor89(elements) {
-    const valid = elements.filter(Boolean);
-    if (!valid.length) return null;
-    let node = valid[0];
-    while (node && node !== document.body) {
-      if (valid.every(el => node.contains(el))) return node;
-      node = node.parentElement;
-    }
-    return null;
-  }
-
-  function findLegendCard89(controls) {
-    let card = commonAncestor89(controls);
-    if (!card) return null;
-
-    // Sobe, se necessário, até encontrar o cartão visual compacto.
-    let current = card;
-    while (current.parentElement && current.parentElement !== document.body) {
-      const r = current.getBoundingClientRect();
-      if (r.width >= 260 && r.width <= 700 && r.height >= 45 && r.height <= 220) break;
-
-      const p = current.parentElement;
-      if (!controls.every(el => p.contains(el))) break;
-      current = p;
-    }
-
-    // Se o ancestral comum ainda for apenas uma sublinha, sobe uma vez para o cartão.
-    const rr = current.getBoundingClientRect();
-    if (rr.height < 55 && current.parentElement && controls.every(el => current.parentElement.contains(el))) {
-      current = current.parentElement;
-    }
-
-    return current;
-  }
-
-  function ensureStyle89() {
-    if (document.getElementById("ps-v89-legend-style")) return;
-
-    const style = document.createElement("style");
-    style.id = "ps-v89-legend-style";
-    style.textContent = `
-      .ps-legend-card-v89 {
-        overflow: visible !important;
-        height: auto !important;
-        min-height: 0 !important;
-        padding: 12px 16px !important;
-        box-sizing: border-box !important;
-      }
-
-      .ps-legend-shell-v89 {
-        width: 100% !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 11px !important;
-        box-sizing: border-box !important;
-      }
-
-      .ps-legend-status-v89 {
-        width: 100% !important;
-        display: grid !important;
-        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-        align-items: center !important;
-        justify-items: center !important;
-        column-gap: 12px !important;
-        row-gap: 6px !important;
-        box-sizing: border-box !important;
-      }
-
-      .ps-legend-actions-v89 {
-        width: 100% !important;
-        display: grid !important;
-        grid-template-columns: repeat(2, minmax(128px, 158px)) !important;
-        justify-content: center !important;
-        align-items: center !important;
-        gap: 14px !important;
-        padding-top: 10px !important;
-        border-top: 1px solid rgba(148,163,184,.22) !important;
-        box-sizing: border-box !important;
-      }
-
-      .ps-legend-status-v89 > * {
-        justify-self: center !important;
-        min-width: 0 !important;
-        margin: 0 !important;
-      }
-
-      .ps-legend-actions-v89 > * {
-        width: 100% !important;
-        min-width: 0 !important;
-        min-height: 34px !important;
-        margin: 0 !important;
-        padding: 7px 10px !important;
-        border-radius: 9px !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        gap: 6px !important;
-        box-sizing: border-box !important;
-        white-space: nowrap !important;
-      }
-
-      .ps-reset-v89 {
-        color: #475569 !important;
-        background: #ffffff !important;
-        border: 1px solid #d8dee7 !important;
-        border-left: 1px solid #d8dee7 !important;
-        border-inline-start: 1px solid #d8dee7 !important;
-      }
-
-      .ps-location-v89 {
-        color: ${VERY_PERI} !important;
-        background: ${VERY_PERI_SOFT} !important;
-        border: 1px solid ${VERY_PERI_BORDER} !important;
-      }
-
-      .ps-location-v89:hover {
-        border-color: ${VERY_PERI} !important;
-        background: #EAE8F8 !important;
-      }
-
-      .ps-user-location-marker-v86 {
-        background: ${VERY_PERI} !important;
-      }
-
-      #psMapLocateFallbackV87 a {
-        background: ${VERY_PERI} !important;
-        color: #fff !important;
-      }
-
-      @media (max-width: 520px) {
-        .ps-legend-card-v89 {
-          padding: 10px 10px !important;
-        }
-
-        .ps-legend-shell-v89 {
-          gap: 8px !important;
-        }
-
-        .ps-legend-status-v89 {
-          column-gap: 4px !important;
-        }
-
-        .ps-legend-status-v89 > * {
-          font-size: 10px !important;
-        }
-
-        .ps-legend-actions-v89 {
-          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-          gap: 7px !important;
-          padding-top: 8px !important;
-        }
-
-        .ps-legend-actions-v89 > * {
-          min-height: 32px !important;
-          padding: 6px 5px !important;
-          font-size: 10px !important;
-        }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  function removeOldSeparators89(card, shell) {
-    Array.from(card.children).forEach(child => {
-      if (child === shell) return;
-      // Depois de mover os 5 controles, os wrappers antigos ficam vazios ou só com separadores.
-      const meaningful = norm89(child.textContent);
-      const hasInteractive = child.querySelector?.("button, a, [role='button']");
-      if (!meaningful && !hasInteractive) {
-        child.style.setProperty("display", "none", "important");
-      }
-    });
-
-    Array.from(card.querySelectorAll("div, span")).forEach(el => {
-      if (shell.contains(el)) return;
-      const r = el.getBoundingClientRect();
-      const cs = getComputedStyle(el);
-      if ((r.width > 0 && r.width <= 3 && r.height >= 16) ||
-          (parseFloat(cs.borderLeftWidth || "0") > 0 && r.width <= 8)) {
-        el.style.setProperty("display", "none", "important");
-      }
-    });
-  }
-
-  function rebuildLegend89() {
-    ensureStyle89();
-
-    const procurado = usableControl89(leafByText89("Procurado"), "Procurado");
-    const avistado = usableControl89(leafByText89("Avistado"), "Avistado");
-    const reencontrado = usableControl89(leafByText89("Reencontrado", true), "Reencontrado");
-    const reset = usableControl89(leafByText89("Resetar Visão"));
-
-    const location =
-      document.getElementById("btnCenterUserLocationV87") ||
-      document.getElementById("btnUserPositionV86") ||
-      document.getElementById("btnMapLocateMeV85") ||
-      document.getElementById("btnMapLocateMe") ||
-      usableControl89(leafByText89("Minha localização"));
-
-    if (!procurado || !avistado || !reencontrado || !reset || !location) return false;
-
-    const controls = [procurado, avistado, reencontrado, reset, location];
-    const card = findLegendCard89(controls);
-    if (!card || card === document.body) return false;
-
-    card.classList.add("ps-legend-card-v89");
-
-    let shell = card.querySelector(":scope > .ps-legend-shell-v89");
-    if (!shell) {
-      shell = document.createElement("div");
-      shell.className = "ps-legend-shell-v89";
-
-      const statusRow = document.createElement("div");
-      statusRow.className = "ps-legend-status-v89";
-
-      const actionRow = document.createElement("div");
-      actionRow.className = "ps-legend-actions-v89";
-
-      shell.append(statusRow, actionRow);
-      card.appendChild(shell);
-    }
-
-    const statusRow = shell.querySelector(".ps-legend-status-v89");
-    const actionRow = shell.querySelector(".ps-legend-actions-v89");
-
-    [procurado, avistado, reencontrado].forEach(el => statusRow.appendChild(el));
-    [reset, location].forEach(el => actionRow.appendChild(el));
-
-    reset.classList.add("ps-reset-v89");
-    reset.style.setProperty("border-left", "1px solid #d8dee7", "important");
-    reset.style.setProperty("border-inline-start", "1px solid #d8dee7", "important");
-
-    location.classList.add("ps-location-v89");
-    location.style.setProperty("color", VERY_PERI, "important");
-    location.style.setProperty("background", VERY_PERI_SOFT, "important");
-    location.style.setProperty("border-color", VERY_PERI_BORDER, "important");
-
-    // Garante um ícone roxo consistente no botão de localização.
-    const locSpans = Array.from(location.querySelectorAll("span"));
-    locSpans.forEach(span => {
-      const t = norm89(span.textContent);
-      if (t === "📍" || t === "◎" || t === "my_location") {
-        span.style.setProperty("color", VERY_PERI, "important");
-      }
-    });
-
-    removeOldSeparators89(card, shell);
-
-    console.log("🎯 v89: quadro da legenda reconstruído com 3 filtros em cima e 2 ações centralizadas embaixo.");
-    return true;
-  }
-
-  function boot89() {
-    rebuildLegend89();
-
-    [100, 250, 500, 900, 1500, 2500, 4000].forEach(ms =>
-      setTimeout(rebuildLegend89, ms)
-    );
-
-    const observer = new MutationObserver(() => {
-      if (!document.querySelector(".ps-legend-shell-v89")) rebuildLegend89();
-    });
-
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot89, { once: true });
-  } else {
-    boot89();
-  }
-})();
-
-
-// === v90 LEGENDA VISUAL INDEPENDENTE: 3 FILTROS + 2 AÇÕES ===
-(() => {
-  const VERY_PERI = "#6667AB";
-  const norm90 = s => String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
-
-  function findText90(label, starts = false) {
-    const wanted = norm90(label);
-    return Array.from(document.querySelectorAll("button, a, [role='button'], span, div, p"))
-      .filter(el => {
-        const txt = norm90(el.textContent);
-        return starts ? txt.startsWith(wanted) : txt === wanted;
-      })
-      .sort((a,b) => a.children.length - b.children.length)[0] || null;
-  }
-
-  function clickable90(el) {
-    if (!el) return null;
-    return el.closest("button, a, [role='button']") || el;
-  }
-
-  function common90(elements) {
-    const valid = elements.filter(Boolean);
-    if (!valid.length) return null;
-    let node = valid[0];
-    while (node && node !== document.body) {
-      if (valid.every(el => node.contains(el))) return node;
-      node = node.parentElement;
-    }
-    return null;
-  }
-
-  function legendCard90() {
-    const p = clickable90(findText90("Procurado"));
-    const a = clickable90(findText90("Avistado"));
-    const r = clickable90(findText90("Reencontrado", true));
-    const reset = clickable90(findText90("Resetar Visão"));
-    const loc = document.getElementById("btnCenterUserLocationV87")
-      || document.getElementById("btnUserPositionV86")
-      || clickable90(findText90("Minha localização"));
-    if (!p || !a || !r || !reset || !loc) return null;
-
-    let card = common90([p,a,r,reset,loc]);
-    if (!card) return null;
-
-    // sobe até o cartão visual real (retângulo branco pequeno no topo)
-    let best = card;
-    for (let i=0; i<4 && best.parentElement && best.parentElement !== document.body; i++) {
-      const rect = best.getBoundingClientRect();
-      if (rect.width >= 350 && rect.width <= 800 && rect.height >= 60 && rect.height <= 220) break;
-      const parent = best.parentElement;
-      if (![p,a,r,reset,loc].every(el => parent.contains(el))) break;
-      best = parent;
-    }
-    return { card: best, originals: { p,a,r,reset,loc } };
-  }
-
-  function css90() {
-    if (document.getElementById("ps-v90-style")) return;
-    const s = document.createElement("style");
-    s.id = "ps-v90-style";
-    s.textContent = `
-      .ps-v90-card {
-        box-sizing: border-box !important;
-        height: auto !important;
-        min-height: 108px !important;
-        padding: 14px 18px !important;
-        overflow: visible !important;
-      }
-      .ps-v90-shell {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        box-sizing: border-box;
-      }
-      .ps-v90-status {
-        width: 100%;
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 14px;
-        align-items: center;
-        justify-items: center;
-      }
-      .ps-v90-actions {
-        width: 100%;
-        display: grid;
-        grid-template-columns: repeat(2, minmax(135px, 170px));
-        gap: 14px;
-        justify-content: center;
-        align-items: center;
-      }
-      .ps-v90-filter,
-      .ps-v90-action {
-        border: 0;
-        background: transparent;
-        font: inherit;
-        cursor: pointer;
-        box-sizing: border-box;
-      }
-      .ps-v90-filter {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 7px;
-        min-height: 28px;
-        padding: 4px 6px;
-        font-size: 12px;
-        font-weight: 700;
-        white-space: nowrap;
-      }
-      .ps-v90-dot {
-        width: 11px;
-        height: 11px;
-        border-radius: 50%;
-        flex: 0 0 11px;
-      }
-      .ps-v90-action {
-        width: 100%;
-        min-height: 38px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 7px;
-        padding: 8px 12px;
-        border-radius: 10px;
-        font-size: 12px;
-        font-weight: 700;
-        white-space: nowrap;
-      }
-      .ps-v90-reset {
-        color: #475569;
-        background: #fff;
-        border: 1px solid #d8dee7;
-      }
-      .ps-v90-location {
-        color: ${VERY_PERI};
-        background: #F3F1FB;
-        border: 1px solid #C9C5EE;
-      }
-      .ps-v90-location-pin { color: ${VERY_PERI}; font-size: 15px; }
-      .ps-v90-filter[data-status="Procurado"] { color:#ef2222; }
-      .ps-v90-filter[data-status="Avistado"] { color:#159bd3; }
-      .ps-v90-filter[data-status="Reencontrado"] { color:#169c48; }
-      @media(max-width:520px){
-        .ps-v90-card{padding:10px 10px !important;min-height:100px !important;}
-        .ps-v90-shell{gap:8px;}
-        .ps-v90-status{gap:3px;}
-        .ps-v90-filter{font-size:10px;padding:3px 2px;gap:4px;}
-        .ps-v90-dot{width:9px;height:9px;flex-basis:9px;}
-        .ps-v90-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;}
-        .ps-v90-action{min-height:34px;font-size:10px;padding:6px 5px;}
-      }
-    `;
-    document.head.appendChild(s);
-  }
-
-  function applyStatus90(status, original) {
-    if (typeof window.applyStatusFilterFromLegend === "function") {
-      window.applyStatusFilterFromLegend(status);
-      return;
-    }
-    try { original?.click(); } catch (_) {}
-  }
-
-  function build90() {
-    css90();
-    if (document.getElementById("psLegendShellV90")) return true;
-    const found = legendCard90();
-    if (!found) return false;
-    const { card, originals } = found;
-    card.classList.add("ps-v90-card");
-
-    // Oculta a estrutura visual antiga inteira sem remover seus listeners.
-    Array.from(card.children).forEach(child => {
-      child.dataset.psV90Old = "1";
-      child.style.setProperty("display", "none", "important");
-    });
-
-    const shell = document.createElement("div");
-    shell.id = "psLegendShellV90";
-    shell.className = "ps-v90-shell";
-
-    const statusRow = document.createElement("div");
-    statusRow.className = "ps-v90-status";
-
-    const specs = [
-      ["Procurado", "#ef2222", originals.p],
-      ["Avistado", "#159bd3", originals.a],
-      ["Reencontrado", "#169c48", originals.r]
-    ];
-
-    specs.forEach(([label,color,original]) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "ps-v90-filter";
-      b.dataset.status = label;
-      b.innerHTML = `<span class="ps-v90-dot" style="background:${color}"></span><span>${label}${label === "Reencontrado" ? " 🎉" : ""}</span>`;
-      b.addEventListener("click", () => applyStatus90(label, original));
-      statusRow.appendChild(b);
-    });
-
-    const actions = document.createElement("div");
-    actions.className = "ps-v90-actions";
-
-    const reset = document.createElement("button");
-    reset.type = "button";
-    reset.className = "ps-v90-action ps-v90-reset";
-    reset.innerHTML = '<span style="font-size:15px">↻</span><span>Resetar Visão</span>';
-    reset.addEventListener("click", () => {
-      try { originals.reset.click(); } catch (_) {}
-    });
-
-    const loc = document.createElement("button");
-    loc.type = "button";
-    loc.className = "ps-v90-action ps-v90-location";
-    loc.innerHTML = '<span class="ps-v90-location-pin">📍</span><span>Minha localização</span>';
-    loc.addEventListener("click", () => {
-      if (typeof window.positionMapAtUserV86 === "function") {
-        window.positionMapAtUserV86(true);
-      } else {
-        try { originals.loc.click(); } catch (_) {}
-      }
-    });
-
-    actions.append(reset, loc);
-    shell.append(statusRow, actions);
-    card.appendChild(shell);
-
-    // Mostra explicitamente apenas o novo shell.
-    shell.style.setProperty("display", "flex", "important");
-
-    console.log("✅ v90: nova legenda 3+2 aplicada visualmente, independente do HTML antigo.");
-    return true;
-  }
-
-  function boot90(){
-    if (build90()) return;
-    const obs = new MutationObserver(() => {
-      if (build90()) obs.disconnect();
-    });
-    obs.observe(document.documentElement,{childList:true,subtree:true});
-    [100,250,500,900,1500,2500,4000].forEach(ms=>setTimeout(build90,ms));
-  }
-
-  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded",boot90,{once:true});
-  else boot90();
-})();
-
-
-// === v91 OVERLAY DEFINITIVO DA LEGENDA 3+2 ===
-(() => {
-  const VERY_PERI = "#6667AB";
-
-  function getStatusButtonsV91() {
-    try {
-      if (typeof getMapLegendFilterElements === "function") {
-        const els = getMapLegendFilterElements();
-        if (Array.isArray(els) && els.length >= 3) return els;
-      }
-    } catch (_) {}
-
-    const wanted = ["Procurado", "Avistado", "Reencontrado"];
-    return wanted.map(label => {
-      const nodes = Array.from(document.querySelectorAll("button, a, [role='button'], span, div"));
-      const found = nodes.filter(el => {
-        const txt = String(el.textContent || "").replace(/\s+/g, " ").trim();
-        return label === "Reencontrado" ? txt.startsWith(label) : txt === label;
-      }).sort((a,b) => a.children.length - b.children.length)[0];
-      return found || null;
-    }).filter(Boolean);
-  }
-
-  function commonAncestorV91(elements) {
-    if (!elements.length) return null;
-    let node = elements[0];
-    while (node && node !== document.body) {
-      if (elements.every(el => node.contains(el))) return node;
-      node = node.parentElement;
-    }
-    return null;
-  }
-
-  function findLegendCardV91(statusButtons, resetBtn) {
-    let node = commonAncestorV91([...statusButtons, resetBtn]);
-    if (!node) return null;
-
-    // Escolhe o ancestral mais próximo que tenha dimensões compatíveis com o cartão da legenda.
-    let candidate = node;
-    for (let i = 0; i < 6 && candidate && candidate !== document.body; i++) {
-      const r = candidate.getBoundingClientRect();
-      const fits = r.width >= 280 && r.width <= 760 && r.height >= 45 && r.height <= 220;
-      if (fits) return candidate;
-      candidate = candidate.parentElement;
-    }
-    return node;
-  }
-
-  function hideOriginalLegendV91(card, statusButtons, resetBtn) {
-    const locationOriginal = document.getElementById("btnCenterUserLocationV87")
-      || document.getElementById("btnUserPositionV86")
-      || document.getElementById("btnMapLocateMeV85")
-      || document.getElementById("btnMapLocateMe");
-
-    [...statusButtons, resetBtn, locationOriginal].filter(Boolean).forEach(el => {
-      el.style.setProperty("visibility", "hidden", "important");
-      el.style.setProperty("pointer-events", "none", "important");
-    });
-
-    // Remove visualmente separadores verticais antigos.
-    Array.from(card.querySelectorAll("div, span")).forEach(el => {
-      if (el.id === "psLegendOverlayV91" || el.closest?.("#psLegendOverlayV91")) return;
-      const r = el.getBoundingClientRect();
-      const cs = getComputedStyle(el);
-      if ((r.width > 0 && r.width <= 3 && r.height >= 16) ||
-          (parseFloat(cs.borderLeftWidth || "0") > 0 && r.width <= 8)) {
-        el.style.setProperty("visibility", "hidden", "important");
-      }
-    });
-  }
-
-  function buildOverlayV91() {
-    if (document.getElementById("psLegendOverlayV91")) return true;
-
-    const resetBtn = document.getElementById("btnResetMap");
-    const statusButtons = getStatusButtonsV91();
-    if (!resetBtn || statusButtons.length < 3) return false;
-
-    const card = findLegendCardV91(statusButtons, resetBtn);
-    if (!card || card === document.body) return false;
-
-    card.style.setProperty("position", "relative", "important");
-    card.style.setProperty("min-height", "112px", "important");
-    card.style.setProperty("height", "112px", "important");
-    card.style.setProperty("overflow", "visible", "important");
-    card.style.setProperty("padding", "0", "important");
-    card.style.setProperty("box-sizing", "border-box", "important");
-
-    hideOriginalLegendV91(card, statusButtons, resetBtn);
-
-    const overlay = document.createElement("div");
-    overlay.id = "psLegendOverlayV91";
-    overlay.style.cssText = [
-      "position:absolute",
-      "inset:0",
-      "display:flex",
-      "flex-direction:column",
-      "justify-content:center",
-      "gap:12px",
-      "padding:12px 18px",
-      "box-sizing:border-box",
-      "z-index:9999",
-      "pointer-events:auto"
-    ].join(";");
-
-    const top = document.createElement("div");
-    top.style.cssText = "display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:center;justify-items:center;width:100%;";
-
-    const specs = [
-      ["Procurado", "#EF2222"],
-      ["Avistado", "#159BD3"],
-      ["Reencontrado 🎉", "#169C48"]
-    ];
-
-    specs.forEach(([label, color], index) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.style.cssText = `display:inline-flex;align-items:center;justify-content:center;gap:7px;border:0;background:transparent;color:${color};font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;padding:4px 6px;`;
-      b.innerHTML = `<span style="width:11px;height:11px;border-radius:50%;background:${color};display:inline-block;flex:0 0 11px"></span><span>${label}</span>`;
-      b.addEventListener("click", () => {
-        const status = index === 0 ? "Procurado" : index === 1 ? "Avistado" : "Reencontrado";
-        if (typeof window.applyStatusFilterFromLegend === "function") {
-          window.applyStatusFilterFromLegend(status);
-        } else {
-          try { statusButtons[index]?.click(); } catch (_) {}
-        }
-      });
-      top.appendChild(b);
-    });
-
-    const bottom = document.createElement("div");
-    bottom.style.cssText = "display:grid;grid-template-columns:repeat(2,minmax(140px,170px));gap:14px;justify-content:center;align-items:center;width:100%;";
-
-    const reset = document.createElement("button");
-    reset.type = "button";
-    reset.style.cssText = "width:100%;min-height:38px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 12px;border-radius:10px;border:1px solid #D8DEE7;background:#FFFFFF;color:#475569;font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;";
-    reset.innerHTML = '<span style="font-size:16px;line-height:1">↻</span><span>Resetar Visão</span>';
-    reset.addEventListener("click", () => resetBtn.click());
-
-    const loc = document.createElement("button");
-    loc.type = "button";
-    loc.style.cssText = `width:100%;min-height:38px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 12px;border-radius:10px;border:1px solid #C9C5EE;background:#F3F1FB;color:${VERY_PERI};font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;`;
-    loc.innerHTML = '<span style="font-size:16px;line-height:1;color:#6667AB">📍</span><span>Minha localização</span>';
-    loc.addEventListener("click", () => {
-      if (typeof window.positionMapAtUserV86 === "function") {
-        window.positionMapAtUserV86(true);
-      } else {
-        const original = document.getElementById("btnCenterUserLocationV87") || document.getElementById("btnUserPositionV86");
-        try { original?.click(); } catch (_) {}
-      }
-    });
-
-    bottom.append(reset, loc);
-    overlay.append(top, bottom);
-    card.appendChild(overlay);
-
-    // Mobile compact layout.
-    const style = document.createElement("style");
-    style.id = "psLegendOverlayV91Style";
-    style.textContent = `
-      @media (max-width: 520px) {
-        #psLegendOverlayV91 { padding: 9px 9px !important; gap: 8px !important; }
-        #psLegendOverlayV91 > div:first-child { gap: 3px !important; }
-        #psLegendOverlayV91 > div:first-child button { font-size: 10px !important; padding: 3px 2px !important; gap: 4px !important; }
-        #psLegendOverlayV91 > div:last-child { grid-template-columns: repeat(2,minmax(0,1fr)) !important; gap: 7px !important; }
-        #psLegendOverlayV91 > div:last-child button { min-height: 34px !important; font-size: 10px !important; padding: 6px 5px !important; }
-      }
-    `;
-    document.head.appendChild(style);
-
-    console.log("🎯 v91: overlay 3+2 aplicado diretamente sobre o cartão original da legenda.");
-    return true;
-  }
-
-  function bootV91() {
-    if (buildOverlayV91()) return;
-    const observer = new MutationObserver(() => {
-      if (buildOverlayV91()) observer.disconnect();
-    });
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-    [100,250,500,900,1500,2500,4000,6000].forEach(ms => setTimeout(buildOverlayV91, ms));
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", bootV91, { once:true });
-  } else {
-    bootV91();
-  }
-})();
-
-
-// === v92 PAINEL 3+2 POSICIONADO PELAS COORDENADAS REAIS DOS CONTROLES ===
-(() => {
-  const VERY_PERI = "#6667AB";
-  let panelV92 = null;
-  let anchorElementsV92 = [];
-
-  const norm92 = s => String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
-
-  function findLeaf92(label, starts = false) {
-    const wanted = norm92(label);
-    return Array.from(document.querySelectorAll("button, a, [role='button'], span, div, p"))
-      .filter(el => {
-        const t = norm92(el.textContent);
-        return starts ? t.startsWith(wanted) : t === wanted;
-      })
-      .sort((a,b) => a.children.length - b.children.length)[0] || null;
-  }
-
-  function clickable92(el) {
-    if (!el) return null;
-    return el.closest("button, a, [role='button']") || el;
-  }
-
-  function getOriginals92() {
-    let status = [];
-    try {
-      if (typeof getMapLegendFilterElements === "function") {
-        status = getMapLegendFilterElements() || [];
-      }
-    } catch (_) {}
-
-    if (status.length < 3) {
-      status = [
-        clickable92(findLeaf92("Procurado")),
-        clickable92(findLeaf92("Avistado")),
-        clickable92(findLeaf92("Reencontrado", true))
-      ].filter(Boolean);
-    }
-
-    const reset = document.getElementById("btnResetMap") || clickable92(findLeaf92("Resetar Visão"));
-    const location = document.getElementById("btnCenterUserLocationV87")
-      || document.getElementById("btnUserPositionV86")
-      || document.getElementById("btnMapLocateMeV85")
-      || document.getElementById("btnMapLocateMe")
-      || clickable92(findLeaf92("Minha localização"));
-
-    if (status.length < 3 || !reset || !location) return null;
-    return { status: status.slice(0,3), reset, location };
-  }
-
-  function unionRect92(elements) {
-    const rects = elements.map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
-    if (!rects.length) return null;
-    const left = Math.min(...rects.map(r => r.left));
-    const top = Math.min(...rects.map(r => r.top));
-    const right = Math.max(...rects.map(r => r.right));
-    const bottom = Math.max(...rects.map(r => r.bottom));
-    return { left, top, right, bottom, width: right-left, height: bottom-top };
-  }
-
-  function hideOriginals92(orig) {
-    [...orig.status, orig.reset, orig.location].forEach(el => {
-      el.style.setProperty("opacity", "0", "important");
-      el.style.setProperty("visibility", "hidden", "important");
-      el.style.setProperty("pointer-events", "none", "important");
-    });
-
-    // esconde separadores verticais próximos do reset
-    const rr = orig.reset.getBoundingClientRect();
-    Array.from(document.querySelectorAll("div, span")).forEach(el => {
-      if (panelV92 && panelV92.contains(el)) return;
-      const r = el.getBoundingClientRect();
-      if (r.height >= 16 && r.width <= 4 && Math.abs(r.top - rr.top) < 24 && r.left < rr.left && rr.left - r.right < 24) {
-        el.style.setProperty("visibility", "hidden", "important");
-      }
-    });
-  }
-
-  function styleButton92(btn, kind) {
-    btn.style.cssText = [
-      "box-sizing:border-box",
-      "font:inherit",
-      "cursor:pointer",
-      "white-space:nowrap",
-      "display:inline-flex",
-      "align-items:center",
-      "justify-content:center",
-      "gap:7px",
-      "margin:0"
-    ].join(";");
-
-    if (kind === "reset") {
-      btn.style.cssText += ";width:100%;min-height:38px;padding:8px 12px;border-radius:10px;border:1px solid #D8DEE7;background:#fff;color:#475569;font-size:12px;font-weight:700;";
-    } else if (kind === "location") {
-      btn.style.cssText += `;width:100%;min-height:38px;padding:8px 12px;border-radius:10px;border:1px solid #C9C5EE;background:#F3F1FB;color:${VERY_PERI};font-size:12px;font-weight:700;`;
-    } else {
-      btn.style.cssText += `;border:0;background:transparent;color:${kind};font-size:12px;font-weight:700;padding:4px 6px;`;
-    }
-  }
-
-  function buildPanel92(orig) {
-    if (panelV92) panelV92.remove();
-    panelV92 = document.createElement("div");
-    panelV92.id = "psLegendPanelV92";
-    panelV92.style.cssText = [
-      "position:absolute",
-      "z-index:2147483000",
-      "background:#fff",
-      "border:1px solid #D9DEE7",
-      "border-radius:14px",
-      "box-shadow:0 2px 8px rgba(15,23,42,.08)",
-      "padding:12px 16px",
-      "box-sizing:border-box",
-      "display:flex",
-      "flex-direction:column",
-      "gap:12px",
-      "pointer-events:auto"
-    ].join(";");
-
-    const top = document.createElement("div");
-    top.style.cssText = "display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:center;justify-items:center;width:100%;";
-
-    const specs = [
-      ["Procurado", "#EF2222"],
-      ["Avistado", "#159BD3"],
-      ["Reencontrado 🎉", "#169C48"]
-    ];
-    specs.forEach(([label,color],i) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      styleButton92(b, color);
-      b.innerHTML = `<span style="width:11px;height:11px;border-radius:50%;background:${color};display:inline-block;flex:0 0 11px"></span><span>${label}</span>`;
-      b.addEventListener("click", () => {
-        const status = i === 0 ? "Procurado" : i === 1 ? "Avistado" : "Reencontrado";
-        if (typeof window.applyStatusFilterFromLegend === "function") window.applyStatusFilterFromLegend(status);
-        else try { orig.status[i].click(); } catch (_) {}
-      });
-      top.appendChild(b);
-    });
-
-    const bottom = document.createElement("div");
-    bottom.style.cssText = "display:grid;grid-template-columns:repeat(2,minmax(140px,170px));gap:14px;justify-content:center;align-items:center;width:100%;";
-
-    const reset = document.createElement("button");
-    reset.type = "button";
-    styleButton92(reset, "reset");
-    reset.innerHTML = '<span style="font-size:16px;line-height:1">↻</span><span>Resetar Visão</span>';
-    reset.addEventListener("click", () => orig.reset.click());
-
-    const location = document.createElement("button");
-    location.type = "button";
-    styleButton92(location, "location");
-    location.innerHTML = '<span style="font-size:16px;line-height:1;color:#6667AB">📍</span><span>Minha localização</span>';
-    location.addEventListener("click", () => {
-      if (typeof window.positionMapAtUserV86 === "function") window.positionMapAtUserV86(true);
-      else try { orig.location.click(); } catch (_) {}
-    });
-
-    bottom.append(reset, location);
-    panelV92.append(top, bottom);
-    document.body.appendChild(panelV92);
-
-    const style = document.createElement("style");
-    style.id = "psLegendPanelV92Responsive";
-    style.textContent = `
-      @media (max-width:520px) {
-        #psLegendPanelV92 { padding:9px 9px !important; gap:8px !important; }
-        #psLegendPanelV92 > div:first-child { gap:3px !important; }
-        #psLegendPanelV92 > div:first-child button { font-size:10px !important; padding:3px 2px !important; gap:4px !important; }
-        #psLegendPanelV92 > div:last-child { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:7px !important; }
-        #psLegendPanelV92 > div:last-child button { min-height:34px !important; font-size:10px !important; padding:6px 5px !important; }
-      }
-    `;
-    if (!document.getElementById(style.id)) document.head.appendChild(style);
-  }
-
-  function positionPanel92(orig) {
-    if (!panelV92) return;
-    const all = [...orig.status, orig.reset, orig.location];
-    const u = unionRect92(all);
-    if (!u) return;
-
-    // usa a posição real do painel atual e aumenta só o necessário para o layout 3+2
-    const desiredWidth = Math.max(390, Math.min(540, u.width + 36));
-    const desiredHeight = window.innerWidth <= 520 ? 98 : 108;
-    const viewportRight = window.scrollX + document.documentElement.clientWidth;
-    let left = window.scrollX + u.left - 12;
-    if (left + desiredWidth > viewportRight - 12) left = viewportRight - desiredWidth - 12;
-    if (left < window.scrollX + 12) left = window.scrollX + 12;
-    const top = window.scrollY + u.top - 10;
-
-    panelV92.style.left = `${left}px`;
-    panelV92.style.top = `${top}px`;
-    panelV92.style.width = `${desiredWidth}px`;
-    panelV92.style.minHeight = `${desiredHeight}px`;
-  }
-
-  function install92() {
-    const orig = getOriginals92();
-    if (!orig) return false;
-    anchorElementsV92 = [...orig.status, orig.reset, orig.location];
-    hideOriginals92(orig);
-    buildPanel92(orig);
-    positionPanel92(orig);
-    console.log("🎯 v92: painel 3+2 redesenhado por cima da legenda usando as coordenadas reais dos controles.");
-    return true;
-  }
-
-  function boot92() {
-    if (!install92()) {
-      const obs = new MutationObserver(() => {
-        if (install92()) obs.disconnect();
-      });
-      obs.observe(document.documentElement,{childList:true,subtree:true});
-      [100,250,500,900,1500,2500,4000,6000].forEach(ms=>setTimeout(install92,ms));
-    }
-
-    const reposition = () => {
-      const orig = getOriginals92();
-      if (orig && panelV92) positionPanel92(orig);
-    };
-    window.addEventListener("resize", reposition, { passive:true });
-    window.addEventListener("scroll", reposition, { passive:true });
-  }
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded",boot92,{once:true});
-  else boot92();
+  [250, 700, 1500, 3000].forEach(ms => setTimeout(boot, ms));
 })();
