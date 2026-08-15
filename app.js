@@ -2298,21 +2298,3 @@ window.adminDeletePet = adminDeletePet;
 window.downloadPosterJPG = downloadPosterJPG;
 window.getRandomDefaultPhoto = getRandomDefaultPhoto;
 
-async function repopulateFirestore() {
-  if (!db || !firestoreSDK) {
-    console.error("❌ Firestore não está inicializado.");
-    return;
-  }
-
-  for (const pet of INITIAL_PETS) {
-    try {
-      await savePetToFirebase(pet);
-      console.log("✅ Pet restaurado:", pet.name);
-    } catch (e) {
-      console.error("❌ Erro ao restaurar pet:", pet.name, e);
-    }
-  }
-}
-
-// Chame a função uma vez para repopular
-repopulateFirestore();
