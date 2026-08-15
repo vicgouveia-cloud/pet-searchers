@@ -722,6 +722,57 @@ function savePetsToStorage() {
   }
 }
 
+// --- UTILITÁRIOS DE PERSISTÊNCIA E EXCLUSÃO ---
+function deduplicatePets(pets) {
+  if (!Array.isArray(pets)) return [];
+  const seenIds = new Set();
+  const seenContentKeys = new Set();
+
+  return pets.filter(pet => {
+    if (!pet || !pet.id) return false;
+    if (seenIds.has(pet.id)) return false;
+
+    const nameStr = String(pet.name || "").toLowerCase().trim();
+    const phoneStr = String(pet.contactPhone || "").trim();
+    const addrStr = String(pet.address || "").toLowerCase().trim();
+    const contentKey = `${nameStr}_${phoneStr}_${addrStr}`;
+
+    // Não remove registros diferentes apenas porque compartilham nome/endereço
+    // quando não há telefone suficiente para identificar um duplicado.
+    if (nameStr.length > 1 && phoneStr.length > 3 && addrStr.length > 2 && seenContentKeys.has(contentKey)) {
+      return false;
+    }
+
+    seenIds.add(pet.id);
+    if (nameStr.length > 1 && phoneStr.length > 3 && addrStr.length > 2) {
+      seenContentKeys.add(contentKey);
+    }
+    return true;
+  });
+}
+
+function getDeletedPetIds() {
+  try {
+    const raw = localStorage.getItem("pet_searchers_deleted_ids_v1");
+    const ids = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(ids) ? ids : []);
+  } catch (e) {
+    console.warn("Não foi possível ler a lista de pets excluídos; usando lista vazia.", e);
+    return new Set();
+  }
+}
+
+function markPetAsDeleted(petId) {
+  if (!petId) return;
+  const deletedSet = getDeletedPetIds();
+  deletedSet.add(petId);
+  try {
+    localStorage.setItem("pet_searchers_deleted_ids_v1", JSON.stringify([...deletedSet]));
+  } catch (e) {
+    console.warn("Não foi possível registrar exclusão local.", e);
+  }
+}
+
 // --- FIREBASE FIRESTORE SYNC & PERSISTENCE ENGINE ---
 
 // --- AUTOMATED 30-DAY EXPIRATION ENGINE ---
