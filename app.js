@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v89 carregado - quadro da legenda reconstruído em 3+2");
+console.log("✅ Pet Searchers app.js BUILD v90 carregado - legenda visual 3+2 independente da estrutura original");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -6293,4 +6293,253 @@ window.getRandomDefaultPhoto = getRandomDefaultPhoto;
   } else {
     boot89();
   }
+})();
+
+
+// === v90 LEGENDA VISUAL INDEPENDENTE: 3 FILTROS + 2 AÇÕES ===
+(() => {
+  const VERY_PERI = "#6667AB";
+  const norm90 = s => String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
+
+  function findText90(label, starts = false) {
+    const wanted = norm90(label);
+    return Array.from(document.querySelectorAll("button, a, [role='button'], span, div, p"))
+      .filter(el => {
+        const txt = norm90(el.textContent);
+        return starts ? txt.startsWith(wanted) : txt === wanted;
+      })
+      .sort((a,b) => a.children.length - b.children.length)[0] || null;
+  }
+
+  function clickable90(el) {
+    if (!el) return null;
+    return el.closest("button, a, [role='button']") || el;
+  }
+
+  function common90(elements) {
+    const valid = elements.filter(Boolean);
+    if (!valid.length) return null;
+    let node = valid[0];
+    while (node && node !== document.body) {
+      if (valid.every(el => node.contains(el))) return node;
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  function legendCard90() {
+    const p = clickable90(findText90("Procurado"));
+    const a = clickable90(findText90("Avistado"));
+    const r = clickable90(findText90("Reencontrado", true));
+    const reset = clickable90(findText90("Resetar Visão"));
+    const loc = document.getElementById("btnCenterUserLocationV87")
+      || document.getElementById("btnUserPositionV86")
+      || clickable90(findText90("Minha localização"));
+    if (!p || !a || !r || !reset || !loc) return null;
+
+    let card = common90([p,a,r,reset,loc]);
+    if (!card) return null;
+
+    // sobe até o cartão visual real (retângulo branco pequeno no topo)
+    let best = card;
+    for (let i=0; i<4 && best.parentElement && best.parentElement !== document.body; i++) {
+      const rect = best.getBoundingClientRect();
+      if (rect.width >= 350 && rect.width <= 800 && rect.height >= 60 && rect.height <= 220) break;
+      const parent = best.parentElement;
+      if (![p,a,r,reset,loc].every(el => parent.contains(el))) break;
+      best = parent;
+    }
+    return { card: best, originals: { p,a,r,reset,loc } };
+  }
+
+  function css90() {
+    if (document.getElementById("ps-v90-style")) return;
+    const s = document.createElement("style");
+    s.id = "ps-v90-style";
+    s.textContent = `
+      .ps-v90-card {
+        box-sizing: border-box !important;
+        height: auto !important;
+        min-height: 108px !important;
+        padding: 14px 18px !important;
+        overflow: visible !important;
+      }
+      .ps-v90-shell {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-sizing: border-box;
+      }
+      .ps-v90-status {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        align-items: center;
+        justify-items: center;
+      }
+      .ps-v90-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(135px, 170px));
+        gap: 14px;
+        justify-content: center;
+        align-items: center;
+      }
+      .ps-v90-filter,
+      .ps-v90-action {
+        border: 0;
+        background: transparent;
+        font: inherit;
+        cursor: pointer;
+        box-sizing: border-box;
+      }
+      .ps-v90-filter {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 28px;
+        padding: 4px 6px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      .ps-v90-dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        flex: 0 0 11px;
+      }
+      .ps-v90-action {
+        width: 100%;
+        min-height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        padding: 8px 12px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      .ps-v90-reset {
+        color: #475569;
+        background: #fff;
+        border: 1px solid #d8dee7;
+      }
+      .ps-v90-location {
+        color: ${VERY_PERI};
+        background: #F3F1FB;
+        border: 1px solid #C9C5EE;
+      }
+      .ps-v90-location-pin { color: ${VERY_PERI}; font-size: 15px; }
+      .ps-v90-filter[data-status="Procurado"] { color:#ef2222; }
+      .ps-v90-filter[data-status="Avistado"] { color:#159bd3; }
+      .ps-v90-filter[data-status="Reencontrado"] { color:#169c48; }
+      @media(max-width:520px){
+        .ps-v90-card{padding:10px 10px !important;min-height:100px !important;}
+        .ps-v90-shell{gap:8px;}
+        .ps-v90-status{gap:3px;}
+        .ps-v90-filter{font-size:10px;padding:3px 2px;gap:4px;}
+        .ps-v90-dot{width:9px;height:9px;flex-basis:9px;}
+        .ps-v90-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;}
+        .ps-v90-action{min-height:34px;font-size:10px;padding:6px 5px;}
+      }
+    `;
+    document.head.appendChild(s);
+  }
+
+  function applyStatus90(status, original) {
+    if (typeof window.applyStatusFilterFromLegend === "function") {
+      window.applyStatusFilterFromLegend(status);
+      return;
+    }
+    try { original?.click(); } catch (_) {}
+  }
+
+  function build90() {
+    css90();
+    if (document.getElementById("psLegendShellV90")) return true;
+    const found = legendCard90();
+    if (!found) return false;
+    const { card, originals } = found;
+    card.classList.add("ps-v90-card");
+
+    // Oculta a estrutura visual antiga inteira sem remover seus listeners.
+    Array.from(card.children).forEach(child => {
+      child.dataset.psV90Old = "1";
+      child.style.setProperty("display", "none", "important");
+    });
+
+    const shell = document.createElement("div");
+    shell.id = "psLegendShellV90";
+    shell.className = "ps-v90-shell";
+
+    const statusRow = document.createElement("div");
+    statusRow.className = "ps-v90-status";
+
+    const specs = [
+      ["Procurado", "#ef2222", originals.p],
+      ["Avistado", "#159bd3", originals.a],
+      ["Reencontrado", "#169c48", originals.r]
+    ];
+
+    specs.forEach(([label,color,original]) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "ps-v90-filter";
+      b.dataset.status = label;
+      b.innerHTML = `<span class="ps-v90-dot" style="background:${color}"></span><span>${label}${label === "Reencontrado" ? " 🎉" : ""}</span>`;
+      b.addEventListener("click", () => applyStatus90(label, original));
+      statusRow.appendChild(b);
+    });
+
+    const actions = document.createElement("div");
+    actions.className = "ps-v90-actions";
+
+    const reset = document.createElement("button");
+    reset.type = "button";
+    reset.className = "ps-v90-action ps-v90-reset";
+    reset.innerHTML = '<span style="font-size:15px">↻</span><span>Resetar Visão</span>';
+    reset.addEventListener("click", () => {
+      try { originals.reset.click(); } catch (_) {}
+    });
+
+    const loc = document.createElement("button");
+    loc.type = "button";
+    loc.className = "ps-v90-action ps-v90-location";
+    loc.innerHTML = '<span class="ps-v90-location-pin">📍</span><span>Minha localização</span>';
+    loc.addEventListener("click", () => {
+      if (typeof window.positionMapAtUserV86 === "function") {
+        window.positionMapAtUserV86(true);
+      } else {
+        try { originals.loc.click(); } catch (_) {}
+      }
+    });
+
+    actions.append(reset, loc);
+    shell.append(statusRow, actions);
+    card.appendChild(shell);
+
+    // Mostra explicitamente apenas o novo shell.
+    shell.style.setProperty("display", "flex", "important");
+
+    console.log("✅ v90: nova legenda 3+2 aplicada visualmente, independente do HTML antigo.");
+    return true;
+  }
+
+  function boot90(){
+    if (build90()) return;
+    const obs = new MutationObserver(() => {
+      if (build90()) obs.disconnect();
+    });
+    obs.observe(document.documentElement,{childList:true,subtree:true});
+    [100,250,500,900,1500,2500,4000].forEach(ms=>setTimeout(build90,ms));
+  }
+
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded",boot90,{once:true});
+  else boot90();
 })();
