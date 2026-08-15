@@ -1,3 +1,4 @@
+console.log("✅ Pet Searchers app.js BUILD v62 carregado - filtros da legenda ativos");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -1124,6 +1125,129 @@ function focusPetOnMap(petId) {
 }
 
 
+
+// --- FILTROS DA LEGENDA DO MAPA (PROCURADO / AVISTADO / REENCONTRADO) ---
+// Funciona mesmo quando o HTML da legenda não possui a classe .legend-filter-btn.
+function getMapLegendFilterElements() {
+  const statusByLabel = {
+    "procurado": "Procurado",
+    "avistado": "Avistado",
+    "reencontrado": "Reencontrado"
+  };
+
+  const results = [];
+  const seen = new Set();
+
+  // 1) Elementos que já usam a classe/dataset esperados.
+  document.querySelectorAll(".legend-filter-btn").forEach(el => {
+    const status = el.dataset.legendStatus || statusByLabel[(el.textContent || "").trim().toLowerCase()];
+    if (status && !seen.has(el)) {
+      el.dataset.legendStatus = status;
+      results.push(el);
+      seen.add(el);
+    }
+  });
+
+  // 2) Fallback: encontra os três rótulos visíveis da legenda pelo texto.
+  // Os filtros inferiores são "Procurados"/"Avistados", portanto não colidem
+  // com os textos singulares da legenda superior.
+  document.querySelectorAll("button, a, [role='button'], span, div").forEach(el => {
+    const label = (el.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+    const status = statusByLabel[label];
+    if (!status) return;
+
+    // Preferir o menor elemento que contenha exatamente o texto da legenda.
+    // Ignora containers que englobam outros controles/textos.
+    const childText = Array.from(el.children || [])
+      .map(c => (c.textContent || "").replace(/\s+/g, " ").trim().toLowerCase())
+      .filter(Boolean);
+    if (childText.some(t => statusByLabel[t])) return;
+
+    if (!seen.has(el)) {
+      el.dataset.legendStatus = status;
+      el.classList.add("legend-filter-btn");
+      el.style.cursor = "pointer";
+      el.setAttribute("role", "button");
+      el.setAttribute("tabindex", "0");
+      el.setAttribute("aria-label", `Filtrar mapa por ${status}`);
+      results.push(el);
+      seen.add(el);
+    }
+  });
+
+  return results;
+}
+
+function applyStatusFilterFromLegend(status) {
+  currentActiveFilters.status =
+    currentActiveFilters.status === status ? "" : status;
+
+  syncStatusFilterUI();
+  renderApp();
+}
+
+function bindMapLegendFilters() {
+  getMapLegendFilterElements().forEach(btn => {
+    if (btn.dataset.legendFilterBound === "1") return;
+    btn.dataset.legendFilterBound = "1";
+
+    const activate = () => {
+      const status = btn.dataset.legendStatus;
+      if (status) applyStatusFilterFromLegend(status);
+    };
+
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      activate();
+    });
+
+    btn.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        activate();
+      }
+    });
+  });
+
+  // "Resetar Visão" da legenda superior também passa a limpar o filtro de status.
+  document.querySelectorAll("button, a, [role='button'], span, div").forEach(el => {
+    const label = (el.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+    if (label !== "resetar visão") return;
+    if (el.dataset.legendResetBound === "1") return;
+
+    el.dataset.legendResetBound = "1";
+    el.style.cursor = "pointer";
+    el.setAttribute("role", "button");
+    el.setAttribute("tabindex", "0");
+
+    const reset = () => {
+      currentActiveFilters.status = "";
+      syncStatusFilterUI();
+      renderApp();
+
+      if (leafletMap) {
+        try {
+          leafletMap.setView([-14.2350, -51.9253], 4, { animate: true });
+        } catch (_) {}
+      }
+    };
+
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      reset();
+    });
+
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        reset();
+      }
+    });
+  });
+}
+
 // --- FILTER EVENT LISTENERS ---
 function initFilterEvents() {
   const filterSearch = document.getElementById("filterSearch");
@@ -1132,19 +1256,8 @@ function initFilterEvents() {
     renderApp();
   });
 
-  // Legend status filter buttons above map (Procurados, Avistados, Reencontrados)
-  document.querySelectorAll(".legend-filter-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const selectedStatus = btn.dataset.legendStatus;
-      if (currentActiveFilters.status === selectedStatus) {
-        currentActiveFilters.status = "";
-      } else {
-        currentActiveFilters.status = selectedStatus;
-      }
-      syncStatusFilterUI();
-      renderApp();
-    });
-  });
+  // Filtros da legenda superior do mapa
+  bindMapLegendFilters();
 
   // Main filter bar status pills
   document.querySelectorAll(".filter-status-btn").forEach(btn => {
@@ -1183,14 +1296,17 @@ function syncStatusFilterUI() {
   const current = currentActiveFilters.status;
 
   // Legend Filter buttons next to Resetar Visão
-  document.querySelectorAll(".legend-filter-btn").forEach(b => {
+  getMapLegendFilterElements().forEach(b => {
     const s = b.dataset.legendStatus;
     if (current === s) {
       b.classList.add("ring-2", "ring-primary", "bg-surface-container", "scale-105");
-      b.classList.remove("border-transparent");
+      b.classList.remove("border-transparent", "opacity-60");
+      b.setAttribute("aria-pressed", "true");
     } else {
       b.classList.remove("ring-2", "ring-primary", "bg-surface-container", "scale-105");
       b.classList.add("border-transparent");
+      b.classList.toggle("opacity-60", Boolean(current));
+      b.setAttribute("aria-pressed", "false");
     }
   });
 
