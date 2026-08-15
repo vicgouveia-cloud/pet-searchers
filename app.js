@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v88 carregado - legenda reorganizada e localização Very Peri");
+console.log("✅ Pet Searchers app.js BUILD v89 carregado - quadro da legenda reconstruído em 3+2");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -5973,5 +5973,324 @@ window.getRandomDefaultPhoto = getRandomDefaultPhoto;
     document.addEventListener("DOMContentLoaded", bootV88, { once: true });
   } else {
     bootV88();
+  }
+})();
+
+
+// === v89 RECONSTRUÇÃO DEFINITIVA DO QUADRO DA LEGENDA ===
+(() => {
+  const VERY_PERI = "#6667AB";
+  const VERY_PERI_SOFT = "#F3F1FB";
+  const VERY_PERI_BORDER = "#C9C5EE";
+
+  const norm89 = value => String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+
+  function leafByText89(label, starts = false) {
+    const wanted = norm89(label);
+    return Array.from(document.querySelectorAll("button, a, [role='button'], span, div, p"))
+      .filter(el => {
+        const txt = norm89(el.textContent);
+        return starts ? txt.startsWith(wanted) : txt === wanted;
+      })
+      .sort((a, b) => a.children.length - b.children.length)[0] || null;
+  }
+
+  function usableControl89(el, type = "") {
+    if (!el) return null;
+
+    // Para os filtros, prioriza o elemento ao qual o código anterior já ligou o filtro.
+    if (type && typeof getMapLegendFilterElements === "function") {
+      try {
+        const match = getMapLegendFilterElements()
+          .find(item => norm89(item.dataset?.legendStatus) === norm89(type));
+        if (match) return match;
+      } catch (_) {}
+    }
+
+    const clickable = el.closest("button, a, [role='button']");
+    if (clickable) return clickable;
+
+    let node = el;
+    const text = norm89(el.textContent);
+    while (node.parentElement && node.parentElement !== document.body) {
+      const p = node.parentElement;
+      if (norm89(p.textContent) !== text) break;
+      if (p.querySelectorAll("button, a, [role='button']").length > 1) break;
+      node = p;
+    }
+    return node;
+  }
+
+  function commonAncestor89(elements) {
+    const valid = elements.filter(Boolean);
+    if (!valid.length) return null;
+    let node = valid[0];
+    while (node && node !== document.body) {
+      if (valid.every(el => node.contains(el))) return node;
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  function findLegendCard89(controls) {
+    let card = commonAncestor89(controls);
+    if (!card) return null;
+
+    // Sobe, se necessário, até encontrar o cartão visual compacto.
+    let current = card;
+    while (current.parentElement && current.parentElement !== document.body) {
+      const r = current.getBoundingClientRect();
+      if (r.width >= 260 && r.width <= 700 && r.height >= 45 && r.height <= 220) break;
+
+      const p = current.parentElement;
+      if (!controls.every(el => p.contains(el))) break;
+      current = p;
+    }
+
+    // Se o ancestral comum ainda for apenas uma sublinha, sobe uma vez para o cartão.
+    const rr = current.getBoundingClientRect();
+    if (rr.height < 55 && current.parentElement && controls.every(el => current.parentElement.contains(el))) {
+      current = current.parentElement;
+    }
+
+    return current;
+  }
+
+  function ensureStyle89() {
+    if (document.getElementById("ps-v89-legend-style")) return;
+
+    const style = document.createElement("style");
+    style.id = "ps-v89-legend-style";
+    style.textContent = `
+      .ps-legend-card-v89 {
+        overflow: visible !important;
+        height: auto !important;
+        min-height: 0 !important;
+        padding: 12px 16px !important;
+        box-sizing: border-box !important;
+      }
+
+      .ps-legend-shell-v89 {
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 11px !important;
+        box-sizing: border-box !important;
+      }
+
+      .ps-legend-status-v89 {
+        width: 100% !important;
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        align-items: center !important;
+        justify-items: center !important;
+        column-gap: 12px !important;
+        row-gap: 6px !important;
+        box-sizing: border-box !important;
+      }
+
+      .ps-legend-actions-v89 {
+        width: 100% !important;
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(128px, 158px)) !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 14px !important;
+        padding-top: 10px !important;
+        border-top: 1px solid rgba(148,163,184,.22) !important;
+        box-sizing: border-box !important;
+      }
+
+      .ps-legend-status-v89 > * {
+        justify-self: center !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+      }
+
+      .ps-legend-actions-v89 > * {
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 34px !important;
+        margin: 0 !important;
+        padding: 7px 10px !important;
+        border-radius: 9px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        box-sizing: border-box !important;
+        white-space: nowrap !important;
+      }
+
+      .ps-reset-v89 {
+        color: #475569 !important;
+        background: #ffffff !important;
+        border: 1px solid #d8dee7 !important;
+        border-left: 1px solid #d8dee7 !important;
+        border-inline-start: 1px solid #d8dee7 !important;
+      }
+
+      .ps-location-v89 {
+        color: ${VERY_PERI} !important;
+        background: ${VERY_PERI_SOFT} !important;
+        border: 1px solid ${VERY_PERI_BORDER} !important;
+      }
+
+      .ps-location-v89:hover {
+        border-color: ${VERY_PERI} !important;
+        background: #EAE8F8 !important;
+      }
+
+      .ps-user-location-marker-v86 {
+        background: ${VERY_PERI} !important;
+      }
+
+      #psMapLocateFallbackV87 a {
+        background: ${VERY_PERI} !important;
+        color: #fff !important;
+      }
+
+      @media (max-width: 520px) {
+        .ps-legend-card-v89 {
+          padding: 10px 10px !important;
+        }
+
+        .ps-legend-shell-v89 {
+          gap: 8px !important;
+        }
+
+        .ps-legend-status-v89 {
+          column-gap: 4px !important;
+        }
+
+        .ps-legend-status-v89 > * {
+          font-size: 10px !important;
+        }
+
+        .ps-legend-actions-v89 {
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          gap: 7px !important;
+          padding-top: 8px !important;
+        }
+
+        .ps-legend-actions-v89 > * {
+          min-height: 32px !important;
+          padding: 6px 5px !important;
+          font-size: 10px !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function removeOldSeparators89(card, shell) {
+    Array.from(card.children).forEach(child => {
+      if (child === shell) return;
+      // Depois de mover os 5 controles, os wrappers antigos ficam vazios ou só com separadores.
+      const meaningful = norm89(child.textContent);
+      const hasInteractive = child.querySelector?.("button, a, [role='button']");
+      if (!meaningful && !hasInteractive) {
+        child.style.setProperty("display", "none", "important");
+      }
+    });
+
+    Array.from(card.querySelectorAll("div, span")).forEach(el => {
+      if (shell.contains(el)) return;
+      const r = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      if ((r.width > 0 && r.width <= 3 && r.height >= 16) ||
+          (parseFloat(cs.borderLeftWidth || "0") > 0 && r.width <= 8)) {
+        el.style.setProperty("display", "none", "important");
+      }
+    });
+  }
+
+  function rebuildLegend89() {
+    ensureStyle89();
+
+    const procurado = usableControl89(leafByText89("Procurado"), "Procurado");
+    const avistado = usableControl89(leafByText89("Avistado"), "Avistado");
+    const reencontrado = usableControl89(leafByText89("Reencontrado", true), "Reencontrado");
+    const reset = usableControl89(leafByText89("Resetar Visão"));
+
+    const location =
+      document.getElementById("btnCenterUserLocationV87") ||
+      document.getElementById("btnUserPositionV86") ||
+      document.getElementById("btnMapLocateMeV85") ||
+      document.getElementById("btnMapLocateMe") ||
+      usableControl89(leafByText89("Minha localização"));
+
+    if (!procurado || !avistado || !reencontrado || !reset || !location) return false;
+
+    const controls = [procurado, avistado, reencontrado, reset, location];
+    const card = findLegendCard89(controls);
+    if (!card || card === document.body) return false;
+
+    card.classList.add("ps-legend-card-v89");
+
+    let shell = card.querySelector(":scope > .ps-legend-shell-v89");
+    if (!shell) {
+      shell = document.createElement("div");
+      shell.className = "ps-legend-shell-v89";
+
+      const statusRow = document.createElement("div");
+      statusRow.className = "ps-legend-status-v89";
+
+      const actionRow = document.createElement("div");
+      actionRow.className = "ps-legend-actions-v89";
+
+      shell.append(statusRow, actionRow);
+      card.appendChild(shell);
+    }
+
+    const statusRow = shell.querySelector(".ps-legend-status-v89");
+    const actionRow = shell.querySelector(".ps-legend-actions-v89");
+
+    [procurado, avistado, reencontrado].forEach(el => statusRow.appendChild(el));
+    [reset, location].forEach(el => actionRow.appendChild(el));
+
+    reset.classList.add("ps-reset-v89");
+    reset.style.setProperty("border-left", "1px solid #d8dee7", "important");
+    reset.style.setProperty("border-inline-start", "1px solid #d8dee7", "important");
+
+    location.classList.add("ps-location-v89");
+    location.style.setProperty("color", VERY_PERI, "important");
+    location.style.setProperty("background", VERY_PERI_SOFT, "important");
+    location.style.setProperty("border-color", VERY_PERI_BORDER, "important");
+
+    // Garante um ícone roxo consistente no botão de localização.
+    const locSpans = Array.from(location.querySelectorAll("span"));
+    locSpans.forEach(span => {
+      const t = norm89(span.textContent);
+      if (t === "📍" || t === "◎" || t === "my_location") {
+        span.style.setProperty("color", VERY_PERI, "important");
+      }
+    });
+
+    removeOldSeparators89(card, shell);
+
+    console.log("🎯 v89: quadro da legenda reconstruído com 3 filtros em cima e 2 ações centralizadas embaixo.");
+    return true;
+  }
+
+  function boot89() {
+    rebuildLegend89();
+
+    [100, 250, 500, 900, 1500, 2500, 4000].forEach(ms =>
+      setTimeout(rebuildLegend89, ms)
+    );
+
+    const observer = new MutationObserver(() => {
+      if (!document.querySelector(".ps-legend-shell-v89")) rebuildLegend89();
+    });
+
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot89, { once: true });
+  } else {
+    boot89();
   }
 })();
