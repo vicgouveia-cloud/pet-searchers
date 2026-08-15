@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v81 carregado - legenda do mapa reorganizada com Me localize");
+console.log("✅ Pet Searchers app.js BUILD v82 carregado - botão Me localize inserido diretamente no quadro da legenda");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -1867,6 +1867,28 @@ function ensureMapLegendControlStyles() {
       cursor: wait;
     }
 
+    .ps-map-legend-status-row-direct {
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+      align-items: center !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    .ps-map-legend-action-row-direct {
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+      align-items: center !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    .ps-map-legend-action-row-direct > * {
+      min-width: 0 !important;
+    }
+
     @media (max-width: 520px) {
       .ps-map-legend-layout {
         gap: 8px;
@@ -2010,52 +2032,75 @@ function locateUserOnMap() {
   );
 }
 
+function getLegendControlWrapper(el, stopAt = null) {
+  if (!el) return null;
+
+  let current = el;
+  const ownText = (el.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+
+  // Sobe apenas enquanto o pai representar o mesmo controle textual.
+  while (current.parentElement && current.parentElement !== stopAt && current.parentElement !== document.body) {
+    const parent = current.parentElement;
+    const parentText = (parent.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+
+    if (parentText !== ownText) break;
+    if (parent.querySelectorAll("button, a, [role='button']").length > 1) break;
+
+    current = parent;
+  }
+
+  return current;
+}
+
 function ensureMapLegendLayout() {
   ensureMapLegendControlStyles();
 
   const statusButtons = getMapLegendFilterElements();
-  const resetEl = getMapLegendResetElement();
-  if (statusButtons.length < 3 || !resetEl) return;
+  const resetTextEl = getMapLegendResetElement();
+  if (statusButtons.length < 3 || !resetTextEl) {
+    console.warn("⚠️ Legenda localizada parcialmente; não foi possível montar Me localize.", {
+      statusButtons: statusButtons.length,
+      resetFound: Boolean(resetTextEl)
+    });
+    return;
+  }
 
-  const host = getSmallestCommonAncestor([...statusButtons, resetEl]);
-  if (!host || host === document.body) return;
+  // Organiza somente a linha existente dos três status, sem desmontar o quadro original.
+  const statusRow = getSmallestCommonAncestor(statusButtons);
+  if (statusRow && statusRow !== document.body && !statusRow.contains(resetTextEl)) {
+    statusRow.classList.add("ps-map-legend-status-row-direct");
+  }
 
-  // Se o layout já foi criado, apenas garante que o botão exista.
-  let layout = host.querySelector(":scope > .ps-map-legend-layout");
-  if (!layout) {
-    layout = document.createElement("div");
-    layout.className = "ps-map-legend-layout";
+  // Descobre o wrapper real de "Resetar Visão" e injeta o novo botão no MESMO pai.
+  const resetControl = getLegendControlWrapper(resetTextEl);
+  const actionRow = resetControl?.parentElement;
+  if (!resetControl || !actionRow || actionRow === document.body) {
+    console.warn("⚠️ Não foi possível localizar a linha de ações da legenda.");
+    return;
+  }
 
-    const statusRow = document.createElement("div");
-    statusRow.className = "ps-map-legend-status-row";
+  resetControl.classList.add("ps-map-legend-reset");
+  resetControl.setAttribute("aria-label", "Resetar visão do mapa e filtro de status");
 
-    const actionRow = document.createElement("div");
-    actionRow.className = "ps-map-legend-action-row";
-
-    statusButtons
-      .sort((a, b) => {
-        const order = { Procurado: 0, Avistado: 1, Reencontrado: 2 };
-        return (order[a.dataset.legendStatus] ?? 9) - (order[b.dataset.legendStatus] ?? 9);
-      })
-      .forEach(btn => statusRow.appendChild(btn));
-
-    resetEl.classList.add("ps-map-legend-reset");
-    resetEl.setAttribute("aria-label", "Resetar visão do mapa e filtro de status");
-    actionRow.appendChild(resetEl);
-
-    const locateBtn = document.createElement("button");
+  let locateBtn = document.getElementById("btnMapLocateMe");
+  if (!locateBtn) {
+    locateBtn = document.createElement("button");
     locateBtn.id = "btnMapLocateMe";
     locateBtn.type = "button";
     locateBtn.className = "ps-map-locate-btn";
     locateBtn.setAttribute("aria-label", "Posicionar o mapa na minha localização aproximada");
     locateBtn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span><span>Me localize</span>';
     locateBtn.addEventListener("click", locateUserOnMap);
-    actionRow.appendChild(locateBtn);
-
-    layout.appendChild(statusRow);
-    layout.appendChild(actionRow);
-    host.appendChild(layout);
   }
+
+  // Inserção direta ao lado de Resetar Visão. Não depende mais de recriar a legenda.
+  if (locateBtn.parentElement !== actionRow) {
+    actionRow.insertBefore(locateBtn, resetControl.nextSibling);
+  }
+
+  actionRow.classList.add("ps-map-legend-action-row-direct");
+
+  console.log("📍 Botão 'Me localize' inserido no mesmo quadro da legenda do mapa.");
 }
 
 function bindMapLegendFilters() {
@@ -2119,8 +2164,10 @@ function bindMapLegendFilters() {
     });
   });
 
-  // Organiza os três filtros em uma linha e as ações em uma segunda linha.
+  // Organiza os três filtros e injeta "Me localize" no mesmo quadro da legenda.
   ensureMapLegendLayout();
+  setTimeout(ensureMapLegendLayout, 150);
+  setTimeout(ensureMapLegendLayout, 600);
 }
 
 window.addEventListener("orientationchange", () => {
