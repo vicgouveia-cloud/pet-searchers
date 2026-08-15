@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v87 carregado - botão Minha localização para centralizar o mapa");
+console.log("✅ Pet Searchers app.js BUILD v88 carregado - legenda reorganizada e localização Very Peri");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -5733,5 +5733,245 @@ window.getRandomDefaultPhoto = getRandomDefaultPhoto;
     document.addEventListener("DOMContentLoaded", bootV87, { once: true });
   } else {
     bootV87();
+  }
+})();
+
+
+// === v88 LEGENDA 3+2 + VERY PERI ===
+(() => {
+  const VERY_PERI = "#6667AB";
+  const VERY_PERI_SOFT = "#F0F0FA";
+  const VERY_PERI_BORDER = "#B9BAE5";
+
+  const norm = value => String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+
+  function findByTextV88(label, startsWith = false) {
+    const wanted = norm(label);
+    const nodes = Array.from(document.querySelectorAll("button, a, [role='button'], span, div, p"));
+    return nodes
+      .filter(el => {
+        const txt = norm(el.textContent);
+        return startsWith ? txt.startsWith(wanted) : txt === wanted;
+      })
+      .sort((a,b) => a.children.length - b.children.length)[0] || null;
+  }
+
+  function controlForV88(el) {
+    if (!el) return null;
+    const clickable = el.closest("button, a, [role='button']");
+    if (clickable) return clickable;
+
+    let node = el;
+    while (node.parentElement && node.parentElement !== document.body) {
+      const p = node.parentElement;
+      if (norm(p.textContent) !== norm(el.textContent)) break;
+      node = p;
+    }
+    return node;
+  }
+
+  function commonAncestorV88(elements) {
+    const valid = elements.filter(Boolean);
+    if (!valid.length) return null;
+    let node = valid[0];
+    while (node && node !== document.body) {
+      if (valid.every(el => node.contains(el))) return node;
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  function ensureV88Styles() {
+    if (document.getElementById("ps-v88-map-legend-style")) return;
+    const style = document.createElement("style");
+    style.id = "ps-v88-map-legend-style";
+    style.textContent = `
+      .ps-map-legend-card-v88 {
+        overflow: visible !important;
+        height: auto !important;
+        min-height: 0 !important;
+        box-sizing: border-box !important;
+      }
+      .ps-map-status-row-v88 {
+        width: 100% !important;
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+        align-items: center !important;
+        justify-items: center !important;
+        box-sizing: border-box !important;
+      }
+      .ps-map-actions-row-v88 {
+        width: 100% !important;
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 150px)) !important;
+        gap: 12px !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin-top: 10px !important;
+        padding-top: 10px !important;
+        border-top: 1px solid rgba(148,163,184,.22) !important;
+        box-sizing: border-box !important;
+      }
+      .ps-map-status-row-v88 > *,
+      .ps-map-actions-row-v88 > * {
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+      }
+      .ps-reset-v88 {
+        border-left: 0 !important;
+        border-inline-start: 0 !important;
+        padding-left: 10px !important;
+        margin-left: 0 !important;
+      }
+      .ps-location-v88 {
+        color: ${VERY_PERI} !important;
+        background: ${VERY_PERI_SOFT} !important;
+        border: 1px solid ${VERY_PERI_BORDER} !important;
+        box-shadow: none !important;
+      }
+      .ps-location-v88:hover {
+        background: #E7E7F6 !important;
+        border-color: ${VERY_PERI} !important;
+      }
+      .ps-user-location-marker-v86 {
+        background: ${VERY_PERI} !important;
+      }
+      #psMapLocateFallbackV87 a {
+        color: #fff !important;
+        background: ${VERY_PERI} !important;
+        border-radius: 50% !important;
+        width: 34px !important;
+        height: 34px !important;
+        box-shadow: 0 2px 7px rgba(102,103,171,.35) !important;
+      }
+      #psMapLocateFallbackV87 {
+        border: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+      }
+      @media (max-width: 520px) {
+        .ps-map-status-row-v88 { gap: 4px !important; }
+        .ps-map-actions-row-v88 {
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          gap: 7px !important;
+          margin-top: 8px !important;
+          padding-top: 8px !important;
+        }
+        .ps-map-status-row-v88 > * { font-size: 10px !important; }
+        .ps-map-actions-row-v88 > * {
+          width: 100% !important;
+          max-width: none !important;
+          justify-content: center !important;
+          font-size: 10px !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function recolorLeafletUserLayersV88() {
+    try {
+      if (typeof leafletMap === "undefined" || !leafletMap) return;
+      leafletMap.eachLayer(layer => {
+        if (layer?.options?.fillColor === "#2563eb" || layer?.options?.color === "#2563eb") {
+          try {
+            layer.setStyle({ color: VERY_PERI, fillColor: VERY_PERI });
+          } catch (_) {}
+        }
+      });
+    } catch (_) {}
+  }
+
+  function removeVerticalSeparatorsV88(card, reset) {
+    if (!card || !reset) return;
+    reset.style.setProperty("border-left", "0", "important");
+    reset.style.setProperty("border-inline-start", "0", "important");
+    reset.classList.add("ps-reset-v88");
+
+    const candidates = Array.from(card.querySelectorAll("div, span"));
+    candidates.forEach(el => {
+      if (el.contains(reset) || reset.contains(el)) return;
+      const rect = el.getBoundingClientRect();
+      const style = getComputedStyle(el);
+      const isThinVertical = rect.width > 0 && rect.width <= 3 && rect.height >= 18;
+      const hasLeftBorder = parseFloat(style.borderLeftWidth || "0") > 0 && rect.width <= 8;
+      if (isThinVertical || hasLeftBorder) {
+        el.style.setProperty("display", "none", "important");
+      }
+    });
+  }
+
+  function arrangeLegendV88() {
+    ensureV88Styles();
+
+    const procurado = controlForV88(findByTextV88("Procurado"));
+    const avistado = controlForV88(findByTextV88("Avistado"));
+    const reencontrado = controlForV88(findByTextV88("Reencontrado", true));
+    const reset = controlForV88(findByTextV88("Resetar Visão"));
+    const location = document.getElementById("btnCenterUserLocationV87")
+      || document.getElementById("btnUserPositionV86")
+      || controlForV88(findByTextV88("Minha localização"));
+
+    if (!procurado || !avistado || !reencontrado || !reset || !location) return false;
+
+    const card = commonAncestorV88([procurado, avistado, reencontrado, reset, location]);
+    if (!card || card === document.body) return false;
+    card.classList.add("ps-map-legend-card-v88");
+
+    let statusRow = card.querySelector(":scope > .ps-map-status-row-v88");
+    if (!statusRow) {
+      statusRow = document.createElement("div");
+      statusRow.className = "ps-map-status-row-v88";
+      card.insertBefore(statusRow, card.firstChild);
+    }
+
+    let actionsRow = card.querySelector(":scope > .ps-map-actions-row-v88");
+    if (!actionsRow) {
+      actionsRow = document.createElement("div");
+      actionsRow.className = "ps-map-actions-row-v88";
+      card.appendChild(actionsRow);
+    }
+
+    [procurado, avistado, reencontrado].forEach(el => {
+      if (el.parentElement !== statusRow) statusRow.appendChild(el);
+    });
+    [reset, location].forEach(el => {
+      if (el.parentElement !== actionsRow) actionsRow.appendChild(el);
+    });
+
+    reset.classList.add("ps-reset-v88");
+    location.classList.add("ps-location-v88");
+    location.style.setProperty("color", VERY_PERI, "important");
+    location.style.setProperty("background", VERY_PERI_SOFT, "important");
+    location.style.setProperty("border-color", VERY_PERI_BORDER, "important");
+
+    // Troca apenas o ícone/ponto visual do botão de localização para Very Peri.
+    Array.from(location.querySelectorAll("span, i"))
+      .filter(el => norm(el.textContent) === "📍" || el.classList.contains("ps-location-dot-v86"))
+      .forEach(el => {
+        el.style.setProperty("color", VERY_PERI, "important");
+        el.style.setProperty("background", VERY_PERI, "important");
+      });
+
+    removeVerticalSeparatorsV88(card, reset);
+    recolorLeafletUserLayersV88();
+
+    console.log("🎨 v88: legenda reorganizada em 3+2 e localização alterada para Very Peri.");
+    return true;
+  }
+
+  function bootV88() {
+    arrangeLegendV88();
+    [100, 300, 700, 1500, 3000].forEach(ms => setTimeout(arrangeLegendV88, ms));
+
+    const observer = new MutationObserver(() => arrangeLegendV88());
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootV88, { once: true });
+  } else {
+    bootV88();
   }
 })();
