@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v73 carregado - cabeçalho mobile responsivo");
+console.log("✅ Pet Searchers app.js BUILD v74 carregado - cabeçalho mobile com safe-area e título sem corte");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -2218,6 +2218,7 @@ function ensureMobileResponsiveStyles() {
         height: auto !important;
         box-sizing: border-box !important;
         overflow: visible !important;
+        padding-top: max(4px, env(safe-area-inset-top)) !important;
       }
 
       .ps-mobile-header-inner {
@@ -2229,8 +2230,10 @@ function ensureMobileResponsiveStyles() {
         align-items: stretch !important;
         justify-content: center !important;
         gap: 8px !important;
-        padding: 8px 10px !important;
+        padding: 10px 10px 8px !important;
+        margin: 0 !important;
         box-sizing: border-box !important;
+        overflow: visible !important;
       }
 
       .ps-mobile-brand {
@@ -2241,7 +2244,28 @@ function ensureMobileResponsiveStyles() {
         align-items: center !important;
         justify-content: flex-start !important;
         gap: 8px !important;
+        padding-top: 3px !important;
+        padding-bottom: 2px !important;
+        margin: 0 !important;
         box-sizing: border-box !important;
+        overflow: visible !important;
+        position: relative !important;
+        top: 0 !important;
+        transform: none !important;
+      }
+
+      .ps-mobile-brand > * {
+        position: static !important;
+        top: auto !important;
+        transform: none !important;
+      }
+
+      .ps-mobile-brand > div,
+      .ps-mobile-brand > section,
+      .ps-mobile-brand > a {
+        min-width: 0 !important;
+        padding-top: 2px !important;
+        overflow: visible !important;
       }
 
       .ps-mobile-brand img {
@@ -2265,13 +2289,20 @@ function ensureMobileResponsiveStyles() {
       .ps-mobile-brand .text-2xl,
       .ps-mobile-brand .text-3xl {
         font-size: 16px !important;
-        line-height: 1.08 !important;
+        line-height: 1.25 !important;
+        min-height: 20px !important;
+        padding-top: 1px !important;
+        padding-bottom: 1px !important;
         margin: 0 !important;
+        overflow: visible !important;
+        position: static !important;
+        transform: none !important;
       }
 
       .ps-mobile-brand p,
       .ps-mobile-brand span {
-        line-height: 1.15 !important;
+        line-height: 1.25 !important;
+        overflow: visible !important;
       }
 
       .ps-mobile-nav-actions {
@@ -2441,9 +2472,30 @@ function ensureMobileResponsiveStyles() {
       }
     }
 
+    @media (max-width: 390px) {
+      .ps-mobile-header {
+        padding-top: max(5px, env(safe-area-inset-top)) !important;
+      }
+
+      .ps-mobile-brand {
+        padding-top: 4px !important;
+      }
+
+      .ps-mobile-brand h1,
+      .ps-mobile-brand h2,
+      .ps-mobile-brand h3,
+      .ps-mobile-brand .text-xl,
+      .ps-mobile-brand .text-2xl,
+      .ps-mobile-brand .text-3xl {
+        font-size: 15px !important;
+        line-height: 1.28 !important;
+        min-height: 20px !important;
+      }
+    }
+
     @media (max-width: 430px) {
       .ps-mobile-header-inner {
-        padding: 7px 8px !important;
+        padding: 10px 8px 7px !important;
         gap: 7px !important;
       }
 
