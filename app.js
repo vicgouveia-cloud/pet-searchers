@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v67 carregado - edições persistentes, proximidade refinada e cartaz 4:5");
+console.log("✅ Pet Searchers app.js BUILD v68 carregado - cartaz 4:5 com foto preservada e coluna de imagem ampliada");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -2511,43 +2511,99 @@ function applyPosterLayoutAdjustments() {
   const posterImg = document.getElementById("posterImg");
   if (!posterArea || !posterImg) return;
 
-  // Moldura da foto em 4:5, preservando a imagem inteira.
   const frame = posterImg.parentElement;
+
+  // Moldura fixa em 4:5.
+  // A imagem NÃO é cortada nem deformada: permanece inteira dentro da moldura.
   if (frame) {
     frame.style.aspectRatio = "4 / 5";
+    frame.style.width = "100%";
+    frame.style.height = "auto";
     frame.style.overflow = "hidden";
     frame.style.display = "flex";
     frame.style.alignItems = "center";
     frame.style.justifyContent = "center";
     frame.style.background = "#ffffff";
+    frame.style.boxSizing = "border-box";
   }
 
+  // Preserva rigorosamente a proporção original da fotografia.
+  posterImg.style.objectFit = "contain";
+  posterImg.style.objectPosition = "center";
   posterImg.style.width = "100%";
   posterImg.style.height = "100%";
   posterImg.style.maxWidth = "100%";
   posterImg.style.maxHeight = "100%";
-  posterImg.style.objectFit = "contain";
-  posterImg.style.objectPosition = "center";
   posterImg.style.background = "#ffffff";
+  posterImg.style.display = "block";
 
-  // Área dos dados 27,5% menor na largura em relação ao bloco atual.
+  // Identifica a coluna de informações.
   const infoElements = [
     document.getElementById("posterAge"),
     document.getElementById("posterColor"),
     document.getElementById("posterBreed"),
     document.getElementById("posterMarkings")
-  ];
+  ].filter(Boolean);
 
   let infoPanel = getCommonAncestor(infoElements);
 
-  // Evita pegar o poster inteiro como ancestral comum; sobe/baixa para um bloco útil.
   if (infoPanel === posterArea && infoElements[0]) {
     infoPanel = infoElements[0].parentElement?.parentElement || infoElements[0].parentElement;
   }
 
-  if (infoPanel && infoPanel !== posterArea) {
-    infoPanel.style.width = "72.5%";
-    infoPanel.style.maxWidth = "72.5%";
+  // Encontra o contêiner comum entre a moldura da foto e a coluna de texto.
+  // Define aproximadamente 65,5% para foto e 34,5% para texto.
+  // Isso deixa a moldura pelo menos 20% mais larga e a área textual
+  // cerca de 31% mais estreita em relação a uma divisão 50/50.
+  if (frame && infoPanel && infoPanel !== posterArea) {
+    let columnsContainer = frame.parentElement;
+
+    while (
+      columnsContainer &&
+      columnsContainer !== posterArea &&
+      !columnsContainer.contains(infoPanel)
+    ) {
+      columnsContainer = columnsContainer.parentElement;
+    }
+
+    if (columnsContainer && columnsContainer !== posterArea) {
+      columnsContainer.style.display = "grid";
+      columnsContainer.style.gridTemplateColumns = "minmax(0, 65.5%) minmax(0, 34.5%)";
+      columnsContainer.style.columnGap = "14px";
+      columnsContainer.style.alignItems = "start";
+      columnsContainer.style.width = "100%";
+      columnsContainer.style.boxSizing = "border-box";
+
+      // Garante que a foto ocupe a primeira coluna e os dados a segunda.
+      let frameColumn = frame;
+      while (frameColumn.parentElement && frameColumn.parentElement !== columnsContainer) {
+        frameColumn = frameColumn.parentElement;
+      }
+
+      let infoColumn = infoPanel;
+      while (infoColumn.parentElement && infoColumn.parentElement !== columnsContainer) {
+        infoColumn = infoColumn.parentElement;
+      }
+
+      if (frameColumn && frameColumn !== columnsContainer) {
+        frameColumn.style.width = "100%";
+        frameColumn.style.maxWidth = "100%";
+        frameColumn.style.minWidth = "0";
+        frameColumn.style.gridColumn = "1";
+      }
+
+      if (infoColumn && infoColumn !== columnsContainer) {
+        infoColumn.style.width = "100%";
+        infoColumn.style.maxWidth = "100%";
+        infoColumn.style.minWidth = "0";
+        infoColumn.style.gridColumn = "2";
+      }
+    }
+
+    // Não restringe mais a coluna textual internamente a 72,5%;
+    // a redução agora é feita corretamente pela divisão das duas colunas.
+    infoPanel.style.width = "100%";
+    infoPanel.style.maxWidth = "100%";
     infoPanel.style.boxSizing = "border-box";
   }
 
