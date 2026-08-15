@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v96 carregado - filtros superiores restaurados");
+console.log("✅ Pet Searchers app.js BUILD v97 carregado - filtros superiores com seleção suave");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -2691,19 +2691,27 @@ function initFilterEvents() {
 function syncStatusFilterUI() {
   const current = currentActiveFilters.status;
 
-  // Legend Filter buttons next to Resetar Visão
+  // Filtros superiores do mapa:
+  // apenas um fundo leve da própria cor indica o botão selecionado.
   getMapLegendFilterElements().forEach(b => {
     const s = b.dataset.legendStatus;
-    if (current === s) {
-      b.classList.add("ring-2", "ring-primary", "bg-surface-container", "scale-105");
-      b.classList.remove("border-transparent", "opacity-60");
-      b.setAttribute("aria-pressed", "true");
-    } else {
-      b.classList.remove("ring-2", "ring-primary", "bg-surface-container", "scale-105");
-      b.classList.add("border-transparent");
-      b.classList.toggle("opacity-60", Boolean(current));
-      b.setAttribute("aria-pressed", "false");
-    }
+    const isActive = current === s;
+
+    b.classList.toggle("is-active", isActive);
+    b.setAttribute("aria-pressed", isActive ? "true" : "false");
+
+    // Remove qualquer resíduo visual das versões anteriores/Tailwind.
+    b.classList.remove(
+      "ring-2",
+      "ring-primary",
+      "bg-surface-container",
+      "scale-105",
+      "border-transparent",
+      "opacity-60"
+    );
+
+    b.style.outline = "none";
+    b.style.boxShadow = "none";
   });
 
   // Main Filter Pills
