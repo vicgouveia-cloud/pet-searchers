@@ -236,6 +236,152 @@
         box-shadow: 0 0 0 0 rgba(229, 36, 33, 0);
       }
     }
+  
+    /* ================================================================
+       MAP LEGEND PANEL - FINAL 3+2 LAYOUT
+       30% menor que a referência visual aprovada, mantendo proporções.
+       ================================================================ */
+    #mapLegendPanel.map-legend-panel {
+      width: min(100%, 455px);
+      background: #ffffff;
+      border: 1px solid rgba(196, 198, 207, 0.62);
+      border-radius: 13px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.055);
+      padding: 10px 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      box-sizing: border-box;
+    }
+
+    #mapLegendPanel .map-legend-status-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-items: center;
+      justify-items: center;
+      gap: 7px;
+      width: 100%;
+    }
+
+    #mapLegendPanel .map-legend-status {
+      border: 0;
+      background: transparent;
+      min-width: 0;
+      min-height: 25px;
+      padding: 3px 4px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      border-radius: 7px;
+      font-size: 10.5px;
+      line-height: 1.1;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background-color .16s ease, opacity .16s ease, transform .16s ease;
+    }
+
+    #mapLegendPanel .map-legend-status:hover {
+      background: #f8fafc;
+      transform: translateY(-1px);
+    }
+
+    #mapLegendPanel .map-legend-status-lost { color: #E52421; }
+    #mapLegendPanel .map-legend-status-sighted { color: #0EA5E9; }
+    #mapLegendPanel .map-legend-status-found { color: #16A34A; }
+
+    #mapLegendPanel .map-legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      flex: 0 0 8px;
+      display: inline-block;
+    }
+
+    #mapLegendPanel .map-legend-actions-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #mapLegendPanel .map-legend-action {
+      width: 100%;
+      min-width: 0;
+      min-height: 34px;
+      padding: 6px 9px;
+      border-radius: 9px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 10.5px;
+      line-height: 1.1;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      box-sizing: border-box;
+      transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease, border-color .16s ease;
+    }
+
+    #mapLegendPanel .map-legend-action:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 7px rgba(15, 23, 42, 0.07);
+    }
+
+    #mapLegendPanel .map-legend-reset {
+      background: #ffffff;
+      color: #475569;
+      border: 1px solid #d8dee7;
+    }
+
+    #mapLegendPanel .map-legend-location {
+      background: #F4F1FF;
+      color: #6667AB;
+      border: 1px solid #C8C4EA;
+    }
+
+    #mapLegendPanel .map-legend-location:hover {
+      background: #ECE8FC;
+      border-color: #6667AB;
+    }
+
+    #mapLegendPanel .map-legend-action-icon {
+      font-size: 15px;
+      line-height: 1;
+    }
+
+    @media (max-width: 767px) {
+      #mapLegendPanel.map-legend-panel {
+        width: 100%;
+        padding: 9px 10px;
+        gap: 8px;
+      }
+
+      #mapLegendPanel .map-legend-status-row {
+        gap: 3px;
+      }
+
+      #mapLegendPanel .map-legend-status {
+        font-size: 9.5px;
+        gap: 4px;
+        padding: 3px 2px;
+      }
+
+      #mapLegendPanel .map-legend-actions-row {
+        gap: 7px;
+      }
+
+      #mapLegendPanel .map-legend-action {
+        min-height: 32px;
+        padding: 5px 6px;
+        font-size: 9.5px;
+      }
+    }
+
   </style>
 </head>
 <body class="bg-background text-on-surface font-sans antialiased min-h-screen flex flex-col selection:bg-secondary-container selection:text-on-secondary-container">
@@ -289,26 +435,36 @@
           </p>
         </div>
         
-        <!-- Legend & Map Filter Buttons -->
-        <div class="flex flex-wrap items-center gap-2 sm:gap-3 text-xs font-semibold bg-surface px-4 py-2.5 rounded-xl border border-outline-variant/50 shadow-sm self-start md:self-auto">
-          <button id="legendFilterLost" onclick="filterByStatusLegend('Procurado')" type="button" class="flex items-center gap-1.5 text-error hover:opacity-80 transition-all cursor-pointer px-2 py-1 rounded-lg hover:bg-error/10" title="Filtrar pets Procurados">
-            <span class="w-3 h-3 rounded-full bg-error inline-block"></span>
-            <span>Procurado</span>
-          </button>
-          
-          <button id="legendFilterSighted" onclick="filterByStatusLegend('Avistado')" type="button" class="flex items-center gap-1.5 text-sky-500 hover:opacity-80 transition-all cursor-pointer px-2 py-1 rounded-lg hover:bg-sky-50" title="Filtrar pets Avistados">
-            <span class="w-3 h-3 rounded-full bg-sky-500 inline-block"></span>
-            <span>Avistado</span>
-          </button>
-          
-          <button id="legendFilterFound" onclick="filterByStatusLegend('Reencontrado')" type="button" class="flex items-center gap-1.5 text-green-600 hover:opacity-80 transition-all cursor-pointer px-2 py-1 rounded-lg hover:bg-green-50 font-bold" title="Filtrar pets Reencontrados">
-            <span class="w-3 h-3 rounded-full bg-green-600 inline-block"></span>
-            <span>Reencontrado 🎉</span>
-          </button>
+        <!-- Legend & Map Controls - Final 3+2 Layout -->
+        <div id="mapLegendPanel" class="map-legend-panel self-start md:self-auto" aria-label="Legenda e controles do mapa">
+          <div class="map-legend-status-row">
+            <button id="legendFilterLost" onclick="filterByStatusLegend('Procurado')" type="button" class="map-legend-status map-legend-status-lost" title="Filtrar pets Procurados">
+              <span class="map-legend-dot bg-error"></span>
+              <span>Procurado</span>
+            </button>
 
-          <button id="btnResetMap" onclick="filterByStatusLegend('')" type="button" class="ml-2 text-outline hover:text-primary transition-colors flex items-center gap-1 border-l border-outline-variant/60 pl-3 cursor-pointer" title="Resetar filtros e visão do mapa">
-            <span class="material-symbols-outlined text-base">restart_alt</span> Resetar Visão
-          </button>
+            <button id="legendFilterSighted" onclick="filterByStatusLegend('Avistado')" type="button" class="map-legend-status map-legend-status-sighted" title="Filtrar pets Avistados">
+              <span class="map-legend-dot bg-sky-500"></span>
+              <span>Avistado</span>
+            </button>
+
+            <button id="legendFilterFound" onclick="filterByStatusLegend('Reencontrado')" type="button" class="map-legend-status map-legend-status-found" title="Filtrar pets Reencontrados">
+              <span class="map-legend-dot bg-green-600"></span>
+              <span>Reencontrado 🎉</span>
+            </button>
+          </div>
+
+          <div class="map-legend-actions-row">
+            <button id="btnResetMap" onclick="filterByStatusLegend('')" type="button" class="map-legend-action map-legend-reset" title="Resetar filtros e visão do mapa">
+              <span class="material-symbols-outlined map-legend-action-icon">restart_alt</span>
+              <span>Resetar Visão</span>
+            </button>
+
+            <button id="btnMapLocateMe" type="button" class="map-legend-action map-legend-location" title="Centralizar e aproximar o mapa na minha localização">
+              <span class="material-symbols-outlined map-legend-action-icon">location_on</span>
+              <span>Minha localização</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1025,6 +1181,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <!-- Main Application Script (With Single-Page Print A4 & Dual Poster PDF/JPG Engine v55) -->
-  <script src="app.js?v=20260815_reference_layout_v94"></script>
+  <script src="app.js?v=20260815_map_menu_final_v95"></script>
 </body>
 </html>

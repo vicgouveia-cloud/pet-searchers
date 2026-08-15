@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v94 carregado - layout do mapa alinhado à referência aprovada");
+console.log("✅ Pet Searchers app.js BUILD v95 carregado - menu 3+2 definido diretamente no index.html");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -2486,7 +2486,7 @@ function installSingleLeafletLocationControlFinal() {
 
   // Remove qualquer controle de localização residual criado por versões anteriores.
   document.querySelectorAll(
-    "#psMapLocateFallbackV87, #btnMapLocateMe, #btnMapLocateMeV85, #btnCenterUserLocationV87, #btnUserPositionV86"
+    "#psMapLocateFallbackV87, #btnMapLocateMeV85, #btnCenterUserLocationV87, #btnUserPositionV86"
   ).forEach(el => {
     try { el.remove(); } catch (_) {}
   });
@@ -2594,15 +2594,22 @@ function buildFinalMapLegend() {
 }
 
 function bindMapLegendFilters() {
-  // O quadro antigo é substituído integralmente pelo layout final.
-  if (buildFinalMapLegend()) return;
+  // O menu agora existe diretamente no index.html.
+  // Não reconstruímos, movemos ou duplicamos elementos via JavaScript.
+  const locationBtn = document.getElementById("btnMapLocateMe");
+  if (locationBtn && locationBtn.dataset.locationBound !== "1") {
+    locationBtn.dataset.locationBound = "1";
+    locationBtn.addEventListener("click", locateUserOnMap);
+  }
 
-  const observer = new MutationObserver(() => {
-    if (buildFinalMapLegend()) observer.disconnect();
+  // Mantém os três filtros acessíveis ao syncStatusFilterUI.
+  getMapLegendFilterElements().forEach(btn => {
+    if (!btn.dataset.legendStatus) {
+      if (btn.id === "legendFilterLost") btn.dataset.legendStatus = "Procurado";
+      if (btn.id === "legendFilterSighted") btn.dataset.legendStatus = "Avistado";
+      if (btn.id === "legendFilterFound") btn.dataset.legendStatus = "Reencontrado";
+    }
   });
-  observer.observe(document.documentElement, { childList: true, subtree: true });
-
-  [100, 300, 700, 1500, 3000].forEach(ms => setTimeout(buildFinalMapLegend, ms));
 }
 
 window.addEventListener("orientationchange", () => {
@@ -5426,16 +5433,18 @@ window.downloadPosterPDF = downloadPosterPDF;
 window.getRandomDefaultPhoto = getRandomDefaultPhoto;
 
 
-// v93: garantia final após inicialização tardia do Leaflet/DOM.
+// v95: o menu 3+2 é estrutural no index.html.
 (() => {
   const boot = () => {
-    buildFinalMapLegend();
+    bindMapLegendFilters();
     installSingleLeafletLocationControlFinal();
   };
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot, { once: true });
   } else {
     boot();
   }
-  [250, 700, 1500, 3000].forEach(ms => setTimeout(boot, ms));
+
+  [300, 900, 1800].forEach(ms => setTimeout(boot, ms));
 })();
