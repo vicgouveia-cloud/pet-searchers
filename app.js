@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v83 carregado - Me localize fixado visivelmente no quadro da legenda");
+console.log("✅ Pet Searchers app.js BUILD v84 carregado - Me localize inserido por observador direto da legenda");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -2161,6 +2161,88 @@ function ensureMapLegendLayout() {
   console.log("📍 v83: Me localize visível dentro do mesmo quadro da legenda.");
 }
 
+
+function forceInsertMapLocateButton() {
+  if (document.getElementById("btnMapLocateMe")) return true;
+
+  const all = Array.from(document.querySelectorAll("button, a, [role='button'], span, div"));
+  const resetText = all.find(el => {
+    const txt = (el.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+    return txt === "resetar visão";
+  });
+  if (!resetText) return false;
+
+  // Usa o elemento clicável existente ou o menor wrapper que contém somente Resetar Visão.
+  let resetControl = resetText.closest("button, a, [role='button']") || resetText;
+  if (resetControl === resetText && resetText.parentElement) {
+    const ptxt = (resetText.parentElement.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+    if (ptxt === "resetar visão") resetControl = resetText.parentElement;
+  }
+
+  const row = resetControl.parentElement;
+  if (!row) return false;
+
+  // Mantém a linha original e apenas acrescenta o novo botão imediatamente depois.
+  row.style.display = "flex";
+  row.style.alignItems = "center";
+  row.style.flexWrap = "wrap";
+  row.style.gap = "8px";
+  row.style.overflow = "visible";
+
+  const btn = document.createElement("button");
+  btn.id = "btnMapLocateMe";
+  btn.type = "button";
+  btn.title = "Posicionar o mapa na minha localização aproximada";
+  btn.setAttribute("aria-label", "Me localize");
+  btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:15px;line-height:1">my_location</span><span>Me localize</span>';
+  btn.style.cssText = [
+    "display:inline-flex !important",
+    "visibility:visible !important",
+    "opacity:1 !important",
+    "position:relative !important",
+    "z-index:999 !important",
+    "align-items:center !important",
+    "justify-content:center !important",
+    "gap:5px !important",
+    "min-height:30px !important",
+    "padding:5px 10px !important",
+    "margin:0 !important",
+    "border:1px solid #bfdbfe !important",
+    "border-radius:8px !important",
+    "background:#eff6ff !important",
+    "color:#075985 !important",
+    "font-size:11px !important",
+    "font-weight:700 !important",
+    "line-height:1.2 !important",
+    "white-space:nowrap !important",
+    "cursor:pointer !important",
+    "width:auto !important",
+    "height:auto !important"
+  ].join(";");
+  btn.addEventListener("click", locateUserOnMap);
+
+  resetControl.insertAdjacentElement("afterend", btn);
+  console.log("📍 v84: botão Me localize inserido diretamente ao lado de Resetar Visão.");
+  return true;
+}
+
+function installMapLocateButtonObserver() {
+  if (forceInsertMapLocateButton()) return;
+  if (window.__petSearchersLocateObserver) return;
+
+  const observer = new MutationObserver(() => {
+    if (forceInsertMapLocateButton()) {
+      observer.disconnect();
+      window.__petSearchersLocateObserver = null;
+    }
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+  window.__petSearchersLocateObserver = observer;
+
+  // Garantias extras para páginas que montam a legenda após o carregamento inicial.
+  [100, 300, 800, 1500, 3000].forEach(ms => setTimeout(forceInsertMapLocateButton, ms));
+}
+
 function bindMapLegendFilters() {
   getMapLegendFilterElements().forEach(btn => {
     if (btn.dataset.legendFilterBound === "1") return;
@@ -2226,6 +2308,7 @@ function bindMapLegendFilters() {
   ensureMapLegendLayout();
   setTimeout(ensureMapLegendLayout, 150);
   setTimeout(ensureMapLegendLayout, 600);
+  installMapLocateButtonObserver();
 }
 
 window.addEventListener("orientationchange", () => {
