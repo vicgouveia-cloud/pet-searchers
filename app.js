@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v84 carregado - Me localize inserido por observador direto da legenda");
+console.log("✅ Pet Searchers app.js BUILD v85 carregado - bootstrap independente do botão Me localize");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -5130,3 +5130,145 @@ window.adminDeletePet = adminDeletePet;
 window.downloadPosterJPG = downloadPosterJPG;
 window.downloadPosterPDF = downloadPosterPDF;
 window.getRandomDefaultPhoto = getRandomDefaultPhoto;
+
+
+// === v85 FAIL-SAFE: ME LOCALIZE ===
+// Bootstrap independente das rotinas anteriores. Executa mesmo que bindMapLegendFilters
+// não seja chamado pelo HTML atual.
+(() => {
+  const normalizeText = (el) => (el?.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+
+  function findExactResetElement() {
+    const nodes = Array.from(document.querySelectorAll("button, a, [role='button'], span, div"));
+    const exact = nodes.filter(el => normalizeText(el) === "resetar visão");
+    if (!exact.length) return null;
+
+    // Prefere um elemento clicável; caso não exista, pega o menor elemento textual.
+    return exact.find(el => el.matches("button, a, [role='button']")) || exact.sort((a,b) => a.children.length - b.children.length)[0];
+  }
+
+  function findClickableWrapper(el) {
+    if (!el) return null;
+    const clickable = el.closest("button, a, [role='button']");
+    if (clickable) return clickable;
+
+    let node = el;
+    while (node.parentElement && node.parentElement !== document.body) {
+      const parent = node.parentElement;
+      if (normalizeText(parent) !== "resetar visão") break;
+      node = parent;
+    }
+    return node;
+  }
+
+  function locateInline() {
+    if (typeof locateUserOnMap === "function") {
+      locateUserOnMap();
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      alert("Seu navegador não disponibiliza geolocalização.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(pos => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      if (typeof leafletMap !== "undefined" && leafletMap) {
+        try { leafletMap.setView([lat, lng], 14, { animate: true }); } catch (_) {}
+      }
+    }, () => alert("Não foi possível obter sua localização."), {
+      enableHighAccuracy: false,
+      timeout: 10000,
+      maximumAge: 60000
+    });
+  }
+
+  function installLocateButtonV85() {
+    if (document.getElementById("btnMapLocateMeV85")) return true;
+
+    const resetText = findExactResetElement();
+    if (!resetText) return false;
+
+    const resetControl = findClickableWrapper(resetText);
+    if (!resetControl || !resetControl.parentElement) return false;
+
+    const row = resetControl.parentElement;
+
+    // Força a própria linha onde Resetar Visão já aparece a aceitar o novo botão.
+    row.style.setProperty("display", "flex", "important");
+    row.style.setProperty("align-items", "center", "important");
+    row.style.setProperty("justify-content", "flex-start", "important");
+    row.style.setProperty("flex-wrap", "wrap", "important");
+    row.style.setProperty("gap", "8px", "important");
+    row.style.setProperty("width", "100%", "important");
+    row.style.setProperty("max-width", "100%", "important");
+    row.style.setProperty("overflow", "visible", "important");
+    row.style.setProperty("box-sizing", "border-box", "important");
+
+    // Não altera o funcionamento do Resetar Visão existente.
+    resetControl.style.setProperty("flex", "0 0 auto", "important");
+
+    const btn = document.createElement("button");
+    btn.id = "btnMapLocateMeV85";
+    btn.type = "button";
+    btn.title = "Centralizar o mapa na minha localização aproximada";
+    btn.setAttribute("aria-label", "Me localize");
+    btn.innerHTML = '<span aria-hidden="true" style="font-size:15px;line-height:1">◎</span><span>Me localize</span>';
+    btn.style.cssText = [
+      "display:inline-flex !important",
+      "visibility:visible !important",
+      "opacity:1 !important",
+      "align-items:center !important",
+      "justify-content:center !important",
+      "gap:5px !important",
+      "flex:0 0 auto !important",
+      "min-width:94px !important",
+      "max-width:none !important",
+      "min-height:30px !important",
+      "height:30px !important",
+      "padding:4px 10px !important",
+      "margin:0 !important",
+      "border:1px solid #bfdbfe !important",
+      "border-radius:8px !important",
+      "background:#eff6ff !important",
+      "color:#075985 !important",
+      "font-family:inherit !important",
+      "font-size:11px !important",
+      "font-weight:700 !important",
+      "line-height:1 !important",
+      "white-space:nowrap !important",
+      "cursor:pointer !important",
+      "position:relative !important",
+      "z-index:2147483646 !important",
+      "pointer-events:auto !important"
+    ].join(";");
+    btn.addEventListener("click", locateInline);
+
+    resetControl.insertAdjacentElement("afterend", btn);
+    console.log("📍 v85: 'Me localize' adicionado ao lado de 'Resetar Visão'.");
+    return true;
+  }
+
+  function boot() {
+    if (installLocateButtonV85()) return;
+
+    const observer = new MutationObserver(() => {
+      if (installLocateButtonV85()) observer.disconnect();
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+
+    let attempts = 0;
+    const timer = setInterval(() => {
+      attempts += 1;
+      if (installLocateButtonV85() || attempts >= 40) clearInterval(timer);
+    }, 250);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot, { once: true });
+  } else {
+    boot();
+  }
+})();
