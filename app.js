@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v68 carregado - cartaz 4:5 com foto preservada e coluna de imagem ampliada");
+console.log("✅ Pet Searchers app.js BUILD v69 carregado - cartaz centralizado, cabeçalho refinado e rodapé alinhado");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -2506,6 +2506,31 @@ function getCommonAncestor(elements) {
   return null;
 }
 
+
+function findPosterElementByText(root, needle) {
+  if (!root || !needle) return null;
+  const target = String(needle).trim().toLowerCase();
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    const value = String(node.nodeValue || "").replace(/\s+/g, " ").trim().toLowerCase();
+    if (value && value.includes(target)) {
+      return node.parentElement || null;
+    }
+  }
+  return null;
+}
+
+function findNearestAncestorContaining(parentStart, requiredElement, stopAt) {
+  let node = parentStart;
+  while (node && node !== stopAt && node !== document.body) {
+    if (requiredElement && node.contains(requiredElement)) return node;
+    node = node.parentElement;
+  }
+  return null;
+}
+
 function applyPosterLayoutAdjustments() {
   const posterArea = document.getElementById("posterArea");
   const posterImg = document.getElementById("posterImg");
@@ -2605,6 +2630,94 @@ function applyPosterLayoutAdjustments() {
     infoPanel.style.width = "100%";
     infoPanel.style.maxWidth = "100%";
     infoPanel.style.boxSizing = "border-box";
+  }
+
+  // Centraliza visualmente o conjunto "foto + coluna de dados" no miolo da página.
+  // Mantém a proporção 65,5 / 34,5, mas evita que o conteúdo fique colado às laterais.
+  if (frame && infoPanel && infoPanel !== posterArea) {
+    let centeredColumns = frame.parentElement;
+
+    while (
+      centeredColumns &&
+      centeredColumns !== posterArea &&
+      !centeredColumns.contains(infoPanel)
+    ) {
+      centeredColumns = centeredColumns.parentElement;
+    }
+
+    if (centeredColumns && centeredColumns !== posterArea) {
+      centeredColumns.style.marginLeft = "auto";
+      centeredColumns.style.marginRight = "auto";
+      centeredColumns.style.marginTop = "18px";
+      centeredColumns.style.marginBottom = "18px";
+      centeredColumns.style.width = "92%";
+      centeredColumns.style.maxWidth = "92%";
+      centeredColumns.style.justifySelf = "center";
+      centeredColumns.style.alignSelf = "center";
+    }
+  }
+
+  // Cabeçalho: "PROCURA-SE" levemente mais alto e com melhor respiro
+  // em relação à linha "DESDE ...".
+  const posterDateSubtext = document.getElementById("posterDateSubtext");
+  const procuraSeEl =
+    findPosterElementByText(posterArea, "PROCURA-SE") ||
+    findPosterElementByText(posterArea, "Procura-se");
+
+  if (procuraSeEl) {
+    procuraSeEl.style.transform = "translateY(-7px)";
+    procuraSeEl.style.lineHeight = "1";
+    procuraSeEl.style.marginBottom = "8px";
+  }
+
+  if (posterDateSubtext) {
+    posterDateSubtext.style.marginTop = "7px";
+    posterDateSubtext.style.lineHeight = "1.45";
+    posterDateSubtext.style.display = "block";
+  }
+
+  if (procuraSeEl && posterDateSubtext) {
+    const headerBlock = getCommonAncestor([procuraSeEl, posterDateSubtext]);
+    if (headerBlock && headerBlock !== posterArea) {
+      headerBlock.style.paddingTop = "14px";
+      headerBlock.style.paddingBottom = "14px";
+      headerBlock.style.boxSizing = "border-box";
+    }
+  }
+
+  // Rodapé: alinha verticalmente o logo Pet Searchers com o número de telefone.
+  const phoneEl = document.getElementById("posterContactPhone");
+  if (phoneEl) {
+    let footerCandidate = phoneEl.parentElement;
+
+    while (
+      footerCandidate &&
+      footerCandidate !== posterArea &&
+      !footerCandidate.querySelector("img")
+    ) {
+      footerCandidate = footerCandidate.parentElement;
+    }
+
+    if (footerCandidate && footerCandidate !== posterArea) {
+      footerCandidate.style.display = "flex";
+      footerCandidate.style.alignItems = "center";
+      footerCandidate.style.justifyContent = "space-between";
+      footerCandidate.style.gap = "12px";
+      footerCandidate.style.boxSizing = "border-box";
+
+      const footerLogo = footerCandidate.querySelector("img");
+      if (footerLogo) {
+        footerLogo.style.alignSelf = "center";
+        footerLogo.style.marginTop = "0";
+        footerLogo.style.marginBottom = "0";
+        footerLogo.style.verticalAlign = "middle";
+      }
+
+      phoneEl.style.alignSelf = "center";
+      phoneEl.style.marginTop = "0";
+      phoneEl.style.marginBottom = "0";
+      phoneEl.style.lineHeight = "1.2";
+    }
   }
 
   replacePosterLabelText(posterArea, "Observação de Saúde", "Observações");
