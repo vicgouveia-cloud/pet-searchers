@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v71 carregado - prévia ajustada e colunas do cartaz harmonizadas");
+console.log("✅ Pet Searchers app.js BUILD v72 carregado - mobile responsivo, mapa compacto e formulário ajustado");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -1275,9 +1275,18 @@ function replaceResolvedLabelsInUI() {
 function enhanceMapLayout() {
   const map = document.getElementById("map");
   if (!map) return;
-  const h = window.innerWidth < 768 ? "460px" : "540px";
+
+  // Mobile: aproximadamente 30% mais baixo que os 460px anteriores,
+  // preservando 100% da largura disponível.
+  const isMobile = window.innerWidth < 768;
+  const h = isMobile ? "322px" : "540px";
+
+  map.style.width = "100%";
+  map.style.maxWidth = "100%";
   map.style.height = h;
   map.style.minHeight = h;
+  map.style.maxHeight = h;
+
   setTimeout(() => {
     try { leafletMap?.invalidateSize(); } catch (_) {}
   }, 100);
@@ -1481,6 +1490,7 @@ function ensureAdvancedFilterControls() {
 }
 
 function initEnhancedPetUI() {
+  ensureMobileResponsiveStyles();
   ensureAdvancedFilterControls();
   replaceResolvedLabelsInUI();
   enhanceMapLayout();
@@ -1792,6 +1802,25 @@ function bindMapLegendFilters() {
         reset();
       }
     });
+  });
+}
+
+window.addEventListener("orientationchange", () => {
+  setTimeout(() => {
+    enhanceMapLayout();
+    const reportModal = document.getElementById("reportModal");
+    if (reportModal && !reportModal.classList.contains("hidden")) {
+      prepareReportModalForViewport();
+    }
+  }, 180);
+});
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", () => {
+    const reportModal = document.getElementById("reportModal");
+    if (reportModal && !reportModal.classList.contains("hidden")) {
+      prepareReportModalForViewport();
+    }
   });
 }
 
@@ -2160,6 +2189,195 @@ function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.68) {
   });
 }
 
+
+function ensureMobileResponsiveStyles() {
+  if (document.getElementById("petSearchersMobileResponsiveStyles")) return;
+
+  const style = document.createElement("style");
+  style.id = "petSearchersMobileResponsiveStyles";
+  style.textContent = `
+    @media (max-width: 767px) {
+      html, body {
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+
+      #map {
+        width: 100% !important;
+        height: 322px !important;
+        min-height: 322px !important;
+        max-height: 322px !important;
+        border-radius: 16px !important;
+      }
+
+      /* Modal de cadastro/edição: nunca centralizar um formulário maior que a tela.
+         Isso evita o corte dos primeiros campos (inclusive foto) no iPhone/Safari. */
+      #reportModal {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100vw !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        box-sizing: border-box !important;
+        align-items: flex-start !important;
+        justify-content: center !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        padding:
+          max(8px, env(safe-area-inset-top))
+          8px
+          max(12px, env(safe-area-inset-bottom)) !important;
+      }
+
+      #reportModal > div {
+        width: min(100%, 720px) !important;
+        max-width: calc(100vw - 16px) !important;
+        min-width: 0 !important;
+        max-height: none !important;
+        height: auto !important;
+        margin: 0 auto !important;
+        border-radius: 18px !important;
+        overflow: visible !important;
+        box-sizing: border-box !important;
+      }
+
+      #reportModal form,
+      #petForm {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        box-sizing: border-box !important;
+      }
+
+      #reportModal input,
+      #reportModal select,
+      #reportModal textarea,
+      #reportModal button {
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+
+      #reportModal input,
+      #reportModal select,
+      #reportModal textarea {
+        font-size: 16px !important; /* evita zoom automático do Safari */
+      }
+
+      #reportModal textarea {
+        min-height: 110px;
+        resize: vertical;
+      }
+
+      #photoPlaceholder,
+      #photoPreviewContainer {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+      }
+
+      #photoPreviewContainer img,
+      #imgPreview {
+        max-width: 100% !important;
+        height: auto !important;
+        object-fit: contain !important;
+      }
+
+      /* Campos e blocos internos com respiro mais uniforme no mobile. */
+      #reportModal .grid {
+        gap: 14px !important;
+      }
+
+      #reportModal label {
+        line-height: 1.3;
+      }
+
+      /* Filtros e controles ficam mais fluidos em telas estreitas. */
+      #petAdvancedControls {
+        gap: 8px !important;
+      }
+
+      #petAdvancedControls > * {
+        min-width: 0 !important;
+      }
+
+      #btnNearbyPets,
+      #btnClearAllPetFilters,
+      #nearbyRadiusSelect,
+      #petSortOrder {
+        min-height: 40px;
+      }
+
+      /* Cartões: evita estouro lateral e mantém espaçamento harmonioso. */
+      #petsGrid {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      #petsGrid > * {
+        min-width: 0;
+      }
+    }
+
+    @media (max-width: 430px) {
+      #reportModal {
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+      }
+
+      #reportModal > div {
+        max-width: calc(100vw - 12px) !important;
+        border-radius: 16px !important;
+      }
+
+      #map {
+        border-radius: 14px !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function prepareReportModalForViewport() {
+  const reportModal = document.getElementById("reportModal");
+  if (!reportModal) return;
+
+  ensureMobileResponsiveStyles();
+
+  // O modal pode ter um wrapper interno com overflow próprio.
+  // Garantimos que todos os possíveis containers voltem ao topo.
+  try {
+    reportModal.scrollTop = 0;
+    reportModal.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  } catch (_) {
+    reportModal.scrollTop = 0;
+  }
+
+  const form = document.getElementById("petForm");
+  let node = form ? form.parentElement : null;
+  let depth = 0;
+
+  while (node && node !== reportModal && depth < 5) {
+    try {
+      if (node.scrollHeight > node.clientHeight) {
+        node.scrollTop = 0;
+      }
+    } catch (_) {}
+    node = node.parentElement;
+    depth += 1;
+  }
+
+  // Recalcula o Leaflet depois que modal fecha/abre em Safari para não
+  // deixar medidas antigas influenciando o layout da página.
+  setTimeout(() => {
+    try { leafletMap?.invalidateSize(); } catch (_) {}
+  }, 120);
+}
+
 // --- MODALS & FORM MANAGEMENT ---
 function initModalEvents() {
   const reportModal = document.getElementById("reportModal");
@@ -2184,7 +2402,13 @@ function initModalEvents() {
   document.getElementById("tabReportSighted")?.addEventListener("click", () => setReportFormType("Avistado"));
 
   document.querySelectorAll(".btnCloseModal").forEach(btn => {
-    btn.addEventListener("click", () => reportModal?.classList.add("hidden"));
+    btn.addEventListener("click", () => {
+      reportModal?.classList.add("hidden");
+      setTimeout(() => {
+        enhanceMapLayout();
+        try { leafletMap?.invalidateSize(); } catch (_) {}
+      }, 80);
+    });
   });
   document.querySelectorAll(".btnClosePosterModal").forEach(btn => {
     btn.addEventListener("click", () => posterModal?.classList.add("hidden"));
@@ -2294,7 +2518,11 @@ function openReportModal(type, editPetId = null) {
 
   const reportModal = document.getElementById("reportModal");
   reportModal.classList.remove("hidden");
-  reportModal.scrollTop = 0;
+
+  // No mobile, o formulário é alinhado pelo topo e todo o conteúdo
+  // fica acessível por rolagem, incluindo o campo da foto.
+  prepareReportModalForViewport();
+  setTimeout(prepareReportModalForViewport, 80);
 }
 
 function setReportFormType(type) {
