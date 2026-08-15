@@ -35,26 +35,6 @@ async function initFirebaseConnection() {
     return false;
   }
 }
-async function fetchGeocodeCoordinates(address) {
-  try {
-    const apiKey = "AIzaSyAurtbJevi0xpbifDhhKlF68zjDIxgEQgY"
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
-
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (data.status === "OK" && data.results.length > 0) {
-      const location = data.results[0].geometry.location;
-      return { lat: location.lat, lng: location.lng };
-    } else {
-      console.warn("Geocoding falhou:", data.status);
-      return null;
-    }
-  } catch (e) {
-    console.error("Erro ao buscar coordenadas no Google Maps:", e);
-    return null;
-  }
-}
 // --- MAPEAMENTO OFICIAL DE CAPITAIS DOS 27 ESTADOS DO BRASIL ---
 const STATE_CAPITALS = {
   AC: "Rio Branco", AL: "Maceió", AP: "Macapá", AM: "Manaus", BA: "Salvador",
@@ -497,26 +477,6 @@ function getLocalCityCoords(cityName) {
 }
 
 // --- GEOLOCALIZAÇÃO PRECISA E INTELIGENTE EM CASCATA ---
-async function fetchGeocodeCoordinates(address) {
-  try {
-    const apiKey = AIzaSyAurtbJevi0xpbifDhhKlF68zjDIxgEQgY;
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
-
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (data.status === "OK" && data.results.length > 0) {
-      const location = data.results[0].geometry.location;
-      return { lat: location.lat, lng: location.lng };
-    } else {
-      console.warn("Geocoding falhou:", data.status);
-      return null;
-    }
-  } catch (e) {
-    console.error("Erro ao buscar coordenadas no Google Maps:", e);
-    return null;
-  }
-}
 async function fetchGeocodeCoordinates(address = "", city = "", state = "") {
   let cleanState = (state || "").trim().toUpperCase();
   let cleanCity = (city || "").trim();
@@ -1367,21 +1327,17 @@ async function renewPetListing(petId) {
     pet.daysActive = 0;
     pet.daysRemaining = 30;
     savePetsToStorage();
-const coords = await fetchGeocodeCoordinates(`${pet.address}, ${pet.city}, ${pet.state}, Brasil`);
-if (coords) {
-  pet.lat = coords.lat;
-  pet.lng = coords.lng;
-}
-    await // Depois de montar o objeto pet com os dados do formulário:
-const coords = await fetchGeocodeCoordinates(`${pet.address}, ${pet.city}, ${pet.state}, Brasil`);
-if (coords) {
-  pet.lat = coords.lat;
-  pet.lng = coords.lng;
-}
 
-// Agora sim salva no Firebase
-await savePetToFirebase(pet);
- savePetToFirebase(pet);
+    const coords = await fetchGeocodeCoordinates(
+      `${pet.address || ""}, ${pet.city || ""}, ${pet.state || ""}, Brasil`
+    );
+
+    if (coords) {
+      pet.lat = coords.lat;
+      pet.lng = coords.lng;
+    }
+
+    await savePetToFirebase(pet);
     renderApp();
     alert(`🎉 O anúncio de "${pet.name}" foi renovado com sucesso por mais 30 dias!`);
   }
@@ -2297,4 +2253,3 @@ window.adminEditPet = adminEditPet;
 window.adminDeletePet = adminDeletePet;
 window.downloadPosterJPG = downloadPosterJPG;
 window.getRandomDefaultPhoto = getRandomDefaultPhoto;
-
