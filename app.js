@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v62 carregado - filtros da legenda ativos");
+console.log("✅ Pet Searchers app.js BUILD v63 carregado - filtros avançados, proximidade, ordenação e detalhes ampliados");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -216,8 +216,12 @@ let currentActiveFilters = {
   state: "",
   city: "",
   status: "",
-  species: ""
+  species: "",
+  nearby: false,
+  sort: "newest"
 };
+
+let currentUserPosition = null;
 
 // Admin State
 let isAdminAuthenticated = false;
@@ -243,6 +247,7 @@ async function startApp() {
     initLeafletMap();
     initDatePicker();
     initFilterEvents();
+    initEnhancedPetUI();
     initModalEvents();
     initAdminEvents();
     preloadPopularStatesCities();
@@ -981,6 +986,232 @@ function getPetPhoto(pet) {
     : getRandomDefaultPhoto(pet && pet.species);
 }
 
+
+function getDisplayStatusLabel(type) {
+  if (type === "Encontrado pelo dono") return "Pet Encontrado";
+  if (type === "Dono encontrado") return "Dono encontrado";
+  return type || "Avistado";
+}
+
+function isResolvedPet(pet) {
+  return pet && (pet.type === "Encontrado pelo dono" || pet.type === "Dono encontrado");
+}
+
+function escapePetHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function haversineDistanceKm(lat1, lng1, lat2, lng2) {
+  const toRad = deg => deg * Math.PI / 180;
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function getPetSortTimestamp(pet) {
+  const candidates = [pet && pet.createdAt, pet && pet.lastModifiedAt, pet && pet.date];
+  for (const value of candidates) {
+    if (!value) continue;
+    const ts = new Date(value).getTime();
+    if (Number.isFinite(ts)) return ts;
+  }
+  const idMatch = String((pet && pet.id) || "").match(/(\d{10,})/);
+  if (idMatch) {
+    const n = Number(idMatch[1]);
+    if (Number.isFinite(n)) return n;
+  }
+  return 0;
+}
+
+function replaceResolvedLabelsInUI() {
+  document.querySelectorAll('option[value="Encontrado pelo dono"]').forEach(opt => {
+    opt.textContent = "🟢 Pet Encontrado";
+  });
+
+  document.querySelectorAll(".filter-status-btn").forEach(btn => {
+    if (btn.dataset.status === "Encontrado pelo dono") {
+      const nodes = Array.from(btn.childNodes).filter(n => n.nodeType === Node.TEXT_NODE);
+      if (nodes.length) {
+        nodes.forEach(n => n.textContent = n.textContent.replace(/Encontrado pelo dono/g, "Pet Encontrado"));
+      } else if ((btn.textContent || "").includes("Encontrado pelo dono")) {
+        btn.textContent = (btn.textContent || "").replace(/Encontrado pelo dono/g, "Pet Encontrado");
+      }
+    }
+  });
+}
+
+function enhanceMapLayout() {
+  const map = document.getElementById("map");
+  if (!map) return;
+  const h = window.innerWidth < 768 ? "460px" : "540px";
+  map.style.height = h;
+  map.style.minHeight = h;
+  setTimeout(() => {
+    try { leafletMap?.invalidateSize(); } catch (_) {}
+  }, 100);
+}
+
+function clearAllPetFilters() {
+  currentActiveFilters = {
+    search: "",
+    state: "",
+    city: "",
+    status: "",
+    species: "",
+    nearby: false,
+    sort: "newest"
+  };
+  currentUserPosition = null;
+
+  const fs = document.getElementById("filterSearch");
+  const fst = document.getElementById("filterState");
+  const fc = document.getElementById("filterCity");
+  const sortSelect = document.getElementById("petSortOrder");
+
+  if (fs) fs.value = "";
+  if (fst) fst.value = "";
+  if (fc) {
+    fc.innerHTML = '<option value="">Todas as Cidades do Brasil</option>';
+    fc.value = "";
+  }
+  if (sortSelect) sortSelect.value = "newest";
+
+  document.querySelectorAll(".filter-species-btn").forEach(b => {
+    const active = !b.dataset.species;
+    b.className = active
+      ? "filter-species-btn px-3.5 py-1.5 rounded-full text-xs font-bold transition-all bg-secondary text-on-primary"
+      : "filter-species-btn px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all bg-surface-container text-on-surface-variant hover:bg-surface-container-high";
+  });
+
+  const nearbyBtn = document.getElementById("btnNearbyPets");
+  if (nearbyBtn) {
+    nearbyBtn.classList.remove("ring-2", "ring-primary", "bg-primary", "text-white");
+    nearbyBtn.classList.add("bg-surface-container", "text-primary");
+    nearbyBtn.setAttribute("aria-pressed", "false");
+  }
+
+  syncStatusFilterUI();
+  renderApp();
+}
+
+function activateNearbyFilter() {
+  const btn = document.getElementById("btnNearbyPets");
+
+  if (currentActiveFilters.nearby) {
+    currentActiveFilters.nearby = false;
+    currentUserPosition = null;
+    if (btn) {
+      btn.setAttribute("aria-pressed", "false");
+      btn.classList.remove("ring-2", "ring-primary", "bg-primary", "text-white");
+      btn.classList.add("bg-surface-container", "text-primary");
+    }
+    renderApp();
+    return;
+  }
+
+  if (!navigator.geolocation) {
+    alert("Seu navegador não disponibiliza geolocalização.");
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">progress_activity</span> Localizando...';
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      currentUserPosition = {
+        lat: Number(pos.coords.latitude),
+        lng: Number(pos.coords.longitude)
+      };
+      currentActiveFilters.nearby = true;
+
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span> Próximos a mim (10 km)';
+        btn.setAttribute("aria-pressed", "true");
+        btn.classList.remove("bg-surface-container", "text-primary");
+        btn.classList.add("ring-2", "ring-primary", "bg-primary", "text-white");
+      }
+      renderApp();
+    },
+    err => {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span> Próximos a mim (10 km)';
+      }
+      alert(err && err.code === 1
+        ? "Permita o acesso à sua localização no navegador para usar o filtro Próximos a mim."
+        : "Não foi possível obter sua localização neste momento.");
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+  );
+}
+
+function ensureAdvancedFilterControls() {
+  if (document.getElementById("petAdvancedControls")) return;
+
+  const filterSearch = document.getElementById("filterSearch");
+  if (!filterSearch) return;
+
+  const host = filterSearch.parentElement?.parentElement?.parentElement || filterSearch.parentElement;
+  if (!host) return;
+
+  const row = document.createElement("div");
+  row.id = "petAdvancedControls";
+  row.className = "mt-3 pt-3 border-t border-outline-variant/30 flex flex-wrap items-center gap-2 justify-between";
+  row.innerHTML = `
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="btnNearbyPets" type="button" aria-pressed="false"
+        class="px-3.5 py-2 rounded-xl bg-surface-container text-primary hover:bg-surface-container-high font-bold text-xs transition-all flex items-center gap-1.5 border border-outline-variant/40">
+        <span class="material-symbols-outlined text-sm">my_location</span> Próximos a mim (10 km)
+      </button>
+      <button id="btnClearAllPetFilters" type="button"
+        class="px-3.5 py-2 rounded-xl bg-white text-primary hover:bg-surface-container font-bold text-xs transition-all flex items-center gap-1.5 border border-outline-variant">
+        <span class="material-symbols-outlined text-sm">filter_alt_off</span> Limpar filtros
+      </button>
+    </div>
+    <label class="flex items-center gap-2 text-xs font-bold text-primary">
+      <span class="material-symbols-outlined text-sm">sort</span>
+      Ordenar:
+      <select id="petSortOrder"
+        class="px-3 py-2 rounded-xl border border-outline-variant bg-white text-primary text-xs font-semibold outline-none cursor-pointer">
+        <option value="newest">Mais recentes primeiro</option>
+        <option value="oldest">Mais antigos primeiro</option>
+      </select>
+    </label>
+  `;
+
+  host.appendChild(row);
+
+  document.getElementById("btnNearbyPets")?.addEventListener("click", activateNearbyFilter);
+  document.getElementById("btnClearAllPetFilters")?.addEventListener("click", clearAllPetFilters);
+  document.getElementById("petSortOrder")?.addEventListener("change", e => {
+    currentActiveFilters.sort = e.target.value === "oldest" ? "oldest" : "newest";
+    renderApp();
+  });
+}
+
+function initEnhancedPetUI() {
+  ensureAdvancedFilterControls();
+  replaceResolvedLabelsInUI();
+  enhanceMapLayout();
+  window.addEventListener("resize", enhanceMapLayout);
+  window.clearAllPetFilters = clearAllPetFilters;
+  window.activateNearbyFilter = activateNearbyFilter;
+  window.applyStatusFilterFromLegend = applyStatusFilterFromLegend;
+}
+
 function updateMapMarkers(filteredPets) {
   if (!leafletMap) return;
 
@@ -999,10 +1230,10 @@ function updateMapMarkers(filteredPets) {
     const mapLng = Number(mapCoords.lng);
     if (!Number.isFinite(mapLat) || !Number.isFinite(mapLng)) return;
 
-    const isResolved = pet.type === "Encontrado pelo dono" || pet.type === "Dono encontrado";
+    const isResolved = isResolvedPet(pet);
     let markerColor = "#0EA5E9"; // Avistado
     let badgeColor = "bg-sky-500";
-    let badgeText = pet.type || "Avistado";
+    let badgeText = getDisplayStatusLabel(pet.type);
 
     if (pet.type === "Procurado") {
       markerColor = "#E52421";
@@ -1062,12 +1293,15 @@ function updateMapMarkers(filteredPets) {
       bubblingMouseEvents: true
     })
       .addTo(leafletMap)
-      .bindPopup(popupHtml, { maxWidth: 280 });
+      .bindPopup(popupHtml, { maxWidth: 320, autoPan: true, autoPanPadding: [28, 80], keepInView: true });
 
     marker.bindTooltip(`${pet.name || 'Pet'} • ${badgeText}`, {
       direction: 'top',
       offset: [0, -8],
       opacity: 0.9
+    });
+    marker.on("mouseover", () => {
+      try { marker.openPopup(); } catch (_) {}
     });
 
     mapMarkers[pet.id] = marker;
@@ -1095,12 +1329,12 @@ function focusPetOnMap(petId) {
   // 1. Rola a tela suavemente até a seção do mapa
   const mapElement = document.getElementById("mapSection") || document.getElementById("map");
   if (mapElement) {
-    mapElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    mapElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   // 2. Centraliza no pet e abre o popup. Funciona também para coordenadas de fallback.
   try {
-    leafletMap.setView([mapCoords.lat, mapCoords.lng], 16, { animate: true });
+    leafletMap.setView([mapCoords.lat, mapCoords.lng], 15, { animate: true });
   } catch (e) {
     console.warn("Aviso setView:", e);
   }
@@ -1132,7 +1366,8 @@ function getMapLegendFilterElements() {
   const statusByLabel = {
     "procurado": "Procurado",
     "avistado": "Avistado",
-    "reencontrado": "Reencontrado"
+    "reencontrado": "Reencontrado",
+    "reencontrado 🎉": "Reencontrado"
   };
 
   const results = [];
@@ -1279,17 +1514,7 @@ function initFilterEvents() {
     });
   });
 
-  document.getElementById("btnClearFilters")?.addEventListener("click", () => {
-    currentActiveFilters = { search: "", state: "", city: "", status: "", species: "" };
-    const fs = document.getElementById("filterSearch");
-    const fst = document.getElementById("filterState");
-    const fc = document.getElementById("filterCity");
-    if (fs) fs.value = "";
-    if (fst) fst.value = "";
-    if (fc) fc.value = "";
-    syncStatusFilterUI();
-    renderApp();
-  });
+  document.getElementById("btnClearFilters")?.addEventListener("click", clearAllPetFilters);
 }
 
 function syncStatusFilterUI() {
@@ -1330,7 +1555,7 @@ function syncStatusFilterUI() {
 function renderApp() {
   runAutoPurgeEngine();
 
-  const filteredPets = petsData.filter(pet => {
+  let filteredPets = petsData.filter(pet => {
     if (currentActiveFilters.search) {
       const q = currentActiveFilters.search;
       const matchName = String(pet.name || "").toLowerCase().includes(q);
@@ -1339,44 +1564,63 @@ function renderApp() {
       const matchAddress = String(pet.address || "").toLowerCase().includes(q);
       const matchCity = String(pet.city || "").toLowerCase().includes(q);
       const matchDesc = String(pet.description || "").toLowerCase().includes(q);
-      if (!matchName && !matchBreed && !matchColor && !matchAddress && !matchCity && !matchDesc) {
-        return false;
-      }
+      if (!matchName && !matchBreed && !matchColor && !matchAddress && !matchCity && !matchDesc) return false;
     }
 
     if (currentActiveFilters.state && pet.state !== currentActiveFilters.state) return false;
     if (currentActiveFilters.city && pet.city !== currentActiveFilters.city) return false;
-    
+
     if (currentActiveFilters.status) {
       if (currentActiveFilters.status === "Reencontrado") {
-        if (pet.type !== "Encontrado pelo dono" && pet.type !== "Dono encontrado") return false;
-      } else {
-        if (pet.type !== currentActiveFilters.status) return false;
+        if (!isResolvedPet(pet)) return false;
+      } else if (pet.type !== currentActiveFilters.status) {
+        return false;
       }
     }
 
     if (currentActiveFilters.species && pet.species !== currentActiveFilters.species) return false;
 
+    if (currentActiveFilters.nearby) {
+      if (!currentUserPosition) return false;
+      const coords = getPetMapCoordinates(pet);
+      if (!coords) return false;
+      const distance = haversineDistanceKm(
+        currentUserPosition.lat,
+        currentUserPosition.lng,
+        Number(coords.lat),
+        Number(coords.lng)
+      );
+      if (!Number.isFinite(distance) || distance > 10) return false;
+    }
+
     return true;
+  });
+
+  filteredPets = [...filteredPets].sort((a, b) => {
+    const ta = getPetSortTimestamp(a);
+    const tb = getPetSortTimestamp(b);
+    return currentActiveFilters.sort === "oldest" ? ta - tb : tb - ta;
   });
 
   const petsGrid = document.getElementById("petsGrid");
   const emptyState = document.getElementById("emptyState");
-  document.getElementById("resultsCount").textContent = filteredPets.length;
+  const resultsCount = document.getElementById("resultsCount");
+  if (resultsCount) resultsCount.textContent = filteredPets.length;
 
-  if (filteredPets.length === 0) {
-    petsGrid.innerHTML = "";
-    emptyState.classList.remove("hidden");
-  } else {
-    emptyState.classList.add("hidden");
-    petsGrid.innerHTML = filteredPets.map(pet => createPetCardHtml(pet)).join("");
+  if (petsGrid && emptyState) {
+    if (filteredPets.length === 0) {
+      petsGrid.innerHTML = "";
+      emptyState.classList.remove("hidden");
+    } else {
+      emptyState.classList.add("hidden");
+      petsGrid.innerHTML = filteredPets.map(pet => createPetCardHtml(pet)).join("");
+    }
   }
 
   updateMapMarkers(filteredPets);
+  replaceResolvedLabelsInUI();
 
-  if (isAdminAuthenticated) {
-    renderAdminDashboardTable();
-  }
+  if (isAdminAuthenticated) renderAdminDashboardTable();
 }
 
 // --- PET CARD HTML TEMPLATE (COM BOTÃO DETALHES COMPLETOS VISÍVEL) ---
@@ -1411,7 +1655,7 @@ function createPetCardHtml(pet) {
         </div>
         
         <div class="absolute top-3 left-3 ${badgeBg} px-3 py-1 rounded-full text-xs font-bold shadow-md flex items-center gap-1">
-          <span class="material-symbols-outlined text-sm">${statusIcon}</span> ${pet.type}
+          <span class="material-symbols-outlined text-sm">${statusIcon}</span> ${getDisplayStatusLabel(pet.type)}
         </div>
 
         <div class="absolute top-3 right-3 bg-primary/95 text-on-primary backdrop-blur-md px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-md flex items-center gap-1">
@@ -1439,7 +1683,7 @@ function createPetCardHtml(pet) {
             <span class="text-green-800 flex items-center gap-1 font-bold">
               <span class="material-symbols-outlined text-base">task_alt</span> Caso Finalizado
             </span>
-            <span class="text-green-700 font-extrabold">Reencontrado 🎉</span>
+            <button type="button" onclick="event.stopPropagation(); applyStatusFilterFromLegend('Reencontrado')" class="text-green-700 font-extrabold hover:underline cursor-pointer" title="Filtrar todos os pets reencontrados">Reencontrado 🎉</button>
           </div>
         ` : (isRenewalWindow ? `
           <div class="bg-amber-50 border border-amber-300 rounded-xl p-2 flex items-center justify-between text-xs text-amber-900" onclick="event.stopPropagation()">
@@ -1992,62 +2236,104 @@ async function downloadPosterJPG() {
 }
 
 // --- DETAIL MODAL ---
+function closePetFullDetailModal() {
+  const overlay = document.getElementById("petFullDetailOverlay");
+  if (overlay) overlay.remove();
+}
+
 function openDetailModal(petId) {
   const pet = petsData.find(p => p.id === petId);
   if (!pet) return;
 
-  const detailImg = document.getElementById("detailImg");
-  detailImg.onerror = () => { detailImg.src = getRandomDefaultPhoto(pet.species); };
-  detailImg.src = getPetPhoto(pet);
+  closePetFullDetailModal();
 
-  const detailFrame = document.getElementById("detailImgFrame");
-  if (detailFrame) {
-    detailFrame.onclick = () => openImageLightbox(pet.id);
-  }
-  document.getElementById("detailName").textContent = pet.name;
-  document.getElementById("detailSpecies").textContent = pet.species;
-  document.getElementById("detailBreedColor").textContent = `${pet.breed} • ${pet.color} ${pet.age ? `(${pet.age})` : ''} - ${pet.gender}`;
-  document.getElementById("detailAddress").textContent = `${pet.address}, ${pet.city} - ${pet.state}`;
-  document.getElementById("detailDate").textContent = `Registrado em: ${formatDate(pet.date)}`;
-  document.getElementById("detailContactName").textContent = `Responsável: ${pet.contactName} - ${pet.contactPhone}`;
-  document.getElementById("detailDesc").textContent = pet.description || "Sem observações adicionais.";
+  const cleanPhone = String(pet.contactPhone || "").replace(/\D/g, "");
+  const waMsg = encodeURIComponent(`Olá ${pet.contactName || ""}, vi o anúncio do pet ${pet.name || "pet"} no portal Pet Searchers!`);
+  const statusLabel = getDisplayStatusLabel(pet.type);
+  const resolved = isResolvedPet(pet);
 
-  const badge = document.getElementById("detailBadge");
-  if (pet.type === "Procurado") {
-    badge.className = "absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md flex items-center gap-1 bg-[#E52421]";
-    badge.innerHTML = `<span class="material-symbols-outlined text-sm">warning</span> PROCURADO`;
-  } else if (pet.type === "Encontrado pelo dono" || pet.type === "Dono encontrado") {
-    badge.className = "absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md flex items-center gap-1 bg-green-600";
-    badge.innerHTML = `<span class="material-symbols-outlined text-sm">task_alt</span> ${pet.type.toUpperCase()}`;
-  } else {
-    badge.className = "absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md flex items-center gap-1 bg-sky-500";
-    badge.innerHTML = `<span class="material-symbols-outlined text-sm">visibility</span> AVISTADO`;
-  }
+  const overlay = document.createElement("div");
+  overlay.id = "petFullDetailOverlay";
+  overlay.className = "fixed inset-0 z-[99999] bg-black/65 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto";
+  overlay.innerHTML = `
+    <div class="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden my-auto" role="dialog" aria-modal="true">
+      <button type="button" id="btnClosePetFullDetail"
+        class="absolute top-3 right-3 z-20 w-10 h-10 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center shadow-lg"
+        aria-label="Fechar detalhes">
+        <span class="material-symbols-outlined">close</span>
+      </button>
 
-  const detailBox = document.getElementById("detailMaintenanceBox");
-  if (pet.isRenewalWindow && pet.type !== "Encontrado pelo dono" && pet.type !== "Dono encontrado") {
-    detailBox.classList.remove("hidden");
-    document.getElementById("btnDetailRenewPet").onclick = () => {
-      document.getElementById("detailModal").classList.add("hidden");
-      renewPetListing(pet.id);
-    };
-  } else {
-    detailBox.classList.add("hidden");
-  }
+      <div class="grid md:grid-cols-[42%_58%]">
+        <div class="bg-gray-50 flex items-center justify-center p-3 md:p-5 min-h-[280px]">
+          <img src="${escapePetHtml(getPetPhoto(pet))}" alt="${escapePetHtml(pet.name || "Pet")}"
+            onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${escapePetHtml(pet.species || "Cachorro")}');"
+            class="w-full max-h-[520px] object-contain rounded-2xl bg-white shadow-sm border border-gray-100"/>
+        </div>
 
-  const cleanPhone = pet.contactPhone.replace(/\D/g, "");
-  const waMsg = encodeURIComponent(`Olá ${pet.contactName}, vi o anúncio do pet ${pet.name} no portal Pet Searchers!`);
-  document.getElementById("detailWhatsappLink").href = `https://wa.me/55${cleanPhone}?text=${waMsg}`;
+        <div class="p-5 sm:p-7 overflow-y-auto max-h-[86vh]">
+          <div class="flex flex-wrap items-center gap-2 mb-3">
+            <span class="px-3 py-1 rounded-full text-xs font-extrabold text-white ${pet.type === "Procurado" ? "bg-[#E52421]" : (resolved ? "bg-green-600" : "bg-sky-500")}">${escapePetHtml(statusLabel)}</span>
+            ${resolved ? '<span class="px-3 py-1 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200">Reencontrado 🎉</span>' : ''}
+          </div>
 
-  document.getElementById("btnDetailGeneratePoster").onclick = () => {
-    document.getElementById("detailModal").classList.add("hidden");
-    generatePosterModal(pet.id);
-  };
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-primary leading-tight">${escapePetHtml(pet.name || "Pet sem nome")}</h2>
+          <p class="mt-1 text-sm text-gray-600 font-semibold">${escapePetHtml(pet.species || "")} • ${escapePetHtml(pet.breed || "Raça não informada")}</p>
 
-  const detailModal = document.getElementById("detailModal");
-  detailModal.classList.remove("hidden");
-  detailModal.scrollTop = 0;
+          <div class="grid sm:grid-cols-2 gap-3 mt-5 text-sm">
+            <div class="rounded-2xl bg-gray-50 p-3 border border-gray-100"><b>Cor:</b><br>${escapePetHtml(pet.color || "Não informada")}</div>
+            <div class="rounded-2xl bg-gray-50 p-3 border border-gray-100"><b>Idade:</b><br>${escapePetHtml(pet.age || "Não informada")}</div>
+            <div class="rounded-2xl bg-gray-50 p-3 border border-gray-100"><b>Sexo:</b><br>${escapePetHtml(pet.gender || "Não informado")}</div>
+            <div class="rounded-2xl bg-gray-50 p-3 border border-gray-100"><b>Data do registro:</b><br>${escapePetHtml(formatDate(pet.date))}</div>
+          </div>
+
+          <div class="mt-4 rounded-2xl bg-blue-50/60 p-4 border border-blue-100 text-sm">
+            <div class="font-extrabold text-primary flex items-center gap-1"><span class="material-symbols-outlined text-base">location_on</span> Localização</div>
+            <div class="mt-1">${escapePetHtml(pet.address || "Endereço não informado")}</div>
+            <div>${escapePetHtml(pet.city || "")}${pet.city && pet.state ? " - " : ""}${escapePetHtml(pet.state || "")}</div>
+          </div>
+
+          <div class="mt-4">
+            <div class="font-extrabold text-primary text-sm">Descrição / características</div>
+            <p class="mt-1 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">${escapePetHtml(pet.description || "Sem observações adicionais.")}</p>
+          </div>
+
+          <div class="mt-4 rounded-2xl bg-emerald-50/70 p-4 border border-emerald-100 text-sm">
+            <div><b>Responsável:</b> ${escapePetHtml(pet.contactName || "Não informado")}</div>
+            <div class="mt-1"><b>Telefone:</b> ${escapePetHtml(pet.contactPhone || "Não informado")}</div>
+          </div>
+
+          <div class="grid sm:grid-cols-3 gap-2 mt-5">
+            <button type="button" onclick="closePetFullDetailModal(); focusPetOnMap('${escapePetHtml(pet.id)}')" class="py-3 px-4 rounded-xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-1.5">
+              <span class="material-symbols-outlined text-base">map</span> Ver no mapa
+            </button>
+            <a href="https://wa.me/55${cleanPhone}?text=${waMsg}" target="_blank" rel="noopener noreferrer" class="py-3 px-4 rounded-xl bg-emerald-600 text-white font-bold text-sm flex items-center justify-center gap-1.5 no-underline">
+              <span class="material-symbols-outlined text-base">chat</span> WhatsApp
+            </a>
+            ${pet.type === "Procurado" ? `
+              <button type="button" onclick="closePetFullDetailModal(); generatePosterModal('${escapePetHtml(pet.id)}')" class="py-3 px-4 rounded-xl bg-red-50 text-[#E52421] border border-red-200 font-bold text-sm flex items-center justify-center gap-1.5">
+                <span class="material-symbols-outlined text-base">print</span> Cartaz
+              </button>` : `
+              <button type="button" onclick="applyStatusFilterFromLegend('Reencontrado'); closePetFullDetailModal();" class="py-3 px-4 rounded-xl bg-green-50 text-green-700 border border-green-200 font-bold text-sm flex items-center justify-center gap-1.5">
+                <span class="material-symbols-outlined text-base">filter_alt</span> Reencontrados
+              </button>`}
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  document.getElementById("btnClosePetFullDetail")?.addEventListener("click", closePetFullDetailModal);
+  overlay.addEventListener("click", e => {
+    if (e.target === overlay) closePetFullDetailModal();
+  });
 }
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closePetFullDetailModal();
+});
+
+window.openDetailModal = openDetailModal;
+window.closePetFullDetailModal = closePetFullDetailModal;
 
 // --- ADMIN DASHBOARD EVENTS & SECURE PASSWORD CHANGE LOGIC ---
 function initAdminEvents() {
@@ -2235,7 +2521,7 @@ function createAdminTableRowHtml(pet) {
   if (pet.type === "Procurado") {
     statusPill = `<span class="px-2 py-0.5 rounded bg-red-100 text-red-700 font-bold">Procurado</span>`;
   } else if (pet.type === "Encontrado pelo dono") {
-    statusPill = `<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 font-bold">🟢 Encontrado pelo dono</span>`;
+    statusPill = `<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 font-bold">🟢 Pet Encontrado</span>`;
   } else if (pet.type === "Dono encontrado") {
     statusPill = `<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 font-bold">🟢 Dono encontrado</span>`;
   }
@@ -2274,7 +2560,7 @@ function createAdminTableRowHtml(pet) {
           <select onchange="adminChangeStatus('${pet.id}', this.value)" class="px-2 py-1 rounded-lg text-[11px] font-bold border border-outline-variant bg-white text-primary outline-none cursor-pointer">
             <option value="Procurado" ${pet.type === 'Procurado' ? 'selected' : ''}>Procurado (Perdido)</option>
             <option value="Avistado" ${pet.type === 'Avistado' ? 'selected' : ''}>Avistado (Encontrado)</option>
-            <option value="Encontrado pelo dono" ${pet.type === 'Encontrado pelo dono' ? 'selected' : ''}>🟢 Encontrado pelo dono</option>
+            <option value="Encontrado pelo dono" ${pet.type === 'Encontrado pelo dono' ? 'selected' : ''}>🟢 Pet Encontrado</option>
             <option value="Dono encontrado" ${pet.type === 'Dono encontrado' ? 'selected' : ''}>🟢 Dono encontrado</option>
           </select>
 
@@ -2332,7 +2618,7 @@ function createAdminMobileCardHtml(pet) {
           <select onchange="adminChangeStatus('${pet.id}', this.value)" class="w-full px-2 py-2 rounded-lg text-xs font-bold border border-outline-variant bg-white text-primary outline-none shadow-sm">
             <option value="Procurado" ${pet.type === 'Procurado' ? 'selected' : ''}>Procurado (Perdido)</option>
             <option value="Avistado" ${pet.type === 'Avistado' ? 'selected' : ''}>Avistado (Encontrado)</option>
-            <option value="Encontrado pelo dono" ${pet.type === 'Encontrado pelo dono' ? 'selected' : ''}>🟢 Encontrado pelo dono</option>
+            <option value="Encontrado pelo dono" ${pet.type === 'Encontrado pelo dono' ? 'selected' : ''}>🟢 Pet Encontrado</option>
             <option value="Dono encontrado" ${pet.type === 'Dono encontrado' ? 'selected' : ''}>🟢 Dono encontrado</option>
           </select>
         </div>
