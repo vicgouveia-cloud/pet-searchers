@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v80 carregado - foto do cartaz preservada sem distorção no JPG e PDF");
+console.log("✅ Pet Searchers app.js BUILD v81 carregado - legenda do mapa reorganizada com Me localize");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -441,6 +441,8 @@ let currentActiveFilters = {
 
 let currentUserPosition = null;
 let currentPosterPetId = null;
+let userMapLocationLayer = null;
+let userMapLocationAccuracyLayer = null;
 
 // Admin State
 let isAdminAuthenticated = false;
@@ -1499,6 +1501,7 @@ function initEnhancedPetUI() {
   window.clearAllPetFilters = clearAllPetFilters;
   window.activateNearbyFilter = activateNearbyFilter;
   window.applyStatusFilterFromLegend = applyStatusFilterFromLegend;
+  window.locateUserOnMap = locateUserOnMap;
 }
 
 function updateMapMarkers(filteredPets) {
@@ -1744,6 +1747,317 @@ function applyStatusFilterFromLegend(status) {
   renderApp();
 }
 
+
+function getMapLegendResetElement() {
+  const candidates = document.querySelectorAll("button, a, [role='button'], span, div");
+  for (const el of candidates) {
+    const label = (el.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+    if (label !== "resetar visão") continue;
+
+    const childLabels = Array.from(el.children || [])
+      .map(c => (c.textContent || "").replace(/\s+/g, " ").trim().toLowerCase())
+      .filter(Boolean);
+
+    if (childLabels.some(t => t === "resetar visão")) continue;
+    return el;
+  }
+  return null;
+}
+
+function getSmallestCommonAncestor(elements) {
+  const valid = elements.filter(Boolean);
+  if (!valid.length) return null;
+
+  let node = valid[0];
+  while (node && node !== document.body) {
+    if (valid.every(el => node.contains(el))) return node;
+    node = node.parentElement;
+  }
+  return null;
+}
+
+function ensureMapLegendControlStyles() {
+  if (document.getElementById("petSearchersMapLegendStyles")) return;
+
+  const style = document.createElement("style");
+  style.id = "petSearchersMapLegendStyles";
+  style.textContent = `
+    .ps-map-legend-layout {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-sizing: border-box;
+    }
+
+    .ps-map-legend-status-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      align-items: center;
+      box-sizing: border-box;
+    }
+
+    .ps-map-legend-action-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      align-items: stretch;
+      padding-top: 9px;
+      border-top: 1px solid rgba(148, 163, 184, .28);
+      box-sizing: border-box;
+    }
+
+    .ps-map-legend-layout .legend-filter-btn {
+      min-width: 0;
+      min-height: 34px;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 5px !important;
+      padding: 6px 8px !important;
+      border-radius: 10px !important;
+      white-space: nowrap;
+      box-sizing: border-box;
+      transition: background-color .18s ease, transform .18s ease, box-shadow .18s ease;
+    }
+
+    .ps-map-legend-reset,
+    .ps-map-locate-btn {
+      min-width: 0;
+      min-height: 36px;
+      width: 100%;
+      border: 0;
+      border-radius: 10px;
+      padding: 7px 10px;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 6px !important;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      box-sizing: border-box;
+      transition: background-color .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+
+    .ps-map-legend-reset {
+      background: #f8fafc;
+      color: #475569;
+      border: 1px solid #dbe2ea;
+    }
+
+    .ps-map-locate-btn {
+      background: #eaf4ff;
+      color: #0b5cab;
+      border: 1px solid #bdd9f5;
+    }
+
+    .ps-map-legend-reset:hover,
+    .ps-map-locate-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 7px rgba(15, 23, 42, .08);
+    }
+
+    .ps-map-locate-btn[aria-busy="true"] {
+      opacity: .72;
+      cursor: wait;
+    }
+
+    @media (max-width: 520px) {
+      .ps-map-legend-layout {
+        gap: 8px;
+      }
+
+      .ps-map-legend-status-row {
+        gap: 4px;
+      }
+
+      .ps-map-legend-layout .legend-filter-btn {
+        min-height: 32px;
+        padding: 5px 4px !important;
+        font-size: 10px !important;
+      }
+
+      .ps-map-legend-action-row {
+        gap: 6px;
+        padding-top: 7px;
+      }
+
+      .ps-map-legend-reset,
+      .ps-map-locate-btn {
+        min-height: 34px;
+        padding: 6px 6px;
+        font-size: 10.5px;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function clearUserMapLocationIndicator() {
+  if (!leafletMap) return;
+
+  if (userMapLocationLayer) {
+    try { leafletMap.removeLayer(userMapLocationLayer); } catch (_) {}
+    userMapLocationLayer = null;
+  }
+
+  if (userMapLocationAccuracyLayer) {
+    try { leafletMap.removeLayer(userMapLocationAccuracyLayer); } catch (_) {}
+    userMapLocationAccuracyLayer = null;
+  }
+}
+
+function getMapZoomForAccuracy(accuracy) {
+  const value = Number(accuracy) || 3000;
+  if (value <= 80) return 16;
+  if (value <= 250) return 15;
+  if (value <= 700) return 14;
+  if (value <= 2000) return 13;
+  if (value <= 5000) return 12;
+  return 11;
+}
+
+function locateUserOnMap() {
+  const btn = document.getElementById("btnMapLocateMe");
+
+  if (!navigator.geolocation) {
+    alert("Seu navegador não disponibiliza geolocalização.");
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.setAttribute("aria-busy", "true");
+    btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">progress_activity</span><span>Localizando...</span>';
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      const lat = Number(position.coords.latitude);
+      const lng = Number(position.coords.longitude);
+      const accuracy = Math.max(20, Number(position.coords.accuracy) || 1000);
+
+      currentUserPosition = { lat, lng };
+
+      if (leafletMap && Number.isFinite(lat) && Number.isFinite(lng)) {
+        clearUserMapLocationIndicator();
+
+        try {
+          userMapLocationAccuracyLayer = L.circle([lat, lng], {
+            radius: accuracy,
+            color: "#2563eb",
+            weight: 1,
+            opacity: 0.65,
+            fillColor: "#60a5fa",
+            fillOpacity: 0.11,
+            interactive: false
+          }).addTo(leafletMap);
+
+          userMapLocationLayer = L.circleMarker([lat, lng], {
+            radius: 7,
+            color: "#ffffff",
+            weight: 3,
+            fillColor: "#2563eb",
+            fillOpacity: 1
+          }).addTo(leafletMap);
+
+          userMapLocationLayer.bindTooltip("Sua localização aproximada", {
+            direction: "top",
+            offset: [0, -8],
+            opacity: 0.95
+          });
+
+          leafletMap.setView([lat, lng], getMapZoomForAccuracy(accuracy), { animate: true });
+          setTimeout(() => {
+            try { leafletMap.invalidateSize(); } catch (_) {}
+          }, 100);
+        } catch (err) {
+          console.warn("Não foi possível posicionar a localização do usuário no mapa:", err);
+        }
+      }
+
+      if (btn) {
+        btn.disabled = false;
+        btn.setAttribute("aria-busy", "false");
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span><span>Me localize</span>';
+      }
+    },
+    error => {
+      if (btn) {
+        btn.disabled = false;
+        btn.setAttribute("aria-busy", "false");
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span><span>Me localize</span>';
+      }
+
+      let message = "Não foi possível obter sua localização neste momento.";
+      if (error?.code === 1) {
+        message = "Permita o acesso à localização no navegador para usar o botão Me localize.";
+      } else if (error?.code === 3) {
+        message = "A localização demorou mais do que o esperado. Tente novamente.";
+      }
+      alert(message);
+    },
+    {
+      enableHighAccuracy: false,
+      timeout: 10000,
+      maximumAge: 60000
+    }
+  );
+}
+
+function ensureMapLegendLayout() {
+  ensureMapLegendControlStyles();
+
+  const statusButtons = getMapLegendFilterElements();
+  const resetEl = getMapLegendResetElement();
+  if (statusButtons.length < 3 || !resetEl) return;
+
+  const host = getSmallestCommonAncestor([...statusButtons, resetEl]);
+  if (!host || host === document.body) return;
+
+  // Se o layout já foi criado, apenas garante que o botão exista.
+  let layout = host.querySelector(":scope > .ps-map-legend-layout");
+  if (!layout) {
+    layout = document.createElement("div");
+    layout.className = "ps-map-legend-layout";
+
+    const statusRow = document.createElement("div");
+    statusRow.className = "ps-map-legend-status-row";
+
+    const actionRow = document.createElement("div");
+    actionRow.className = "ps-map-legend-action-row";
+
+    statusButtons
+      .sort((a, b) => {
+        const order = { Procurado: 0, Avistado: 1, Reencontrado: 2 };
+        return (order[a.dataset.legendStatus] ?? 9) - (order[b.dataset.legendStatus] ?? 9);
+      })
+      .forEach(btn => statusRow.appendChild(btn));
+
+    resetEl.classList.add("ps-map-legend-reset");
+    resetEl.setAttribute("aria-label", "Resetar visão do mapa e filtro de status");
+    actionRow.appendChild(resetEl);
+
+    const locateBtn = document.createElement("button");
+    locateBtn.id = "btnMapLocateMe";
+    locateBtn.type = "button";
+    locateBtn.className = "ps-map-locate-btn";
+    locateBtn.setAttribute("aria-label", "Posicionar o mapa na minha localização aproximada");
+    locateBtn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span><span>Me localize</span>';
+    locateBtn.addEventListener("click", locateUserOnMap);
+    actionRow.appendChild(locateBtn);
+
+    layout.appendChild(statusRow);
+    layout.appendChild(actionRow);
+    host.appendChild(layout);
+  }
+}
+
 function bindMapLegendFilters() {
   getMapLegendFilterElements().forEach(btn => {
     if (btn.dataset.legendFilterBound === "1") return;
@@ -1804,6 +2118,9 @@ function bindMapLegendFilters() {
       }
     });
   });
+
+  // Organiza os três filtros em uma linha e as ações em uma segunda linha.
+  ensureMapLegendLayout();
 }
 
 window.addEventListener("orientationchange", () => {
