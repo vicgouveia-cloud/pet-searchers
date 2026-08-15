@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v93 carregado - menu do mapa final 3+2 sem duplicações");
+console.log("✅ Pet Searchers app.js BUILD v94 carregado - layout do mapa alinhado à referência aprovada");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -1166,8 +1166,8 @@ function populateCityOptions(selectElem, cityList, defaultText) {
 // --- LEAFLET INTERACTIVE MAP (GOOGLE MAPS BASE LAYER) ---
 function initLeafletMap() {
   leafletMap = L.map('map', {
-    center: [-14.2350, -51.9253],
-    zoom: 4,
+    center: [-16.0, -50.5],
+    zoom: 5,
     zoomControl: true
   });
 
@@ -1182,7 +1182,7 @@ function initLeafletMap() {
     currentActiveFilters.status = "";
     syncStatusFilterUI();
     renderApp();
-    leafletMap.setView([-14.2350, -51.9253], 4, { animate: true });
+    leafletMap.setView([-16.0, -50.5], 5, { animate: true });
   });
 }
 
@@ -2250,7 +2250,7 @@ function resetMapLegendAndViewFinal() {
 
   if (leafletMap) {
     try {
-      leafletMap.setView([-14.2350, -51.9253], 4, { animate: true });
+      leafletMap.setView([-16.0, -50.5], 5, { animate: true });
     } catch (_) {}
   }
 }
@@ -2268,30 +2268,34 @@ function getSmallestCommonAncestorFinal(elements) {
 }
 
 function findMapLegendCardFinal() {
-  const statusButtons = getMapLegendFilterElements();
-  const resetText = getMapLegendResetElement();
-  if (statusButtons.length < 3 || !resetText) return null;
+  const reset = document.getElementById("btnResetMap");
+  if (!reset) return null;
 
-  const resetControl = resetText.closest?.("button, a, [role='button']") || resetText;
-  let card = getSmallestCommonAncestorFinal([...statusButtons, resetControl]);
-  if (!card) return null;
+  // O botão Resetar Visão existe no HTML original e é a âncora mais confiável.
+  // Procuramos o primeiro ancestral que corresponde ao pequeno cartão branco
+  // no canto superior direito.
+  let node = reset;
+  let fallback = reset.parentElement;
 
-  // Sobe somente até o cartão branco compacto da legenda.
-  let candidate = card;
-  while (candidate.parentElement && candidate.parentElement !== document.body) {
-    const rect = candidate.getBoundingClientRect();
-    if (rect.width >= 280 && rect.width <= 760 && rect.height >= 45 && rect.height <= 220) {
-      card = candidate;
-      break;
+  while (node && node.parentElement && node.parentElement !== document.body) {
+    node = node.parentElement;
+    const rect = node.getBoundingClientRect();
+
+    if (
+      rect.width >= 300 &&
+      rect.width <= 650 &&
+      rect.height >= 55 &&
+      rect.height <= 180
+    ) {
+      return node;
     }
 
-    const parent = candidate.parentElement;
-    if (![...statusButtons, resetControl].every(el => parent.contains(el))) break;
-    candidate = parent;
-    card = candidate;
+    if (rect.width >= 260 && rect.width <= 760 && rect.height <= 220) {
+      fallback = node;
+    }
   }
 
-  return card;
+  return fallback;
 }
 
 function ensureFinalMapLegendStyles() {
@@ -2304,8 +2308,8 @@ function ensureFinalMapLegendStyles() {
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      padding: 12px 16px;
+      gap: 18px;
+      padding: 20px 24px;
       box-sizing: border-box;
     }
 
@@ -2313,7 +2317,7 @@ function ensureFinalMapLegendStyles() {
       width: 100%;
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
+      gap: 18px;
       align-items: center;
       justify-items: center;
     }
@@ -2321,8 +2325,8 @@ function ensureFinalMapLegendStyles() {
     .ps-final-map-actions-row {
       width: 100%;
       display: grid;
-      grid-template-columns: repeat(2, minmax(135px, 175px));
-      gap: 14px;
+      grid-template-columns: repeat(2, minmax(165px, 1fr));
+      gap: 20px;
       justify-content: center;
       align-items: center;
     }
@@ -2333,15 +2337,15 @@ function ensureFinalMapLegendStyles() {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 7px;
-      min-height: 28px;
-      padding: 4px 6px;
+      gap: 10px;
+      min-height: 34px;
+      padding: 5px 8px;
       font: inherit;
-      font-size: 12px;
+      font-size: 15px;
       font-weight: 700;
       white-space: nowrap;
       cursor: pointer;
-      border-radius: 8px;
+      border-radius: 9px;
     }
 
     .ps-final-status-btn:hover {
@@ -2349,27 +2353,33 @@ function ensureFinalMapLegendStyles() {
     }
 
     .ps-final-status-dot {
-      width: 11px;
-      height: 11px;
+      width: 14px;
+      height: 14px;
       border-radius: 999px;
-      flex: 0 0 11px;
+      flex: 0 0 14px;
     }
 
     .ps-final-action-btn {
       width: 100%;
-      min-height: 38px;
-      padding: 8px 12px;
+      min-height: 52px;
+      padding: 10px 16px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 7px;
-      border-radius: 10px;
+      gap: 10px;
+      border-radius: 12px;
       font: inherit;
-      font-size: 12px;
+      font-size: 15px;
       font-weight: 700;
       white-space: nowrap;
       cursor: pointer;
       box-sizing: border-box;
+      transition: transform .15s ease, box-shadow .15s ease, background-color .15s ease;
+    }
+
+    .ps-final-action-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 10px rgba(15,23,42,.07);
     }
 
     .ps-final-reset-btn {
@@ -2379,44 +2389,64 @@ function ensureFinalMapLegendStyles() {
     }
 
     .ps-final-location-btn {
-      color: #6667AB;
-      background: #F3F1FB;
-      border: 1px solid #C9C5EE;
+      color: #6D45E8;
+      background: #F7F3FF;
+      border: 1px solid #CBB8FF;
     }
 
     .ps-final-location-btn:hover {
-      background: #EAE8F8;
-      border-color: #6667AB;
+      background: #EFE8FF;
+      border-color: #7C4DFF;
     }
 
     .ps-final-leaflet-locate {
       border: 0 !important;
       box-shadow: none !important;
       background: transparent !important;
+      margin-top: 10px !important;
     }
 
     .ps-final-leaflet-locate a {
-      width: 34px !important;
-      height: 34px !important;
+      width: 38px !important;
+      height: 38px !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       border-radius: 50% !important;
-      background: #6667AB !important;
+      background: #7C4DFF !important;
       color: #fff !important;
       text-decoration: none !important;
-      box-shadow: 0 2px 7px rgba(102,103,171,.35) !important;
-      font-size: 18px !important;
+      box-shadow: 0 3px 9px rgba(124,77,255,.35) !important;
+      font-size: 20px !important;
+      border: 3px solid rgba(255,255,255,.82) !important;
+    }
+
+    /* Aproxima a composição da referência aprovada. */
+    #map {
+      min-height: 610px !important;
+      border-radius: 18px !important;
+    }
+
+    @media (min-width: 900px) {
+      .ps-final-map-legend {
+        min-width: 500px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      #map {
+        min-height: 500px !important;
+      }
     }
 
     @media (max-width: 520px) {
       .ps-final-map-legend {
-        gap: 8px;
-        padding: 9px 9px;
+        gap: 9px;
+        padding: 10px;
       }
 
       .ps-final-map-status-row {
-        gap: 3px;
+        gap: 4px;
       }
 
       .ps-final-status-btn {
@@ -2433,13 +2463,17 @@ function ensureFinalMapLegendStyles() {
 
       .ps-final-map-actions-row {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 7px;
+        gap: 8px;
       }
 
       .ps-final-action-btn {
-        min-height: 34px;
+        min-height: 36px;
         padding: 6px 5px;
         font-size: 10px;
+      }
+
+      #map {
+        min-height: 390px !important;
       }
     }
   `;
@@ -2488,14 +2522,18 @@ function buildFinalMapLegend() {
   if (!card) return false;
   if (card.dataset.finalLegendBuilt === "1") return true;
 
-  // Remove completamente o conteúdo antigo do quadro. Assim não ficam botões,
-  // wrappers ou linhas verticais escondidos atrás do novo layout.
+  // Substitui o conteúdo do cartão antigo em vez de adicionar elementos a ele.
   card.innerHTML = "";
   card.dataset.finalLegendBuilt = "1";
-  card.style.boxSizing = "border-box";
-  card.style.height = "auto";
-  card.style.minHeight = "0";
-  card.style.overflow = "visible";
+  card.style.setProperty("box-sizing", "border-box", "important");
+  card.style.setProperty("height", "auto", "important");
+  card.style.setProperty("min-height", "0", "important");
+  card.style.setProperty("overflow", "visible", "important");
+  card.style.setProperty("padding", "0", "important");
+  card.style.setProperty("border-radius", "16px", "important");
+  card.style.setProperty("background", "#ffffff", "important");
+  card.style.setProperty("border", "1px solid #dce2ea", "important");
+  card.style.setProperty("box-shadow", "0 3px 12px rgba(15,23,42,.06)", "important");
 
   const shell = document.createElement("div");
   shell.className = "ps-final-map-legend";
@@ -2525,14 +2563,14 @@ function buildFinalMapLegend() {
   const resetBtn = document.createElement("button");
   resetBtn.type = "button";
   resetBtn.className = "ps-final-action-btn ps-final-reset-btn";
-  resetBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px">restart_alt</span><span>Resetar Visão</span>';
+  resetBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:22px">restart_alt</span><span>Resetar Visão</span>';
   resetBtn.addEventListener("click", resetMapLegendAndViewFinal);
 
   const locationBtn = document.createElement("button");
   locationBtn.id = "btnMapLocateMe";
   locationBtn.type = "button";
   locationBtn.className = "ps-final-action-btn ps-final-location-btn";
-  locationBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px">location_on</span><span>Minha localização</span>';
+  locationBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:22px">location_on</span><span>Minha localização</span>';
   locationBtn.addEventListener("click", locateUserOnMap);
 
   actionsRow.append(resetBtn, locationBtn);
@@ -2540,7 +2578,18 @@ function buildFinalMapLegend() {
   card.appendChild(shell);
 
   installSingleLeafletLocationControlFinal();
-  console.log("🎯 v93: quadro antigo substituído por menu final 3+2, sem botões duplicados.");
+
+  // Depois de alterar a altura do mapa, força o Leaflet a recalcular o viewport.
+  setTimeout(() => {
+    try {
+      leafletMap?.invalidateSize();
+      if (!currentUserPosition) {
+        leafletMap?.setView([-16.0, -50.5], 5, { animate: false });
+      }
+    } catch (_) {}
+  }, 120);
+
+  console.log("🎯 v94: menu superior substituído e distribuído conforme a referência aprovada.");
   return true;
 }
 
