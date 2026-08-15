@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v72 carregado - mobile responsivo, mapa compacto e formulário ajustado");
+console.log("✅ Pet Searchers app.js BUILD v73 carregado - cabeçalho mobile responsivo");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -1491,6 +1491,7 @@ function ensureAdvancedFilterControls() {
 
 function initEnhancedPetUI() {
   ensureMobileResponsiveStyles();
+  optimizeMobileTopHeader();
   ensureAdvancedFilterControls();
   replaceResolvedLabelsInUI();
   enhanceMapLayout();
@@ -1807,12 +1808,17 @@ function bindMapLegendFilters() {
 
 window.addEventListener("orientationchange", () => {
   setTimeout(() => {
+    optimizeMobileTopHeader();
     enhanceMapLayout();
     const reportModal = document.getElementById("reportModal");
     if (reportModal && !reportModal.classList.contains("hidden")) {
       prepareReportModalForViewport();
     }
   }, 180);
+});
+
+window.addEventListener("resize", () => {
+  optimizeMobileTopHeader();
 });
 
 if (window.visualViewport) {
@@ -2202,6 +2208,118 @@ function ensureMobileResponsiveStyles() {
         overflow-x: hidden;
       }
 
+      /* CABEÇALHO MOBILE
+         Organiza a marca em uma linha e as três ações em outra,
+         evitando qualquer estouro horizontal em iPhone/Android. */
+      .ps-mobile-header {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 0 !important;
+        height: auto !important;
+        box-sizing: border-box !important;
+        overflow: visible !important;
+      }
+
+      .ps-mobile-header-inner {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        padding: 8px 10px !important;
+        box-sizing: border-box !important;
+      }
+
+      .ps-mobile-brand {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 8px !important;
+        box-sizing: border-box !important;
+      }
+
+      .ps-mobile-brand img {
+        width: 38px !important;
+        height: 38px !important;
+        max-width: 38px !important;
+        max-height: 38px !important;
+        flex: 0 0 38px !important;
+        object-fit: contain !important;
+      }
+
+      .ps-mobile-brand * {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+      }
+
+      .ps-mobile-brand h1,
+      .ps-mobile-brand h2,
+      .ps-mobile-brand h3,
+      .ps-mobile-brand .text-xl,
+      .ps-mobile-brand .text-2xl,
+      .ps-mobile-brand .text-3xl {
+        font-size: 16px !important;
+        line-height: 1.08 !important;
+        margin: 0 !important;
+      }
+
+      .ps-mobile-brand p,
+      .ps-mobile-brand span {
+        line-height: 1.15 !important;
+      }
+
+      .ps-mobile-nav-actions {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        display: grid !important;
+        grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) !important;
+        gap: 6px !important;
+        align-items: stretch !important;
+        box-sizing: border-box !important;
+      }
+
+      #btnOpenAdmin,
+      #btnOpenReportLost,
+      #btnOpenReportSighted {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        min-height: 42px !important;
+        height: 42px !important;
+        padding: 6px 7px !important;
+        margin: 0 !important;
+        border-radius: 12px !important;
+        font-size: 11px !important;
+        line-height: 1.1 !important;
+        white-space: normal !important;
+        text-align: center !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 4px !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+      }
+
+      #btnOpenAdmin {
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+      }
+
+      #btnOpenAdmin .material-symbols-outlined,
+      #btnOpenReportLost .material-symbols-outlined,
+      #btnOpenReportSighted .material-symbols-outlined {
+        font-size: 17px !important;
+        flex: 0 0 auto !important;
+      }
+
       #map {
         width: 100% !important;
         height: 322px !important;
@@ -2324,6 +2442,43 @@ function ensureMobileResponsiveStyles() {
     }
 
     @media (max-width: 430px) {
+      .ps-mobile-header-inner {
+        padding: 7px 8px !important;
+        gap: 7px !important;
+      }
+
+      .ps-mobile-brand img {
+        width: 34px !important;
+        height: 34px !important;
+        max-width: 34px !important;
+        max-height: 34px !important;
+        flex-basis: 34px !important;
+      }
+
+      .ps-mobile-brand h1,
+      .ps-mobile-brand h2,
+      .ps-mobile-brand h3,
+      .ps-mobile-brand .text-xl,
+      .ps-mobile-brand .text-2xl,
+      .ps-mobile-brand .text-3xl {
+        font-size: 15px !important;
+      }
+
+      .ps-mobile-nav-actions {
+        grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr) !important;
+        gap: 5px !important;
+      }
+
+      #btnOpenAdmin,
+      #btnOpenReportLost,
+      #btnOpenReportSighted {
+        height: 40px !important;
+        min-height: 40px !important;
+        font-size: 10.5px !important;
+        padding: 5px 6px !important;
+        border-radius: 11px !important;
+      }
+
       #reportModal {
         padding-left: 6px !important;
         padding-right: 6px !important;
@@ -2340,6 +2495,78 @@ function ensureMobileResponsiveStyles() {
     }
   `;
   document.head.appendChild(style);
+}
+
+
+function optimizeMobileTopHeader() {
+  const adminBtn = document.getElementById("btnOpenAdmin");
+  const lostBtn = document.getElementById("btnOpenReportLost");
+  const sightedBtn = document.getElementById("btnOpenReportSighted");
+
+  if (!adminBtn || !lostBtn || !sightedBtn) return;
+
+  const buttons = [adminBtn, lostBtn, sightedBtn];
+
+  // Menor ancestral que contém os três botões.
+  let actions = adminBtn.parentElement;
+  while (
+    actions &&
+    actions !== document.body &&
+    !buttons.every(btn => actions.contains(btn))
+  ) {
+    actions = actions.parentElement;
+  }
+
+  if (!actions || actions === document.body) return;
+  actions.classList.add("ps-mobile-nav-actions");
+
+  // Preferimos o <header>; se não houver, sobe até encontrar um container
+  // que também contenha a marca/logo.
+  let header = actions.closest("header");
+  if (!header) {
+    let node = actions.parentElement;
+    while (node && node !== document.body) {
+      if (node.querySelector("img") && node.contains(actions)) {
+        header = node;
+        break;
+      }
+      node = node.parentElement;
+    }
+  }
+
+  if (!header) return;
+  header.classList.add("ps-mobile-header");
+
+  // Container interno principal do cabeçalho.
+  let inner = actions.parentElement;
+  while (
+    inner &&
+    inner !== header &&
+    !(inner.querySelector("img") && inner.contains(actions))
+  ) {
+    inner = inner.parentElement;
+  }
+  if (!inner || inner === document.body) inner = header;
+  inner.classList.add("ps-mobile-header-inner");
+
+  // Bloco da marca: o ancestral do primeiro logo que seja irmão/parte do
+  // mesmo container interno, sem englobar os botões.
+  const logo = inner.querySelector("img");
+  if (logo) {
+    let brand = logo.parentElement;
+    while (
+      brand &&
+      brand.parentElement &&
+      brand.parentElement !== inner &&
+      !brand.contains(actions)
+    ) {
+      brand = brand.parentElement;
+    }
+
+    if (brand && !brand.contains(actions)) {
+      brand.classList.add("ps-mobile-brand");
+    }
+  }
 }
 
 function prepareReportModalForViewport() {
