@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Pet Searchers Portal - Application Logic (app.js v17)
+   Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
    Geolocalização Precisa com Time-out Anti-Travamento (AbortController),
    Status Verdes de Reencontro, Botão Detalhes Completos nos Cards,
@@ -984,7 +984,7 @@ function updateMapMarkers(filteredPets) {
   if (!leafletMap) return;
 
   Object.keys(mapMarkers).forEach(id => {
-    leafletMap.removeLayer(mapMarkers[id]);
+    try { leafletMap.removeLayer(mapMarkers[id]); } catch (e) {}
   });
   mapMarkers = {};
 
@@ -993,59 +993,41 @@ function updateMapMarkers(filteredPets) {
   filteredPets.forEach(pet => {
     const mapCoords = getPetMapCoordinates(pet);
     if (!mapCoords) return;
-    const mapLat = mapCoords.lat;
-    const mapLng = mapCoords.lng;
 
-    // Ícones em Formato de Bolinha:
-    // Vermelho (#E52E10) -> Procurado / Perdido
-    // Cinza (#6B7280)    -> Avistado
-    // Verde (#16A34A)   -> Reencontrado (Encontrado pelo dono / Dono encontrado)
+    const mapLat = Number(mapCoords.lat);
+    const mapLng = Number(mapCoords.lng);
+    if (!Number.isFinite(mapLat) || !Number.isFinite(mapLng)) return;
+
     const isResolved = pet.type === "Encontrado pelo dono" || pet.type === "Dono encontrado";
-    let circleClass = "marker-circle-sighted"; // Azul claro por padrão (Avistado)
+    let markerColor = "#0EA5E9"; // Avistado
     let badgeColor = "bg-sky-500";
-    let badgeText = pet.type;
+    let badgeText = pet.type || "Avistado";
 
     if (pet.type === "Procurado") {
-      circleClass = "marker-circle-lost"; // Vermelho (Procurado)
+      markerColor = "#E52421";
       badgeColor = "bg-[#E52421]";
     } else if (isResolved) {
-      circleClass = "marker-circle-found"; // Verde (Reencontrado)
+      markerColor = "#16A34A";
       badgeColor = "bg-green-600";
       badgeText = "Reencontrado 🎉";
     }
 
-    const customIcon = L.divIcon({
-      className: 'custom-leaflet-circle-pin',
-      html: `<div class="custom-marker-circle ${circleClass}" title="${pet.name} (${badgeText})">
-              <div class="marker-circle-inner"></div>
-            </div>`,
-      iconSize: [26, 26],
-      iconAnchor: [13, 13],
-      popupAnchor: [0, -14]
-    });
-
     const cleanPhone = (pet.contactPhone || '').replace(/\D/g, "");
-    const waMsg = encodeURIComponent(`Olá ${pet.contactName}, vi o aviso de ${pet.name} no mapa do Pet Searchers!`);
+    const waMsg = encodeURIComponent(`Olá ${pet.contactName || ''}, vi o aviso de ${pet.name || 'pet'} no mapa do Pet Searchers!`);
 
     const popupHtml = `
       <div class="w-56 font-sans flex flex-col bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden">
-        <!-- Imagem 1:1 no topo com object-contain e Fundo Branco -->
         <div class="w-full aspect-square shrink-0 relative overflow-hidden bg-white border-b border-gray-100 flex items-center justify-center p-1.5 cursor-pointer group" style="aspect-ratio: 1 / 1;" onclick="openImageLightbox('${pet.id}')" title="Clique para ampliar foto em tela cheia">
-          <img src="${getPetPhoto(pet)}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-contain rounded-lg group-hover:scale-105 transition-transform duration-300"/>
+          <img src="${getPetPhoto(pet)}" alt="${pet.name || 'Pet'}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species || 'Cachorro'}');" class="w-full h-full object-contain rounded-lg group-hover:scale-105 transition-transform duration-300"/>
           <span class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-extrabold text-white ${badgeColor} shadow-md flex items-center gap-1">
             ${badgeText}
           </span>
-          <span class="absolute bottom-2 right-2 bg-black/70 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5 backdrop-blur-sm">
-            <span class="material-symbols-outlined text-[11px]">zoom_in</span> Ampliar
-          </span>
         </div>
-
-        <!-- Conteúdo inferior ultra compacto (Nome, Dados do Pet e Botões) -->
         <div class="p-3 space-y-2 bg-white">
           <div>
             <div class="flex items-center justify-between gap-1">
-              <h4 class="font-extrabold text-xs sm:text-sm text-primary leading-tight truncate">${pet.name}</h4>
-              <span class="text-[9px] font-bold text-gray-500 uppercase flex-shrink-0">${pet.species}</span>
+              <h4 class="font-extrabold text-xs sm:text-sm text-primary leading-tight truncate">${pet.name || 'Pet sem nome'}</h4>
+              <span class="text-[9px] font-bold text-gray-500 uppercase flex-shrink-0">${pet.species || ''}</span>
             </div>
             <p class="text-[11px] text-gray-600 font-medium mt-0.5">${pet.breed || "Raça não informada"} • ${pet.color || "Cor não informada"}${pet.age ? ` • ${pet.age}` : ''}</p>
             <div class="mt-1.5 space-y-0.5 text-[10px] text-gray-600">
@@ -1055,7 +1037,6 @@ function updateMapMarkers(filteredPets) {
               ${pet.contactName ? `<div><b>Tutor:</b> ${pet.contactName}</div>` : ''}
             </div>
           </div>
-
           <div class="grid grid-cols-2 gap-1.5 pt-1 border-t border-gray-100">
             <button onclick="openDetailModal('${pet.id}')" class="py-1.5 px-2 bg-primary hover:bg-primary-container text-white rounded-xl text-[11px] font-bold transition-colors flex items-center justify-center gap-1 shadow-sm">
               <span class="material-symbols-outlined text-xs">info</span> Detalhes
@@ -1065,20 +1046,37 @@ function updateMapMarkers(filteredPets) {
             </a>
           </div>
         </div>
-      </div>
-    `;
+      </div>`;
 
-    const marker = L.marker([mapLat, mapLng], { icon: customIcon })
+    // CircleMarker usa SVG do próprio Leaflet e NÃO depende de CSS externo.
+    // Isso evita o caso em que o marcador é criado, mas fica invisível porque
+    // as classes custom-marker-circle/marker-circle-* não existem no CSS carregado.
+    const marker = L.circleMarker([mapLat, mapLng], {
+      radius: 8,
+      color: "#FFFFFF",
+      weight: 2,
+      opacity: 1,
+      fillColor: markerColor,
+      fillOpacity: 0.95,
+      bubblingMouseEvents: true
+    })
       .addTo(leafletMap)
-      .bindPopup(popupHtml);
+      .bindPopup(popupHtml, { maxWidth: 280 });
+
+    marker.bindTooltip(`${pet.name || 'Pet'} • ${badgeText}`, {
+      direction: 'top',
+      offset: [0, -8],
+      opacity: 0.9
+    });
 
     mapMarkers[pet.id] = marker;
     bounds.extend([mapLat, mapLng]);
   });
 
-  console.log(`🗺️ Mapa: ${Object.keys(mapMarkers).length} de ${filteredPets.length} pets com posição exibida.`);
+  const markerCount = Object.keys(mapMarkers).length;
+  console.log(`🗺️ Mapa: ${markerCount} de ${filteredPets.length} pets com marcador SVG visível.`);
 
-  if (bounds.isValid() && filteredPets.length > 0) {
+  if (bounds.isValid() && markerCount > 0) {
     try {
       leafletMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
     } catch (e) {
@@ -1099,28 +1097,23 @@ function focusPetOnMap(petId) {
     mapElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  // 2. Voo animado até a coordenada com zoom 16 e abertura do popup card
-  if (Number.isFinite(pet.lat) && Number.isFinite(pet.lng)) {
-    try {
-      leafletMap.setView([mapCoords.lat, mapCoords.lng], 16, { animate: true });
-    } catch (e) {
-      console.warn("Aviso setView:", e);
-    }
-    
-    const marker = mapMarkers[petId];
-    if (marker) {
-      setTimeout(() => {
+  // 2. Centraliza no pet e abre o popup. Funciona também para coordenadas de fallback.
+  try {
+    leafletMap.setView([mapCoords.lat, mapCoords.lng], 16, { animate: true });
+  } catch (e) {
+    console.warn("Aviso setView:", e);
+  }
+
+  const marker = mapMarkers[petId];
+  if (marker) {
+    setTimeout(() => {
+      try {
+        if (typeof marker.bringToFront === "function") marker.bringToFront();
         marker.openPopup();
-        const markerEl = marker.getElement();
-        if (markerEl) {
-          const circleEl = markerEl.querySelector('.custom-marker-circle');
-          if (circleEl) {
-            circleEl.classList.add("map-pin-pulse");
-            setTimeout(() => circleEl.classList.remove("map-pin-pulse"), 3600);
-          }
-        }
-      }, 300);
-    }
+      } catch (e) {
+        console.warn("Aviso ao abrir marcador:", e);
+      }
+    }, 300);
   }
 
   const cardElem = document.getElementById(`card-${petId}`);
