@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v95 carregado - menu 3+2 definido diretamente no index.html");
+console.log("✅ Pet Searchers app.js BUILD v96 carregado - filtros superiores restaurados");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -2594,22 +2594,38 @@ function buildFinalMapLegend() {
 }
 
 function bindMapLegendFilters() {
-  // O menu agora existe diretamente no index.html.
-  // Não reconstruímos, movemos ou duplicamos elementos via JavaScript.
+  // O menu é estrutural no index.html. Aqui apenas ligamos os controles
+  // às funções de filtro já existentes, sem reconstruir ou duplicar elementos.
+
+  const statusButtons = [
+    ["legendFilterLost", "Procurado"],
+    ["legendFilterSighted", "Avistado"],
+    ["legendFilterFound", "Reencontrado"]
+  ];
+
+  statusButtons.forEach(([id, status]) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+
+    btn.dataset.legendStatus = status;
+    btn.classList.add("legend-filter-btn");
+
+    if (btn.dataset.statusFilterBound !== "1") {
+      btn.dataset.statusFilterBound = "1";
+      btn.addEventListener("click", () => {
+        applyStatusFilterFromLegend(status);
+      });
+    }
+  });
+
   const locationBtn = document.getElementById("btnMapLocateMe");
   if (locationBtn && locationBtn.dataset.locationBound !== "1") {
     locationBtn.dataset.locationBound = "1";
     locationBtn.addEventListener("click", locateUserOnMap);
   }
 
-  // Mantém os três filtros acessíveis ao syncStatusFilterUI.
-  getMapLegendFilterElements().forEach(btn => {
-    if (!btn.dataset.legendStatus) {
-      if (btn.id === "legendFilterLost") btn.dataset.legendStatus = "Procurado";
-      if (btn.id === "legendFilterSighted") btn.dataset.legendStatus = "Avistado";
-      if (btn.id === "legendFilterFound") btn.dataset.legendStatus = "Reencontrado";
-    }
-  });
+  // Garante que a aparência dos filtros superiores acompanhe o filtro ativo.
+  syncStatusFilterUI();
 }
 
 window.addEventListener("orientationchange", () => {

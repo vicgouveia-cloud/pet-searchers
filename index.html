@@ -438,24 +438,24 @@
         <!-- Legend & Map Controls - Final 3+2 Layout -->
         <div id="mapLegendPanel" class="map-legend-panel self-start md:self-auto" aria-label="Legenda e controles do mapa">
           <div class="map-legend-status-row">
-            <button id="legendFilterLost" onclick="filterByStatusLegend('Procurado')" type="button" class="map-legend-status map-legend-status-lost" title="Filtrar pets Procurados">
+            <button id="legendFilterLost" data-legend-status="Procurado" type="button" class="legend-filter-btn map-legend-status map-legend-status-lost" title="Filtrar pets Procurados">
               <span class="map-legend-dot bg-error"></span>
               <span>Procurado</span>
             </button>
 
-            <button id="legendFilterSighted" onclick="filterByStatusLegend('Avistado')" type="button" class="map-legend-status map-legend-status-sighted" title="Filtrar pets Avistados">
+            <button id="legendFilterSighted" data-legend-status="Avistado" type="button" class="legend-filter-btn map-legend-status map-legend-status-sighted" title="Filtrar pets Avistados">
               <span class="map-legend-dot bg-sky-500"></span>
               <span>Avistado</span>
             </button>
 
-            <button id="legendFilterFound" onclick="filterByStatusLegend('Reencontrado')" type="button" class="map-legend-status map-legend-status-found" title="Filtrar pets Reencontrados">
+            <button id="legendFilterFound" data-legend-status="Reencontrado" type="button" class="legend-filter-btn map-legend-status map-legend-status-found" title="Filtrar pets Reencontrados">
               <span class="map-legend-dot bg-green-600"></span>
               <span>Reencontrado 🎉</span>
             </button>
           </div>
 
           <div class="map-legend-actions-row">
-            <button id="btnResetMap" onclick="filterByStatusLegend('')" type="button" class="map-legend-action map-legend-reset" title="Resetar filtros e visão do mapa">
+            <button id="btnResetMap" type="button" class="map-legend-action map-legend-reset" title="Resetar filtros e visão do mapa">
               <span class="material-symbols-outlined map-legend-action-icon">restart_alt</span>
               <span>Resetar Visão</span>
             </button>
@@ -1181,6 +1181,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <!-- Main Application Script (With Single-Page Print A4 & Dual Poster PDF/JPG Engine v55) -->
-  <script src="app.js?v=20260815_map_menu_final_v95"></script>
+  <script src="app.js?v=20260815_map_menu_filters_v96"></script>
 </body>
 </html>
