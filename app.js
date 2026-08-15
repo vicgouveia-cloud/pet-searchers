@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v77 carregado - compartilhamento de JPG no mobile e PDF A4 em página única");
+console.log("✅ Pet Searchers app.js BUILD v78 carregado - PDF A4 nativo em página única sem jsPDF");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -3825,35 +3825,115 @@ async function shareOrSavePosterImage(blob, filename) {
   return { shared: false, downloaded: true };
 }
 
-async function ensureJsPdfLoaded() {
-  if (window.jspdf?.jsPDF) return window.jspdf.jsPDF;
 
-  const existing = document.querySelector('script[data-pet-searchers-jspdf="1"]');
-  if (existing) {
-    await new Promise((resolve, reject) => {
-      if (window.jspdf?.jsPDF) return resolve();
-      existing.addEventListener("load", resolve, { once: true });
-      existing.addEventListener("error", reject, { once: true });
-      setTimeout(() => window.jspdf?.jsPDF ? resolve() : reject(new Error("Timeout jsPDF")), 8000);
-    });
-    return window.jspdf?.jsPDF;
-  }
+function asciiBytes(value) {
+  return new TextEncoder().encode(String(value));
+}
 
-  await new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js";
-    script.async = true;
-    script.dataset.petSearchersJspdf = "1";
-    script.onload = resolve;
-    script.onerror = reject;
-    document.head.appendChild(script);
-    setTimeout(() => window.jspdf?.jsPDF ? resolve() : reject(new Error("Timeout jsPDF")), 8000);
+function concatUint8Arrays(parts) {
+  const total = parts.reduce((sum, part) => sum + part.length, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  parts.forEach(part => {
+    out.set(part, offset);
+    offset += part.length;
+  });
+  return out;
+}
+
+async function canvasToJpegBytes(canvas, quality = 0.94) {
+  const blob = await new Promise((resolve, reject) => {
+    canvas.toBlob(
+      result => result ? resolve(result) : reject(new Error("Não foi possível criar a imagem JPEG do PDF.")),
+      "image/jpeg",
+      quality
+    );
   });
 
-  if (!window.jspdf?.jsPDF) {
-    throw new Error("jsPDF não foi carregado.");
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+function buildSinglePageA4Pdf(jpegBytes, imageWidth, imageHeight) {
+  // A4 em points: 210 × 297 mm.
+  const pageWidth = 595.28;
+  const pageHeight = 841.89;
+
+  const objects = [];
+
+  objects[1] = [
+    asciiBytes("1 0 obj\n"),
+    asciiBytes("<< /Type /Catalog /Pages 2 0 R >>\n"),
+    asciiBytes("endobj\n")
+  ];
+
+  objects[2] = [
+    asciiBytes("2 0 obj\n"),
+    asciiBytes("<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"),
+    asciiBytes("endobj\n")
+  ];
+
+  objects[3] = [
+    asciiBytes("3 0 obj\n"),
+    asciiBytes(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] ` +
+      `/Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>\n`
+    ),
+    asciiBytes("endobj\n")
+  ];
+
+  objects[4] = [
+    asciiBytes("4 0 obj\n"),
+    asciiBytes(
+      `<< /Type /XObject /Subtype /Image /Width ${imageWidth} /Height ${imageHeight} ` +
+      `/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpegBytes.length} >>\n`
+    ),
+    asciiBytes("stream\n"),
+    jpegBytes,
+    asciiBytes("\nendstream\nendobj\n")
+  ];
+
+  const content = `q\n${pageWidth} 0 0 ${pageHeight} 0 0 cm\n/Im0 Do\nQ\n`;
+  const contentBytes = asciiBytes(content);
+
+  objects[5] = [
+    asciiBytes("5 0 obj\n"),
+    asciiBytes(`<< /Length ${contentBytes.length} >>\n`),
+    asciiBytes("stream\n"),
+    contentBytes,
+    asciiBytes("endstream\nendobj\n")
+  ];
+
+  const header = concatUint8Arrays([
+    asciiBytes("%PDF-1.4\n"),
+    new Uint8Array([0x25, 0xe2, 0xe3, 0xcf, 0xd3, 0x0a])
+  ]);
+
+  const assembled = [header];
+  const offsets = [0];
+  let byteOffset = header.length;
+
+  for (let i = 1; i <= 5; i++) {
+    offsets[i] = byteOffset;
+    const objBytes = concatUint8Arrays(objects[i]);
+    assembled.push(objBytes);
+    byteOffset += objBytes.length;
   }
-  return window.jspdf.jsPDF;
+
+  const xrefOffset = byteOffset;
+  let xref = "xref\n0 6\n";
+  xref += "0000000000 65535 f \n";
+  for (let i = 1; i <= 5; i++) {
+    xref += `${String(offsets[i]).padStart(10, "0")} 00000 n \n`;
+  }
+
+  const trailer =
+    `${xref}` +
+    `trailer\n<< /Size 6 /Root 1 0 R >>\n` +
+    `startxref\n${xrefOffset}\n%%EOF\n`;
+
+  assembled.push(asciiBytes(trailer));
+
+  return new Blob(assembled, { type: "application/pdf" });
 }
 
 async function downloadPosterPDF() {
@@ -3867,40 +3947,23 @@ async function downloadPosterPDF() {
 
   try {
     const canvas = await renderPosterExportCanvas();
-    const jsPDF = await ensureJsPdfLoaded();
+    const jpegBytes = await canvasToJpegBytes(canvas, 0.94);
 
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "a4",
-      compress: true,
-      putOnlyUsedFonts: true
-    });
+    // O PDF é criado localmente, sem CDN e sem jsPDF.
+    // Há somente UM objeto /Page e uma única imagem A4.
+    const pdfBlob = buildSinglePageA4Pdf(
+      jpegBytes,
+      canvas.width,
+      canvas.height
+    );
 
-    // O cartaz inteiro é rasterizado em uma única imagem A4 e aplicado
-    // exclusivamente à primeira página. Isso impede quebra em 2 páginas.
-    const imgData = canvas.toDataURL("image/jpeg", 0.94);
-    pdf.addImage(imgData, "JPEG", 0, 0, 210, 297, undefined, "FAST");
-
-    // Garantia adicional: se alguma versão do jsPDF criar páginas extras,
-    // removemos todas além da primeira.
-    while (typeof pdf.getNumberOfPages === "function" && pdf.getNumberOfPages() > 1) {
-      pdf.deletePage(pdf.getNumberOfPages());
-    }
-
-    const blob = pdf.output("blob");
-    triggerBlobDownload(blob, `${getCurrentPosterFileBase()}.pdf`);
+    triggerBlobDownload(
+      pdfBlob,
+      `${getCurrentPosterFileBase()}.pdf`
+    );
   } catch (err) {
-    console.error("Erro ao gerar PDF do cartaz:", err);
-
-    // Fallback: mantém a opção de impressão caso a biblioteca externa
-    // não possa ser carregada no navegador do usuário.
-    const usePrint = confirm("Não foi possível gerar o PDF diretamente. Deseja abrir a opção de impressão para salvar como PDF?");
-    if (usePrint) {
-      const pet = petsData.find(p => p.id === currentPosterPetId);
-      if (pet) buildUnifiedPoster(pet);
-      setTimeout(() => window.print(), 60);
-    }
+    console.error("Erro ao gerar PDF A4:", err);
+    alert("⚠️ Não foi possível gerar o PDF A4. Atualize a página e tente novamente.");
   } finally {
     if (btn) {
       btn.disabled = false;
