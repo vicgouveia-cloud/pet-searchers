@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v63 carregado - filtros avançados, proximidade, ordenação e detalhes ampliados");
+console.log("✅ Pet Searchers app.js BUILD v64 carregado - popup compacto do mapa com hover abrir/fechar");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -1248,33 +1248,36 @@ function updateMapMarkers(filteredPets) {
     const waMsg = encodeURIComponent(`Olá ${pet.contactName || ''}, vi o aviso de ${pet.name || 'pet'} no mapa do Pet Searchers!`);
 
     const popupHtml = `
-      <div class="w-56 font-sans flex flex-col bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden">
-        <div class="w-full aspect-square shrink-0 relative overflow-hidden bg-white border-b border-gray-100 flex items-center justify-center p-1.5 cursor-pointer group" style="aspect-ratio: 1 / 1;" onclick="openImageLightbox('${pet.id}')" title="Clique para ampliar foto em tela cheia">
-          <img src="${getPetPhoto(pet)}" alt="${pet.name || 'Pet'}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species || 'Cachorro'}');" class="w-full h-full object-contain rounded-lg group-hover:scale-105 transition-transform duration-300"/>
-          <span class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-extrabold text-white ${badgeColor} shadow-md flex items-center gap-1">
-            ${badgeText}
-          </span>
+      <div class="w-44 font-sans bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+        <div class="w-full h-28 bg-white flex items-center justify-center overflow-hidden p-1.5">
+          <img
+            src="${getPetPhoto(pet)}"
+            alt="${pet.name || 'Pet'}"
+            onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species || 'Cachorro'}');"
+            class="w-full h-full object-contain rounded-lg"
+          />
         </div>
-        <div class="p-3 space-y-2 bg-white">
-          <div>
-            <div class="flex items-center justify-between gap-1">
-              <h4 class="font-extrabold text-xs sm:text-sm text-primary leading-tight truncate">${pet.name || 'Pet sem nome'}</h4>
-              <span class="text-[9px] font-bold text-gray-500 uppercase flex-shrink-0">${pet.species || ''}</span>
-            </div>
-            <p class="text-[11px] text-gray-600 font-medium mt-0.5">${pet.breed || "Raça não informada"} • ${pet.color || "Cor não informada"}${pet.age ? ` • ${pet.age}` : ''}</p>
-            <div class="mt-1.5 space-y-0.5 text-[10px] text-gray-600">
-              <div><b>Sexo:</b> ${pet.gender || "Não informado"} &nbsp; <b>Data:</b> ${pet.date || "Não informada"}</div>
-              <div><b>Local:</b> ${pet.address || "Não informado"}, ${pet.city || ""}/${pet.state || ""}</div>
-              ${pet.description ? `<div class="pt-0.5 line-clamp-2"><b>Descrição:</b> ${pet.description}</div>` : ''}
-              ${pet.contactName ? `<div><b>Tutor:</b> ${pet.contactName}</div>` : ''}
-            </div>
-          </div>
-          <div class="grid grid-cols-2 gap-1.5 pt-1 border-t border-gray-100">
-            <button onclick="openDetailModal('${pet.id}')" class="py-1.5 px-2 bg-primary hover:bg-primary-container text-white rounded-xl text-[11px] font-bold transition-colors flex items-center justify-center gap-1 shadow-sm">
-              <span class="material-symbols-outlined text-xs">info</span> Detalhes
+
+        <div class="px-2.5 pt-2 pb-2.5 bg-white">
+          <h4 class="font-extrabold text-sm text-primary leading-tight text-center truncate mb-2">
+            ${pet.name || 'Pet sem nome'}
+          </h4>
+
+          <div class="grid grid-cols-2 gap-1.5">
+            <button
+              onclick="openDetailModal('${pet.id}')"
+              class="py-1.5 px-2 bg-primary hover:bg-primary-container text-white rounded-lg text-[10px] font-bold transition-colors flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[12px]">info</span>
+              Detalhes
             </button>
-            <a href="https://wa.me/55${cleanPhone}?text=${waMsg}" target="_blank" class="py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-bold transition-colors flex items-center justify-center gap-1 shadow-sm no-underline">
-              <span class="material-symbols-outlined text-xs">chat</span> WhatsApp
+
+            <a
+              href="https://wa.me/55${cleanPhone}?text=${waMsg}"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition-colors flex items-center justify-center gap-1 no-underline">
+              <span class="material-symbols-outlined text-[12px]">chat</span>
+              WhatsApp
             </a>
           </div>
         </div>
@@ -1293,16 +1296,47 @@ function updateMapMarkers(filteredPets) {
       bubblingMouseEvents: true
     })
       .addTo(leafletMap)
-      .bindPopup(popupHtml, { maxWidth: 320, autoPan: true, autoPanPadding: [28, 80], keepInView: true });
+      .bindPopup(popupHtml, { maxWidth: 190, minWidth: 176, autoPan: true, autoPanPadding: [22, 55], keepInView: true, closeButton: false });
 
     marker.bindTooltip(`${pet.name || 'Pet'} • ${badgeText}`, {
       direction: 'top',
       offset: [0, -8],
       opacity: 0.9
     });
+    let popupCloseTimer = null;
+
+    const cancelPopupClose = () => {
+      if (popupCloseTimer) {
+        clearTimeout(popupCloseTimer);
+        popupCloseTimer = null;
+      }
+    };
+
+    const schedulePopupClose = () => {
+      cancelPopupClose();
+      popupCloseTimer = setTimeout(() => {
+        try { marker.closePopup(); } catch (_) {}
+      }, 220);
+    };
+
     marker.on("mouseover", () => {
+      cancelPopupClose();
       try { marker.openPopup(); } catch (_) {}
     });
+
+    marker.on("mouseout", schedulePopupClose);
+
+    // Mantém o pequeno cartão aberto enquanto o mouse estiver sobre ele,
+    // permitindo clicar em "Detalhes" ou "WhatsApp". Ao sair do cartão, fecha.
+    marker.on("popupopen", (event) => {
+      const popupEl = event.popup && event.popup.getElement ? event.popup.getElement() : null;
+      if (!popupEl) return;
+
+      popupEl.addEventListener("mouseenter", cancelPopupClose);
+      popupEl.addEventListener("mouseleave", schedulePopupClose);
+    });
+
+    marker.on("popupclose", cancelPopupClose);
 
     mapMarkers[pet.id] = marker;
     bounds.extend([mapLat, mapLng]);
