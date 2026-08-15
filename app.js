@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v90 carregado - legenda visual 3+2 independente da estrutura original");
+console.log("✅ Pet Searchers app.js BUILD v91 carregado - overlay definitivo da legenda 3+2");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -6542,4 +6542,195 @@ window.getRandomDefaultPhoto = getRandomDefaultPhoto;
 
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded",boot90,{once:true});
   else boot90();
+})();
+
+
+// === v91 OVERLAY DEFINITIVO DA LEGENDA 3+2 ===
+(() => {
+  const VERY_PERI = "#6667AB";
+
+  function getStatusButtonsV91() {
+    try {
+      if (typeof getMapLegendFilterElements === "function") {
+        const els = getMapLegendFilterElements();
+        if (Array.isArray(els) && els.length >= 3) return els;
+      }
+    } catch (_) {}
+
+    const wanted = ["Procurado", "Avistado", "Reencontrado"];
+    return wanted.map(label => {
+      const nodes = Array.from(document.querySelectorAll("button, a, [role='button'], span, div"));
+      const found = nodes.filter(el => {
+        const txt = String(el.textContent || "").replace(/\s+/g, " ").trim();
+        return label === "Reencontrado" ? txt.startsWith(label) : txt === label;
+      }).sort((a,b) => a.children.length - b.children.length)[0];
+      return found || null;
+    }).filter(Boolean);
+  }
+
+  function commonAncestorV91(elements) {
+    if (!elements.length) return null;
+    let node = elements[0];
+    while (node && node !== document.body) {
+      if (elements.every(el => node.contains(el))) return node;
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  function findLegendCardV91(statusButtons, resetBtn) {
+    let node = commonAncestorV91([...statusButtons, resetBtn]);
+    if (!node) return null;
+
+    // Escolhe o ancestral mais próximo que tenha dimensões compatíveis com o cartão da legenda.
+    let candidate = node;
+    for (let i = 0; i < 6 && candidate && candidate !== document.body; i++) {
+      const r = candidate.getBoundingClientRect();
+      const fits = r.width >= 280 && r.width <= 760 && r.height >= 45 && r.height <= 220;
+      if (fits) return candidate;
+      candidate = candidate.parentElement;
+    }
+    return node;
+  }
+
+  function hideOriginalLegendV91(card, statusButtons, resetBtn) {
+    const locationOriginal = document.getElementById("btnCenterUserLocationV87")
+      || document.getElementById("btnUserPositionV86")
+      || document.getElementById("btnMapLocateMeV85")
+      || document.getElementById("btnMapLocateMe");
+
+    [...statusButtons, resetBtn, locationOriginal].filter(Boolean).forEach(el => {
+      el.style.setProperty("visibility", "hidden", "important");
+      el.style.setProperty("pointer-events", "none", "important");
+    });
+
+    // Remove visualmente separadores verticais antigos.
+    Array.from(card.querySelectorAll("div, span")).forEach(el => {
+      if (el.id === "psLegendOverlayV91" || el.closest?.("#psLegendOverlayV91")) return;
+      const r = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      if ((r.width > 0 && r.width <= 3 && r.height >= 16) ||
+          (parseFloat(cs.borderLeftWidth || "0") > 0 && r.width <= 8)) {
+        el.style.setProperty("visibility", "hidden", "important");
+      }
+    });
+  }
+
+  function buildOverlayV91() {
+    if (document.getElementById("psLegendOverlayV91")) return true;
+
+    const resetBtn = document.getElementById("btnResetMap");
+    const statusButtons = getStatusButtonsV91();
+    if (!resetBtn || statusButtons.length < 3) return false;
+
+    const card = findLegendCardV91(statusButtons, resetBtn);
+    if (!card || card === document.body) return false;
+
+    card.style.setProperty("position", "relative", "important");
+    card.style.setProperty("min-height", "112px", "important");
+    card.style.setProperty("height", "112px", "important");
+    card.style.setProperty("overflow", "visible", "important");
+    card.style.setProperty("padding", "0", "important");
+    card.style.setProperty("box-sizing", "border-box", "important");
+
+    hideOriginalLegendV91(card, statusButtons, resetBtn);
+
+    const overlay = document.createElement("div");
+    overlay.id = "psLegendOverlayV91";
+    overlay.style.cssText = [
+      "position:absolute",
+      "inset:0",
+      "display:flex",
+      "flex-direction:column",
+      "justify-content:center",
+      "gap:12px",
+      "padding:12px 18px",
+      "box-sizing:border-box",
+      "z-index:9999",
+      "pointer-events:auto"
+    ].join(";");
+
+    const top = document.createElement("div");
+    top.style.cssText = "display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:center;justify-items:center;width:100%;";
+
+    const specs = [
+      ["Procurado", "#EF2222"],
+      ["Avistado", "#159BD3"],
+      ["Reencontrado 🎉", "#169C48"]
+    ];
+
+    specs.forEach(([label, color], index) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.style.cssText = `display:inline-flex;align-items:center;justify-content:center;gap:7px;border:0;background:transparent;color:${color};font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;padding:4px 6px;`;
+      b.innerHTML = `<span style="width:11px;height:11px;border-radius:50%;background:${color};display:inline-block;flex:0 0 11px"></span><span>${label}</span>`;
+      b.addEventListener("click", () => {
+        const status = index === 0 ? "Procurado" : index === 1 ? "Avistado" : "Reencontrado";
+        if (typeof window.applyStatusFilterFromLegend === "function") {
+          window.applyStatusFilterFromLegend(status);
+        } else {
+          try { statusButtons[index]?.click(); } catch (_) {}
+        }
+      });
+      top.appendChild(b);
+    });
+
+    const bottom = document.createElement("div");
+    bottom.style.cssText = "display:grid;grid-template-columns:repeat(2,minmax(140px,170px));gap:14px;justify-content:center;align-items:center;width:100%;";
+
+    const reset = document.createElement("button");
+    reset.type = "button";
+    reset.style.cssText = "width:100%;min-height:38px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 12px;border-radius:10px;border:1px solid #D8DEE7;background:#FFFFFF;color:#475569;font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;";
+    reset.innerHTML = '<span style="font-size:16px;line-height:1">↻</span><span>Resetar Visão</span>';
+    reset.addEventListener("click", () => resetBtn.click());
+
+    const loc = document.createElement("button");
+    loc.type = "button";
+    loc.style.cssText = `width:100%;min-height:38px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 12px;border-radius:10px;border:1px solid #C9C5EE;background:#F3F1FB;color:${VERY_PERI};font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;`;
+    loc.innerHTML = '<span style="font-size:16px;line-height:1;color:#6667AB">📍</span><span>Minha localização</span>';
+    loc.addEventListener("click", () => {
+      if (typeof window.positionMapAtUserV86 === "function") {
+        window.positionMapAtUserV86(true);
+      } else {
+        const original = document.getElementById("btnCenterUserLocationV87") || document.getElementById("btnUserPositionV86");
+        try { original?.click(); } catch (_) {}
+      }
+    });
+
+    bottom.append(reset, loc);
+    overlay.append(top, bottom);
+    card.appendChild(overlay);
+
+    // Mobile compact layout.
+    const style = document.createElement("style");
+    style.id = "psLegendOverlayV91Style";
+    style.textContent = `
+      @media (max-width: 520px) {
+        #psLegendOverlayV91 { padding: 9px 9px !important; gap: 8px !important; }
+        #psLegendOverlayV91 > div:first-child { gap: 3px !important; }
+        #psLegendOverlayV91 > div:first-child button { font-size: 10px !important; padding: 3px 2px !important; gap: 4px !important; }
+        #psLegendOverlayV91 > div:last-child { grid-template-columns: repeat(2,minmax(0,1fr)) !important; gap: 7px !important; }
+        #psLegendOverlayV91 > div:last-child button { min-height: 34px !important; font-size: 10px !important; padding: 6px 5px !important; }
+      }
+    `;
+    document.head.appendChild(style);
+
+    console.log("🎯 v91: overlay 3+2 aplicado diretamente sobre o cartão original da legenda.");
+    return true;
+  }
+
+  function bootV91() {
+    if (buildOverlayV91()) return;
+    const observer = new MutationObserver(() => {
+      if (buildOverlayV91()) observer.disconnect();
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+    [100,250,500,900,1500,2500,4000,6000].forEach(ms => setTimeout(buildOverlayV91, ms));
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootV91, { once:true });
+  } else {
+    bootV91();
+  }
 })();
