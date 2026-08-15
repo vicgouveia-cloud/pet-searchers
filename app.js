@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v85 carregado - bootstrap independente do botão Me localize");
+console.log("✅ Pet Searchers app.js BUILD v86 carregado - localização do usuário no mapa com legenda posicionadora");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -5270,5 +5270,322 @@ window.getRandomDefaultPhoto = getRandomDefaultPhoto;
     document.addEventListener("DOMContentLoaded", boot, { once: true });
   } else {
     boot();
+  }
+})();
+
+
+// === v86 LOCALIZAÇÃO DO USUÁRIO + LEGENDA POSICIONADORA ===
+(() => {
+  let psUserMarkerV86 = null;
+  let psUserAccuracyV86 = null;
+  let psUserCoordsV86 = null;
+  let psLocationWatchIdV86 = null;
+
+  const normalize = (s) => String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
+
+  function getLeafTextElement(label) {
+    const target = normalize(label);
+    const nodes = Array.from(document.querySelectorAll("button, a, [role='button'], span, div, p"));
+    return nodes
+      .filter(el => normalize(el.textContent) === target)
+      .sort((a, b) => a.children.length - b.children.length)[0] || null;
+  }
+
+  function getCommonAncestorV86(elements) {
+    const els = elements.filter(Boolean);
+    if (!els.length) return null;
+    let node = els[0];
+    while (node && node !== document.body) {
+      if (els.every(el => node.contains(el))) return node;
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  function findLegendCardV86() {
+    const procurado = getLeafTextElement("Procurado");
+    const avistado = getLeafTextElement("Avistado");
+    const reencontrado = Array.from(document.querySelectorAll("button, a, [role='button'], span, div, p"))
+      .filter(el => normalize(el.textContent).startsWith("reencontrado"))
+      .sort((a, b) => a.children.length - b.children.length)[0] || null;
+    const reset = getLeafTextElement("Resetar Visão");
+
+    if (!procurado || !avistado || !reencontrado || !reset) return null;
+
+    let card = getCommonAncestorV86([procurado, avistado, reencontrado, reset]);
+    if (!card) return null;
+
+    // Se o ancestral for grande demais, desce para um filho que ainda contenha os 4 controles.
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const child of Array.from(card.children || [])) {
+        if ([procurado, avistado, reencontrado, reset].every(el => child.contains(el))) {
+          card = child;
+          changed = true;
+          break;
+        }
+      }
+    }
+
+    return card;
+  }
+
+  function ensureLegendStylesV86() {
+    if (document.getElementById("ps-location-v86-style")) return;
+    const style = document.createElement("style");
+    style.id = "ps-location-v86-style";
+    style.textContent = `
+      .ps-location-row-v86 {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 8px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(148,163,184,.28);
+        box-sizing: border-box;
+      }
+      .ps-location-button-v86 {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        min-height: 32px !important;
+        padding: 6px 10px !important;
+        border-radius: 8px !important;
+        border: 1px solid #bfdbfe !important;
+        background: #eff6ff !important;
+        color: #075985 !important;
+        font: inherit !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        white-space: nowrap !important;
+        cursor: pointer !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 9999 !important;
+      }
+      .ps-location-dot-v86 {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,.18);
+        flex: 0 0 auto;
+      }
+      .ps-location-status-v86 {
+        font-size: 10px;
+        color: #64748b;
+        line-height: 1.2;
+      }
+      .ps-user-location-marker-v86 {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #2563eb;
+        border: 3px solid #ffffff;
+        box-shadow: 0 2px 8px rgba(15,23,42,.28);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 15px;
+        font-weight: 900;
+      }
+      @media (max-width: 520px) {
+        .ps-location-row-v86 { gap: 6px; }
+        .ps-location-button-v86 {
+          min-height: 30px !important;
+          padding: 5px 8px !important;
+          font-size: 10px !important;
+        }
+        .ps-location-status-v86 { display: none; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function ensureLocationLegendV86() {
+    ensureLegendStylesV86();
+    if (document.getElementById("btnUserPositionV86")) return true;
+
+    const card = findLegendCardV86();
+    if (!card) return false;
+
+    card.style.setProperty("overflow", "visible", "important");
+    card.style.setProperty("height", "auto", "important");
+    card.style.setProperty("min-height", "0", "important");
+    card.style.setProperty("box-sizing", "border-box", "important");
+
+    const row = document.createElement("div");
+    row.className = "ps-location-row-v86";
+
+    const btn = document.createElement("button");
+    btn.id = "btnUserPositionV86";
+    btn.type = "button";
+    btn.className = "ps-location-button-v86";
+    btn.title = "Centralizar e aproximar o mapa na minha localização";
+    btn.innerHTML = '<span class="ps-location-dot-v86" aria-hidden="true"></span><span>Minha localização</span>';
+    btn.addEventListener("click", () => positionMapAtUserV86(true));
+
+    const status = document.createElement("span");
+    status.id = "userPositionStatusV86";
+    status.className = "ps-location-status-v86";
+    status.textContent = "Centralizar mapa";
+
+    row.appendChild(btn);
+    row.appendChild(status);
+    card.appendChild(row);
+
+    console.log("📍 v86: legenda 'Minha localização' adicionada ao quadro do mapa.");
+    return true;
+  }
+
+  function userIconV86() {
+    if (typeof L === "undefined") return null;
+    return L.divIcon({
+      className: "ps-user-location-icon-wrapper-v86",
+      html: '<div class="ps-user-location-marker-v86" title="Sua localização aproximada">⌖</div>',
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+  }
+
+  function updateUserMarkerV86(lat, lng, accuracy) {
+    if (typeof leafletMap === "undefined" || !leafletMap || typeof L === "undefined") return;
+
+    psUserCoordsV86 = { lat, lng, accuracy };
+    currentUserPosition = { lat, lng };
+
+    if (!psUserMarkerV86) {
+      const icon = userIconV86();
+      psUserMarkerV86 = icon
+        ? L.marker([lat, lng], { icon, zIndexOffset: 2500, interactive: true }).addTo(leafletMap)
+        : L.circleMarker([lat, lng], { radius: 8, color: "#fff", weight: 3, fillColor: "#2563eb", fillOpacity: 1 }).addTo(leafletMap);
+      psUserMarkerV86.bindTooltip("Sua localização aproximada", { direction: "top", offset: [0, -14] });
+    } else {
+      psUserMarkerV86.setLatLng([lat, lng]);
+    }
+
+    if (psUserAccuracyV86) {
+      try { leafletMap.removeLayer(psUserAccuracyV86); } catch (_) {}
+    }
+    psUserAccuracyV86 = L.circle([lat, lng], {
+      radius: Math.max(20, Number(accuracy) || 100),
+      color: "#2563eb",
+      weight: 1,
+      opacity: .45,
+      fillColor: "#60a5fa",
+      fillOpacity: .08,
+      interactive: false
+    }).addTo(leafletMap);
+
+    const status = document.getElementById("userPositionStatusV86");
+    if (status) status.textContent = "Posição encontrada";
+  }
+
+  function zoomForAccuracyV86(accuracy) {
+    const a = Number(accuracy) || 1000;
+    if (a <= 50) return 17;
+    if (a <= 150) return 16;
+    if (a <= 400) return 15;
+    if (a <= 1200) return 14;
+    if (a <= 3500) return 13;
+    return 12;
+  }
+
+  function centerOnStoredUserV86() {
+    if (!psUserCoordsV86 || typeof leafletMap === "undefined" || !leafletMap) return false;
+    leafletMap.setView(
+      [psUserCoordsV86.lat, psUserCoordsV86.lng],
+      zoomForAccuracyV86(psUserCoordsV86.accuracy),
+      { animate: true }
+    );
+    setTimeout(() => { try { leafletMap.invalidateSize(); } catch (_) {} }, 80);
+    return true;
+  }
+
+  function positionMapAtUserV86(forceRefresh = false) {
+    ensureLocationLegendV86();
+
+    if (!forceRefresh && centerOnStoredUserV86()) return;
+
+    const status = document.getElementById("userPositionStatusV86");
+    if (status) status.textContent = "Localizando...";
+
+    if (!navigator.geolocation) {
+      if (status) status.textContent = "Geolocalização indisponível";
+      alert("Seu navegador não disponibiliza geolocalização.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const lat = Number(pos.coords.latitude);
+        const lng = Number(pos.coords.longitude);
+        const accuracy = Number(pos.coords.accuracy) || 100;
+        updateUserMarkerV86(lat, lng, accuracy);
+        centerOnStoredUserV86();
+      },
+      err => {
+        if (status) status.textContent = "Clique para permitir localização";
+        if (forceRefresh) {
+          const msg = err?.code === 1
+            ? "Permita o acesso à localização no navegador para posicionar o mapa."
+            : "Não foi possível obter sua localização neste momento.";
+          alert(msg);
+        }
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
+    );
+  }
+
+  function startLocationTrackingV86() {
+    if (!navigator.geolocation || psLocationWatchIdV86 !== null) return;
+
+    // Tenta mostrar o ponto no mapa assim que houver permissão disponível.
+    const start = () => {
+      try {
+        psLocationWatchIdV86 = navigator.geolocation.watchPosition(
+          pos => updateUserMarkerV86(
+            Number(pos.coords.latitude),
+            Number(pos.coords.longitude),
+            Number(pos.coords.accuracy) || 100
+          ),
+          () => {},
+          { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+        );
+      } catch (_) {}
+    };
+
+    if (navigator.permissions?.query) {
+      navigator.permissions.query({ name: "geolocation" }).then(result => {
+        if (result.state === "granted") start();
+        result.addEventListener?.("change", () => {
+          if (result.state === "granted") start();
+        });
+      }).catch(() => {});
+    }
+  }
+
+  function bootV86() {
+    ensureLocationLegendV86();
+    startLocationTrackingV86();
+
+    const observer = new MutationObserver(() => ensureLocationLegendV86());
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+
+    [100, 300, 700, 1500, 3000].forEach(ms => setTimeout(ensureLocationLegendV86, ms));
+  }
+
+  window.positionMapAtUserV86 = positionMapAtUserV86;
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootV86, { once: true });
+  } else {
+    bootV86();
   }
 })();
