@@ -955,6 +955,31 @@ function initLeafletMap() {
   });
 }
 
+function getPetMapCoordinates(pet) {
+  const lat = Number(pet && pet.lat);
+  const lng = Number(pet && pet.lng);
+  if (Number.isFinite(lat) && Number.isFinite(lng) && lat >= -34 && lat <= 6 && lng >= -74 && lng <= -30) {
+    return { lat, lng };
+  }
+
+  const cityCoords = getLocalCityCoords(pet && pet.city);
+  if (cityCoords) return cityCoords;
+
+  const uf = String((pet && pet.state) || '').trim().toUpperCase();
+  const stateCoords = BRAZIL_UFS.find(u => u.sigla === uf);
+  if (stateCoords && Number.isFinite(Number(stateCoords.lat)) && Number.isFinite(Number(stateCoords.lng))) {
+    return { lat: Number(stateCoords.lat), lng: Number(stateCoords.lng) };
+  }
+
+  return null;
+}
+
+function getPetPhoto(pet) {
+  return (pet && typeof pet.photo === 'string' && pet.photo.trim())
+    ? pet.photo
+    : getRandomDefaultPhoto(pet && pet.species);
+}
+
 function updateMapMarkers(filteredPets) {
   if (!leafletMap) return;
 
@@ -966,7 +991,10 @@ function updateMapMarkers(filteredPets) {
   const bounds = L.latLngBounds();
 
   filteredPets.forEach(pet => {
-    if (!Number.isFinite(pet.lat) || !Number.isFinite(pet.lng)) return;
+    const mapCoords = getPetMapCoordinates(pet);
+    if (!mapCoords) return;
+    const mapLat = mapCoords.lat;
+    const mapLng = mapCoords.lng;
 
     // Ícones em Formato de Bolinha:
     // Vermelho (#E52E10) -> Procurado / Perdido
@@ -1003,7 +1031,7 @@ function updateMapMarkers(filteredPets) {
       <div class="w-56 font-sans flex flex-col bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden">
         <!-- Imagem 1:1 no topo com object-contain e Fundo Branco -->
         <div class="w-full aspect-square shrink-0 relative overflow-hidden bg-white border-b border-gray-100 flex items-center justify-center p-1.5 cursor-pointer group" style="aspect-ratio: 1 / 1;" onclick="openImageLightbox('${pet.id}')" title="Clique para ampliar foto em tela cheia">
-          <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-contain rounded-lg group-hover:scale-105 transition-transform duration-300"/>
+          <img src="${getPetPhoto(pet)}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-contain rounded-lg group-hover:scale-105 transition-transform duration-300"/>
           <span class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-extrabold text-white ${badgeColor} shadow-md flex items-center gap-1">
             ${badgeText}
           </span>
@@ -1019,7 +1047,13 @@ function updateMapMarkers(filteredPets) {
               <h4 class="font-extrabold text-xs sm:text-sm text-primary leading-tight truncate">${pet.name}</h4>
               <span class="text-[9px] font-bold text-gray-500 uppercase flex-shrink-0">${pet.species}</span>
             </div>
-            <p class="text-[11px] text-gray-600 font-medium truncate mt-0.5">${pet.breed} • ${pet.color} ${pet.age ? `(${pet.age})` : ''}</p>
+            <p class="text-[11px] text-gray-600 font-medium mt-0.5">${pet.breed || "Raça não informada"} • ${pet.color || "Cor não informada"}${pet.age ? ` • ${pet.age}` : ''}</p>
+            <div class="mt-1.5 space-y-0.5 text-[10px] text-gray-600">
+              <div><b>Sexo:</b> ${pet.gender || "Não informado"} &nbsp; <b>Data:</b> ${pet.date || "Não informada"}</div>
+              <div><b>Local:</b> ${pet.address || "Não informado"}, ${pet.city || ""}/${pet.state || ""}</div>
+              ${pet.description ? `<div class="pt-0.5 line-clamp-2"><b>Descrição:</b> ${pet.description}</div>` : ''}
+              ${pet.contactName ? `<div><b>Tutor:</b> ${pet.contactName}</div>` : ''}
+            </div>
           </div>
 
           <div class="grid grid-cols-2 gap-1.5 pt-1 border-t border-gray-100">
@@ -1034,13 +1068,15 @@ function updateMapMarkers(filteredPets) {
       </div>
     `;
 
-    const marker = L.marker([pet.lat, pet.lng], { icon: customIcon })
+    const marker = L.marker([mapLat, mapLng], { icon: customIcon })
       .addTo(leafletMap)
       .bindPopup(popupHtml);
 
     mapMarkers[pet.id] = marker;
-    bounds.extend([pet.lat, pet.lng]);
+    bounds.extend([mapLat, mapLng]);
   });
+
+  console.log(`🗺️ Mapa: ${Object.keys(mapMarkers).length} de ${filteredPets.length} pets com posição exibida.`);
 
   if (bounds.isValid() && filteredPets.length > 0) {
     try {
@@ -1054,6 +1090,8 @@ function updateMapMarkers(filteredPets) {
 function focusPetOnMap(petId) {
   const pet = petsData.find(p => p.id === petId);
   if (!pet || !leafletMap) return;
+  const mapCoords = getPetMapCoordinates(pet);
+  if (!mapCoords) return;
 
   // 1. Rola a tela suavemente até a seção do mapa
   const mapElement = document.getElementById("mapSection") || document.getElementById("map");
@@ -1064,7 +1102,7 @@ function focusPetOnMap(petId) {
   // 2. Voo animado até a coordenada com zoom 16 e abertura do popup card
   if (Number.isFinite(pet.lat) && Number.isFinite(pet.lng)) {
     try {
-      leafletMap.setView([pet.lat, pet.lng], 16, { animate: true });
+      leafletMap.setView([mapCoords.lat, mapCoords.lng], 16, { animate: true });
     } catch (e) {
       console.warn("Aviso setView:", e);
     }
@@ -1186,12 +1224,12 @@ function renderApp() {
   const filteredPets = petsData.filter(pet => {
     if (currentActiveFilters.search) {
       const q = currentActiveFilters.search;
-      const matchName = pet.name.toLowerCase().includes(q);
-      const matchBreed = pet.breed.toLowerCase().includes(q);
-      const matchColor = pet.color.toLowerCase().includes(q);
-      const matchAddress = pet.address.toLowerCase().includes(q);
-      const matchCity = pet.city.toLowerCase().includes(q);
-      const matchDesc = pet.description.toLowerCase().includes(q);
+      const matchName = String(pet.name || "").toLowerCase().includes(q);
+      const matchBreed = String(pet.breed || "").toLowerCase().includes(q);
+      const matchColor = String(pet.color || "").toLowerCase().includes(q);
+      const matchAddress = String(pet.address || "").toLowerCase().includes(q);
+      const matchCity = String(pet.city || "").toLowerCase().includes(q);
+      const matchDesc = String(pet.description || "").toLowerCase().includes(q);
       if (!matchName && !matchBreed && !matchColor && !matchAddress && !matchCity && !matchDesc) {
         return false;
       }
@@ -1257,7 +1295,7 @@ function createPetCardHtml(pet) {
       
       <!-- Imagem 1:1 no topo com object-contain e Fundo Branco -->
       <div class="w-full aspect-square shrink-0 relative overflow-hidden bg-white border-b border-outline-variant/30 flex items-center justify-center p-1.5 cursor-pointer group/img" style="aspect-ratio: 1 / 1;" onclick="event.stopPropagation(); openImageLightbox('${pet.id}')" title="Clique para ampliar a foto deste pet em tela cheia">
-        <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-contain rounded-lg group-hover/img:scale-105 transition-transform duration-500"/>
+        <img src="${getPetPhoto(pet)}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-contain rounded-lg group-hover/img:scale-105 transition-transform duration-500"/>
         
         <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 backdrop-blur-sm shadow-md group-hover/img:bg-primary transition-colors">
           <span class="material-symbols-outlined text-xs">zoom_in</span> Ampliar Foto
@@ -1396,7 +1434,7 @@ function openImageLightbox(petId) {
   if (pet && pet.photo) {
     const lightboxImg = document.getElementById("lightboxImg");
     lightboxImg.onerror = () => { lightboxImg.src = getRandomDefaultPhoto(pet.species); };
-    lightboxImg.src = pet.photo;
+    lightboxImg.src = getPetPhoto(pet);
     document.getElementById("lightboxPetName").textContent = `📸 ${pet.name} (${pet.species}) - ${pet.city || ''}/${pet.state || ''}`;
     document.getElementById("imageLightboxModal").classList.remove("hidden");
   }
@@ -1784,7 +1822,7 @@ function generatePosterModal(petId) {
 
   const posterImg = document.getElementById("posterImg");
   posterImg.onerror = () => { posterImg.src = getRandomDefaultPhoto(pet.species); };
-  posterImg.src = pet.photo;
+  posterImg.src = getPetPhoto(pet);
   document.getElementById("posterPetName").textContent = pet.name;
   document.getElementById("posterDateSubtext").textContent = getFormattedPosterDate(pet.date);
   document.getElementById("posterAge").textContent = pet.age || "Não informada";
@@ -1851,7 +1889,7 @@ function openDetailModal(petId) {
 
   const detailImg = document.getElementById("detailImg");
   detailImg.onerror = () => { detailImg.src = getRandomDefaultPhoto(pet.species); };
-  detailImg.src = pet.photo;
+  detailImg.src = getPetPhoto(pet);
 
   const detailFrame = document.getElementById("detailImgFrame");
   if (detailFrame) {
@@ -2104,7 +2142,7 @@ function createAdminTableRowHtml(pet) {
     <tr class="hover:bg-gray-50 transition-colors">
       <td class="p-3">
         <div class="flex items-center gap-2">
-          <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-9 h-9 rounded-lg object-cover border"/>
+          <img src="${getPetPhoto(pet)}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-9 h-9 rounded-lg object-cover border"/>
           <div>
             <span class="font-bold text-primary block">${pet.name}</span>
             <span class="text-[10px] text-gray-500">${pet.species} • ${pet.breed}</span>
@@ -2158,7 +2196,7 @@ function createAdminMobileCardHtml(pet) {
     <div class="bg-surface rounded-xl p-3.5 border border-outline-variant/50 shadow-sm space-y-3 text-xs">
       <div class="flex items-center justify-between gap-2 pb-2 border-b border-outline-variant/30">
         <div class="flex items-center gap-2.5">
-          <img src="${pet.photo}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-11 h-11 rounded-xl object-cover border border-outline-variant/40 shrink-0"/>
+          <img src="${getPetPhoto(pet)}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-11 h-11 rounded-xl object-cover border border-outline-variant/40 shrink-0"/>
           <div>
             <h4 class="font-extrabold text-sm text-primary leading-tight">${pet.name}</h4>
             <span class="text-[10px] text-outline font-semibold">${pet.species} • ${pet.breed}</span>
