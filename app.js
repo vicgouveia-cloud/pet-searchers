@@ -482,7 +482,31 @@ function getLocalCityCoords(cityName) {
   return POPULAR_CITY_COORDINATES[normalized] || null;
 }
 
-// --- GEOLOCALIZAÇÃO PRECISA E INTELIGENTE EM CASCATA ---
+// --- CONSULTA SEGURA AO NOMINATIM ---
+async function singleNominatimQuery(query, timeoutMs = 3500) {
+  if (!query) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=br&addressdetails=1&q=${encodeURIComponent(query)}`;
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'Accept-Language': 'pt-BR,pt;q=0.9' }
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (Array.isArray(data) && data.length && data[0].lat && data[0].lon) {
+      return { lat: Number(data[0].lat), lng: Number(data[0].lon) };
+    }
+    return null;
+  } catch (e) {
+    if (e && e.name !== 'AbortError') console.warn('Nominatim indisponível:', e.message || e);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchGeocodeCoordinates(address = "", city = "", state = "") {
   let cleanState = (state || "").trim().toUpperCase();
   let cleanCity = (city || "").trim();
@@ -582,44 +606,57 @@ async function fetchGeocodeCoordinates(address = "", city = "", state = "") {
 
 async function retroactiveGeocodePets() {
   let updated = false;
+  const petsNeedingPreciseGeocode = [];
 
-  for (let pet of petsData) {
+  // Primeiro: garante que TODOS os pets tenham uma posição utilizável no mapa.
+  // Isso não bloqueia a abertura do portal esperando dezenas de consultas externas.
+  for (const pet of petsData) {
     if (pet.city && pet.city.trim().toLowerCase() === "capital") {
       pet.city = getCapitalCityForState(pet.state);
       updated = true;
     }
 
-    const isDefaultSecoCoords = (pet.lat === -23.5505 && pet.lng === -46.6333);
-    const isPosadasArgentina = (pet.lat < -27.1 && pet.lat > -27.6 && pet.lng < -55.7 && pet.lng > -56.2);
-    
-    // Detecta se o pet está em uma cidade diferente da capital, mas com as coordenadas da capital por erro anterior
-    const capitalCityName = getCapitalCityForState(pet.state);
-    const ufCapitalObj = BRAZIL_UFS.find(u => u.sigla === pet.state);
-    const isCapitalCoords = ufCapitalObj && (Math.abs(pet.lat - ufCapitalObj.lat) < 0.001 && Math.abs(pet.lng - ufCapitalObj.lng) < 0.001);
-    const isMispositionedCapital = isCapitalCoords && pet.city && (pet.city.trim().toLowerCase() !== capitalCityName.toLowerCase());
+    const validCoords = Number.isFinite(Number(pet.lat)) && Number.isFinite(Number(pet.lng)) &&
+      Math.abs(Number(pet.lat)) <= 90 && Math.abs(Number(pet.lng)) <= 180;
+
+    if (!validCoords) {
+      const cityCoords = getLocalCityCoords(pet.city);
+      const ufObj = BRAZIL_UFS.find(u => u.sigla === pet.state);
+      const fallback = cityCoords || (ufObj ? { lat: ufObj.lat, lng: ufObj.lng } : { lat: -14.235, lng: -51.9253 });
+      pet.lat = fallback.lat;
+      pet.lng = fallback.lng;
+      pet.geocodedCity = pet.city || "";
+      pet.geocodedAddress = pet.address || "";
+      updated = true;
+    }
 
     const cityChanged = !pet.geocodedCity || pet.geocodedCity !== pet.city;
     const addressChanged = !pet.geocodedAddress || pet.geocodedAddress !== pet.address;
-
-    if (cityChanged || addressChanged || isDefaultSecoCoords || isPosadasArgentina || isMispositionedCapital) {
-      const coords = await fetchGeocodeCoordinates(pet.address, pet.city, pet.state);
-      if (coords && (coords.lat !== pet.lat || coords.lng !== pet.lng)) {
-        pet.lat = coords.lat;
-        pet.lng = coords.lng;
-        pet.geocodedCity = pet.city;
-        pet.geocodedAddress = pet.address;
-        updated = true;
-      }
-    }
+    if (cityChanged || addressChanged) petsNeedingPreciseGeocode.push(pet);
   }
 
   if (updated) {
     savePetsToStorage();
     renderApp();
-    for (let p of petsData) {
-      if (p.isLocalPending || (p.id && !p.id.startsWith("pet-100"))) {
-        savePetToFirebase(p);
+  }
+
+  // Depois, tenta melhorar a precisão em segundo plano, sem impedir o mapa de aparecer.
+  for (const pet of petsNeedingPreciseGeocode) {
+    try {
+      const coords = await fetchGeocodeCoordinates(pet.address, pet.city, pet.state);
+      if (coords && (coords.lat !== pet.lat || coords.lng !== pet.lng)) {
+        pet.lat = coords.lat;
+        pet.lng = coords.lng;
+        pet.geocodedCity = pet.city || "";
+        pet.geocodedAddress = pet.address || "";
+        savePetsToStorage();
+        renderApp();
+        if (db && firestoreSDK) await savePetToFirebase(pet);
       }
+      // Respeita a política de uso do Nominatim e evita disparar muitas requisições.
+      await new Promise(resolve => setTimeout(resolve, 1100));
+    } catch (e) {
+      console.warn("Geocodificação retroativa ignorada para", pet.name, e);
     }
   }
 }
@@ -670,66 +707,19 @@ function loadPetsFromStorage() {
 
 function savePetsToStorage() {
   try {
-    const sanitized = petsData.map(sanitizePetObject);
+    // Fotos em base64 podem ocupar megabytes e estourar o limite do localStorage.
+    // O Firebase é a fonte principal das fotos; no cache local guardamos apenas os dados leves.
+    const sanitized = petsData.map(sanitizePetObject).map(pet => {
+      const copy = { ...pet };
+      if (typeof copy.photo === "string" && copy.photo.startsWith("data:image/")) {
+        delete copy.photo;
+      }
+      return copy;
+    });
     localStorage.setItem("pet_searchers_portal_data_v8", JSON.stringify(sanitized));
   } catch (e) {
-    console.warn("⚠️ Cota do localStorage excedida. Otimizando fotos locais...", e);
-    try {
-      const sanitizedPets = petsData.map((p, idx) => {
-        let cleanP = sanitizePetObject(p);
-        if (idx > 2 && cleanP.photo && cleanP.photo.startsWith("data:image/")) {
-          return { ...cleanP, photo: getRandomDefaultPhoto(cleanP.species) };
-        }
-        return cleanP;
-      });
-      localStorage.setItem("pet_searchers_portal_data_v8", JSON.stringify(sanitizedPets));
-    } catch (e2) {
-      console.error("Não foi possível salvar no localStorage:", e2);
-    }
+    console.warn("Não foi possível atualizar o cache local dos pets; mantendo os dados no Firebase:", e);
   }
-}
-
-function deduplicatePets(pets) {
-  if (!Array.isArray(pets)) return [];
-  const seenIds = new Set();
-  const seenContentKeys = new Set();
-
-  return pets.filter(pet => {
-    if (!pet || !pet.id) return false;
-    
-    // 1. Desduplica por ID estrito
-    if (seenIds.has(pet.id)) return false;
-
-    // 2. Desduplica por conteúdo chave (Nome + Telefone + Endereço) para eliminar cadastros idênticos salvos com IDs diferentes
-    const nameStr = (pet.name || '').toLowerCase().trim();
-    const phoneStr = (pet.contactPhone || '').trim();
-    const addrStr = (pet.address || '').toLowerCase().trim();
-    const contentKey = `${nameStr}_${phoneStr}_${addrStr}`;
-
-    if (nameStr.length > 1 && contentKey.length > 5 && seenContentKeys.has(contentKey)) {
-      return false;
-    }
-
-    seenIds.add(pet.id);
-    if (nameStr.length > 1 && contentKey.length > 5) {
-      seenContentKeys.add(contentKey);
-    }
-    return true;
-  });
-}
-
-function getDeletedPetIds() {
-  try {
-    return new Set(JSON.parse(localStorage.getItem("pet_searchers_deleted_ids_v1") || "[]"));
-  } catch (e) {
-    return new Set();
-  }
-}
-
-function markPetAsDeleted(petId) {
-  const deletedSet = getDeletedPetIds();
-  deletedSet.add(petId);
-  localStorage.setItem("pet_searchers_deleted_ids_v1", JSON.stringify(Array.from(deletedSet)));
 }
 
 // --- FIREBASE FIRESTORE SYNC & PERSISTENCE ENGINE ---
