@@ -447,6 +447,177 @@
       }
     }
 
+  
+    /* ================================================================
+       v98 — MENU DO MAPA conforme referência aprovada
+       3 filtros na linha superior + 2 ações na linha inferior.
+       Dimensionamento ~25% menor que a versão visual maior aprovada.
+       ================================================================ */
+
+    #mapLegendPanel.map-legend-panel {
+      width: min(100%, 520px) !important;
+      padding: 11px 14px !important;
+      gap: 8px !important;
+      border-radius: 13px !important;
+      border: 1px solid rgba(196, 198, 207, .62) !important;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, .055) !important;
+    }
+
+    /* Linha 1: três filtros igualmente distribuídos */
+    #mapLegendPanel .map-legend-status-row {
+      width: 100% !important;
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+      align-items: center !important;
+      justify-items: stretch !important;
+    }
+
+    #mapLegendPanel .map-legend-status {
+      width: 100% !important;
+      min-width: 0 !important;
+      min-height: 30px !important;
+      padding: 5px 6px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 6px !important;
+      border-radius: 8px !important;
+      border: 1px solid transparent !important;
+      font-size: 11.5px !important;
+      line-height: 1.1 !important;
+      font-weight: 700 !important;
+      white-space: nowrap !important;
+      outline: none !important;
+      box-shadow: none !important;
+      transform: none !important;
+    }
+
+    #mapLegendPanel .map-legend-dot {
+      width: 10px !important;
+      height: 10px !important;
+      flex: 0 0 10px !important;
+    }
+
+    /* Seleção suave — fundo cobre bolinha + texto por inteiro */
+    #mapLegendPanel .map-legend-status-lost.is-active {
+      background: #FDECEC !important;
+      border-color: #F8C9C8 !important;
+      color: #E52421 !important;
+    }
+
+    #mapLegendPanel .map-legend-status-sighted.is-active {
+      background: #EAF7FD !important;
+      border-color: #BDE7F7 !important;
+      color: #0EA5E9 !important;
+    }
+
+    #mapLegendPanel .map-legend-status-found.is-active {
+      background: #ECF8F0 !important;
+      border-color: #C7EBD3 !important;
+      color: #16A34A !important;
+    }
+
+    #mapLegendPanel .map-legend-status:not(.is-active) {
+      background: transparent !important;
+      border-color: transparent !important;
+      opacity: 1 !important;
+    }
+
+    #mapLegendPanel .map-legend-status:focus,
+    #mapLegendPanel .map-legend-status:focus-visible,
+    #mapLegendPanel .map-legend-status:active {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+    /* Linha 2: duas ações centralizadas e proporcionais */
+    #mapLegendPanel .map-legend-actions-row {
+      width: 100% !important;
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 10px !important;
+      align-items: center !important;
+      justify-content: center !important;
+      padding-top: 8px !important;
+      border-top: 1px solid rgba(196, 198, 207, .38) !important;
+    }
+
+    #mapLegendPanel .map-legend-action {
+      width: 100% !important;
+      min-width: 0 !important;
+      min-height: 39px !important;
+      padding: 7px 10px !important;
+      border-radius: 9px !important;
+      gap: 7px !important;
+      font-size: 11.5px !important;
+      line-height: 1.1 !important;
+      font-weight: 700 !important;
+    }
+
+    #mapLegendPanel .map-legend-action-icon {
+      font-size: 17px !important;
+      line-height: 1 !important;
+    }
+
+    #mapLegendPanel .map-legend-reset {
+      background: #FFFFFF !important;
+      color: #475569 !important;
+      border: 1px solid #D8DEE7 !important;
+    }
+
+    #mapLegendPanel .map-legend-location {
+      background: #F4F1FF !important;
+      color: #6667AB !important;
+      border: 1px solid #C8C4EA !important;
+    }
+
+    #mapLegendPanel .map-legend-location:hover {
+      background: #ECE8FC !important;
+      border-color: #6667AB !important;
+    }
+
+    /* Mobile preserva o mesmo desenho, apenas compacto */
+    @media (max-width: 767px) {
+      #mapLegendPanel.map-legend-panel {
+        width: 100% !important;
+        padding: 9px 10px !important;
+        gap: 7px !important;
+      }
+
+      #mapLegendPanel .map-legend-status-row {
+        gap: 4px !important;
+      }
+
+      #mapLegendPanel .map-legend-status {
+        min-height: 28px !important;
+        padding: 4px 3px !important;
+        gap: 4px !important;
+        font-size: 10px !important;
+      }
+
+      #mapLegendPanel .map-legend-dot {
+        width: 9px !important;
+        height: 9px !important;
+        flex-basis: 9px !important;
+      }
+
+      #mapLegendPanel .map-legend-actions-row {
+        gap: 7px !important;
+        padding-top: 7px !important;
+      }
+
+      #mapLegendPanel .map-legend-action {
+        min-height: 34px !important;
+        padding: 6px 5px !important;
+        font-size: 10px !important;
+      }
+
+      #mapLegendPanel .map-legend-action-icon {
+        font-size: 15px !important;
+      }
+    }
+
   </style>
 </head>
 <body class="bg-background text-on-surface font-sans antialiased min-h-screen flex flex-col selection:bg-secondary-container selection:text-on-secondary-container">
@@ -1246,6 +1417,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <!-- Main Application Script (With Single-Page Print A4 & Dual Poster PDF/JPG Engine v55) -->
-  <script src="app.js?v=20260815_map_menu_soft_active_v97"></script>
+  <script src="app.js?v=20260815_map_menu_reference_v98"></script>
 </body>
 </html>

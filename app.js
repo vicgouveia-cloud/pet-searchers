@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v97 carregado - filtros superiores com seleção suave");
+console.log("✅ Pet Searchers app.js BUILD v98 carregado - menu do mapa ajustado à referência aprovada");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
