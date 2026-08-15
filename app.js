@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v82 carregado - botão Me localize inserido diretamente no quadro da legenda");
+console.log("✅ Pet Searchers app.js BUILD v83 carregado - Me localize fixado visivelmente no quadro da legenda");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -1889,7 +1889,27 @@ function ensureMapLegendControlStyles() {
       min-width: 0 !important;
     }
 
+    .ps-map-location-actions-v83 {
+      width: 100% !important;
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+      align-items: center !important;
+      box-sizing: border-box !important;
+    }
+
     @media (max-width: 520px) {
+      .ps-map-location-actions-v83 {
+        gap: 6px !important;
+      }
+
+      .ps-map-location-actions-v83 .ps-map-legend-reset,
+      .ps-map-location-actions-v83 .ps-map-locate-btn {
+        min-height: 32px !important;
+        font-size: 10px !important;
+        padding: 5px 6px !important;
+      }
+
       .ps-map-legend-layout {
         gap: 8px;
       }
@@ -2058,29 +2078,62 @@ function ensureMapLegendLayout() {
   const statusButtons = getMapLegendFilterElements();
   const resetTextEl = getMapLegendResetElement();
   if (statusButtons.length < 3 || !resetTextEl) {
-    console.warn("⚠️ Legenda localizada parcialmente; não foi possível montar Me localize.", {
+    console.warn("⚠️ Não foi possível localizar completamente a legenda do mapa.", {
       statusButtons: statusButtons.length,
       resetFound: Boolean(resetTextEl)
     });
     return;
   }
 
-  // Organiza somente a linha existente dos três status, sem desmontar o quadro original.
-  const statusRow = getSmallestCommonAncestor(statusButtons);
-  if (statusRow && statusRow !== document.body && !statusRow.contains(resetTextEl)) {
-    statusRow.classList.add("ps-map-legend-status-row-direct");
-  }
-
-  // Descobre o wrapper real de "Resetar Visão" e injeta o novo botão no MESMO pai.
   const resetControl = getLegendControlWrapper(resetTextEl);
-  const actionRow = resetControl?.parentElement;
-  if (!resetControl || !actionRow || actionRow === document.body) {
-    console.warn("⚠️ Não foi possível localizar a linha de ações da legenda.");
+  if (!resetControl) return;
+
+  // O menor ancestral comum dos três status + Resetar Visão é o próprio
+  // cartão branco da legenda. A partir dele criamos explicitamente a linha
+  // inferior, em vez de depender da estrutura interna original.
+  const legendCard = getSmallestCommonAncestor([...statusButtons, resetControl]);
+  if (!legendCard || legendCard === document.body) {
+    console.warn("⚠️ Quadro da legenda não localizado.");
     return;
   }
 
+  legendCard.style.boxSizing = "border-box";
+  legendCard.style.overflow = "visible";
+
+  // Mantém os três status juntos e bem distribuídos.
+  const statusRow = getSmallestCommonAncestor(statusButtons);
+  if (statusRow && statusRow !== legendCard && !statusRow.contains(resetControl)) {
+    statusRow.classList.add("ps-map-legend-status-row-direct");
+  }
+
+  // Cria uma linha dedicada DENTRO do mesmo quadro branco.
+  let actionRow = legendCard.querySelector(".ps-map-location-actions-v83");
+  if (!actionRow) {
+    actionRow = document.createElement("div");
+    actionRow.className = "ps-map-location-actions-v83";
+    actionRow.style.width = "100%";
+    actionRow.style.display = "grid";
+    actionRow.style.gridTemplateColumns = "repeat(2, minmax(0, 1fr))";
+    actionRow.style.gap = "8px";
+    actionRow.style.alignItems = "center";
+    actionRow.style.borderTop = "1px solid rgba(148,163,184,.30)";
+    actionRow.style.paddingTop = "8px";
+    actionRow.style.marginTop = "8px";
+    actionRow.style.boxSizing = "border-box";
+    legendCard.appendChild(actionRow);
+  }
+
+  // Move o controle existente de Resetar Visão para a nova linha.
+  if (resetControl.parentElement !== actionRow) {
+    actionRow.appendChild(resetControl);
+  }
   resetControl.classList.add("ps-map-legend-reset");
-  resetControl.setAttribute("aria-label", "Resetar visão do mapa e filtro de status");
+  resetControl.style.width = "100%";
+  resetControl.style.minWidth = "0";
+  resetControl.style.display = "flex";
+  resetControl.style.alignItems = "center";
+  resetControl.style.justifyContent = "center";
+  resetControl.style.boxSizing = "border-box";
 
   let locateBtn = document.getElementById("btnMapLocateMe");
   if (!locateBtn) {
@@ -2093,14 +2146,19 @@ function ensureMapLegendLayout() {
     locateBtn.addEventListener("click", locateUserOnMap);
   }
 
-  // Inserção direta ao lado de Resetar Visão. Não depende mais de recriar a legenda.
+  locateBtn.style.display = "flex";
+  locateBtn.style.visibility = "visible";
+  locateBtn.style.opacity = "1";
+  locateBtn.style.width = "100%";
+  locateBtn.style.minWidth = "0";
+  locateBtn.style.position = "relative";
+  locateBtn.style.zIndex = "2";
+
   if (locateBtn.parentElement !== actionRow) {
-    actionRow.insertBefore(locateBtn, resetControl.nextSibling);
+    actionRow.appendChild(locateBtn);
   }
 
-  actionRow.classList.add("ps-map-legend-action-row-direct");
-
-  console.log("📍 Botão 'Me localize' inserido no mesmo quadro da legenda do mapa.");
+  console.log("📍 v83: Me localize visível dentro do mesmo quadro da legenda.");
 }
 
 function bindMapLegendFilters() {
