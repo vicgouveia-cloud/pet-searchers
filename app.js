@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v64 carregado - popup compacto do mapa com hover abrir/fechar");
+console.log("✅ Pet Searchers app.js BUILD v66 carregado - filtro Próximos a mim com raio selecionável");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -59,35 +59,150 @@ function getCapitalCityForState(uf) {
 }
 
 // --- PERSISTÊNCIA INVIOLÁVEL DE EDIÇÕES DO ADMINISTRADOR ---
+function sanitizePetForLocalStorage(pet) {
+  if (!pet || typeof pet !== "object") return pet;
+
+  const copy = { ...pet };
+
+  // Fotos enviadas pelo formulário chegam como data:image/... (Base64).
+  // Elas podem ocupar centenas de KB ou vários MB e não devem ser duplicadas no localStorage.
+  // A foto completa permanece no objeto em memória e é enviada ao Firebase separadamente.
+  if (typeof copy.photo === "string" && copy.photo.startsWith("data:image/")) {
+    delete copy.photo;
+  }
+
+  return copy;
+}
+
 function getEditedPetsMap() {
   try {
-    return JSON.parse(localStorage.getItem("pet_searchers_edited_pets_v1") || "{}");
+    const parsed = JSON.parse(localStorage.getItem("pet_searchers_edited_pets_v1") || "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
   } catch (e) {
+    console.warn("Cache de edições locais inválido; iniciando mapa de edições vazio.", e);
     return {};
   }
 }
 
-function saveEditedPet(pet) {
-  if (!pet || !pet.id) return;
-  pet.lastModifiedAt = pet.lastModifiedAt || new Date().toISOString();
-  const map = getEditedPetsMap();
-  map[pet.id] = { ...map[pet.id], ...pet };
-  localStorage.setItem("pet_searchers_edited_pets_v1", JSON.stringify(map));
+function compactEditedPetsMap(map) {
+  const compact = {};
+  Object.entries(map || {}).forEach(([id, pet]) => {
+    if (!pet || typeof pet !== "object") return;
+    compact[id] = sanitizePetForLocalStorage(pet);
+  });
+  return compact;
+}
 
-  // Atualiza a constante INITIAL_PETS em memória para evitar reversão local
+function persistEditedPetsMap(map) {
+  const compact = compactEditedPetsMap(map);
+
+  try {
+    localStorage.setItem("pet_searchers_edited_pets_v1", JSON.stringify(compact));
+    return true;
+  } catch (e) {
+    console.warn("⚠️ Cache local de edições excedeu a cota. Tentando compactação adicional...", e);
+
+    try {
+      // Segunda tentativa: mantém somente os campos realmente necessários para preservar
+      // edições locais até a sincronização com o Firebase.
+      const minimal = {};
+      Object.entries(compact).forEach(([id, pet]) => {
+        minimal[id] = {
+          id: pet.id || id,
+          name: pet.name,
+          type: pet.type,
+          species: pet.species,
+          breed: pet.breed,
+          color: pet.color,
+          age: pet.age,
+          gender: pet.gender,
+          state: pet.state,
+          city: pet.city,
+          address: pet.address,
+          date: pet.date,
+          description: pet.description,
+          contactName: pet.contactName,
+          contactPhone: pet.contactPhone,
+          lat: pet.lat,
+          lng: pet.lng,
+          geocodedCity: pet.geocodedCity,
+          geocodedAddress: pet.geocodedAddress,
+          createdAt: pet.createdAt,
+          lastRenewedAt: pet.lastRenewedAt,
+          lastModifiedAt: pet.lastModifiedAt,
+          isLocalPending: pet.isLocalPending
+        };
+      });
+
+      localStorage.setItem("pet_searchers_edited_pets_v1", JSON.stringify(minimal));
+      return true;
+    } catch (e2) {
+      // O cadastro não deve falhar só porque o cache do navegador está cheio.
+      console.warn("Não foi possível atualizar o cache local de edições. O Firebase continuará sendo a fonte principal.", e2);
+      return false;
+    }
+  }
+}
+
+function migrateOversizedLocalStorage() {
+  try {
+    const editedMap = getEditedPetsMap();
+    persistEditedPetsMap(editedMap);
+
+    const savedPets = localStorage.getItem("pet_searchers_portal_data_v8");
+    if (savedPets) {
+      try {
+        const parsedPets = JSON.parse(savedPets);
+        if (Array.isArray(parsedPets)) {
+          const compactPets = parsedPets.map(sanitizePetForLocalStorage);
+          try {
+            localStorage.setItem("pet_searchers_portal_data_v8", JSON.stringify(compactPets));
+          } catch (e) {
+            console.warn("Cache geral de pets continua grande; removendo somente esse cache local para reconstrução pelo Firebase.", e);
+            localStorage.removeItem("pet_searchers_portal_data_v8");
+          }
+        }
+      } catch (e) {
+        localStorage.removeItem("pet_searchers_portal_data_v8");
+      }
+    }
+  } catch (e) {
+    console.warn("Não foi possível compactar o armazenamento local automaticamente:", e);
+  }
+}
+
+function saveEditedPet(pet) {
+  if (!pet || !pet.id) return false;
+
+  pet.lastModifiedAt = pet.lastModifiedAt || new Date().toISOString();
+
+  const map = getEditedPetsMap();
+  const previous = map[pet.id] || {};
+  const localPet = sanitizePetForLocalStorage(pet);
+
+  // Importante: como localPet não contém Base64, uma foto antiga em Base64 também
+  // não pode sobreviver no objeto anterior.
+  map[pet.id] = sanitizePetForLocalStorage({ ...previous, ...localPet });
+
+  const savedLocally = persistEditedPetsMap(map);
+
+  // Atualiza a constante INITIAL_PETS em memória para evitar reversão local.
+  // Aqui podemos manter o objeto completo em memória, inclusive a foto.
   if (typeof INITIAL_PETS !== "undefined" && Array.isArray(INITIAL_PETS)) {
     const initIdx = INITIAL_PETS.findIndex(p => p.id === pet.id);
     if (initIdx !== -1) {
       INITIAL_PETS[initIdx] = { ...INITIAL_PETS[initIdx], ...pet };
     }
   }
+
+  return savedLocally;
 }
 
 function removeEditedPet(petId) {
   if (!petId) return;
   const map = getEditedPetsMap();
   delete map[petId];
-  localStorage.setItem("pet_searchers_edited_pets_v1", JSON.stringify(map));
+  persistEditedPetsMap(map);
 }
 
 function listenToFirebasePets() {
@@ -218,6 +333,7 @@ let currentActiveFilters = {
   status: "",
   species: "",
   nearby: false,
+  nearbyRadiusKm: 10,
   sort: "newest"
 };
 
@@ -252,6 +368,8 @@ async function startApp() {
     initAdminEvents();
     preloadPopularStatesCities();
 
+    // Limpa automaticamente fotos Base64 de caches antigos antes de qualquer novo cadastro.
+    migrateOversizedLocalStorage();
     loadPetsFromStorage();
     runAutoPurgeEngine();
     renderApp();
@@ -713,18 +831,20 @@ function loadPetsFromStorage() {
 
 function savePetsToStorage() {
   try {
-    // Fotos em base64 podem ocupar megabytes e estourar o limite do localStorage.
-    // O Firebase é a fonte principal das fotos; no cache local guardamos apenas os dados leves.
-    const sanitized = petsData.map(sanitizePetObject).map(pet => {
-      const copy = { ...pet };
-      if (typeof copy.photo === "string" && copy.photo.startsWith("data:image/")) {
-        delete copy.photo;
-      }
-      return copy;
-    });
+    // O cache local guarda apenas dados leves. Fotos Base64 ficam fora do localStorage.
+    const sanitized = petsData
+      .map(sanitizePetObject)
+      .map(sanitizePetForLocalStorage);
+
     localStorage.setItem("pet_searchers_portal_data_v8", JSON.stringify(sanitized));
   } catch (e) {
     console.warn("Não foi possível atualizar o cache local dos pets; mantendo os dados no Firebase:", e);
+
+    // Se um cache antigo já estiver ocupando a cota, ele pode ser removido com segurança:
+    // o Firestore reconstruirá a lista na próxima sincronização.
+    try {
+      localStorage.removeItem("pet_searchers_portal_data_v8");
+    } catch (_) {}
   }
 }
 
@@ -1068,6 +1188,7 @@ function clearAllPetFilters() {
     status: "",
     species: "",
     nearby: false,
+    nearbyRadiusKm: 10,
     sort: "newest"
   };
   currentUserPosition = null;
@@ -1076,6 +1197,7 @@ function clearAllPetFilters() {
   const fst = document.getElementById("filterState");
   const fc = document.getElementById("filterCity");
   const sortSelect = document.getElementById("petSortOrder");
+  const nearbyRadiusSelect = document.getElementById("nearbyRadiusSelect");
 
   if (fs) fs.value = "";
   if (fst) fst.value = "";
@@ -1084,6 +1206,7 @@ function clearAllPetFilters() {
     fc.value = "";
   }
   if (sortSelect) sortSelect.value = "newest";
+  if (nearbyRadiusSelect) nearbyRadiusSelect.value = "10";
 
   document.querySelectorAll(".filter-species-btn").forEach(b => {
     const active = !b.dataset.species;
@@ -1125,7 +1248,7 @@ function activateNearbyFilter() {
 
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">progress_activity</span> Localizando...';
+    btn.innerHTML = `<span class="material-symbols-outlined text-sm animate-spin">progress_activity</span> Localizando (${currentActiveFilters.nearbyRadiusKm} km)...`;
   }
 
   navigator.geolocation.getCurrentPosition(
@@ -1138,7 +1261,7 @@ function activateNearbyFilter() {
 
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span> Próximos a mim (10 km)';
+        btn.innerHTML = `<span class="material-symbols-outlined text-sm">my_location</span> Próximos a mim (${currentActiveFilters.nearbyRadiusKm} km)`;
         btn.setAttribute("aria-pressed", "true");
         btn.classList.remove("bg-surface-container", "text-primary");
         btn.classList.add("ring-2", "ring-primary", "bg-primary", "text-white");
@@ -1148,7 +1271,7 @@ function activateNearbyFilter() {
     err => {
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span> Próximos a mim (10 km)';
+        btn.innerHTML = `<span class="material-symbols-outlined text-sm">my_location</span> Próximos a mim (${currentActiveFilters.nearbyRadiusKm} km)`;
       }
       alert(err && err.code === 1
         ? "Permita o acesso à sua localização no navegador para usar o filtro Próximos a mim."
@@ -1172,10 +1295,24 @@ function ensureAdvancedFilterControls() {
   row.className = "mt-3 pt-3 border-t border-outline-variant/30 flex flex-wrap items-center gap-2 justify-between";
   row.innerHTML = `
     <div class="flex flex-wrap items-center gap-2">
-      <button id="btnNearbyPets" type="button" aria-pressed="false"
-        class="px-3.5 py-2 rounded-xl bg-surface-container text-primary hover:bg-surface-container-high font-bold text-xs transition-all flex items-center gap-1.5 border border-outline-variant/40">
-        <span class="material-symbols-outlined text-sm">my_location</span> Próximos a mim (10 km)
-      </button>
+      <div class="flex items-center gap-1.5">
+        <button id="btnNearbyPets" type="button" aria-pressed="false"
+          class="px-3.5 py-2 rounded-xl bg-surface-container text-primary hover:bg-surface-container-high font-bold text-xs transition-all flex items-center gap-1.5 border border-outline-variant/40">
+          <span class="material-symbols-outlined text-sm">my_location</span> Próximos a mim (10 km)
+        </button>
+
+        <select id="nearbyRadiusSelect"
+          class="px-2.5 py-2 rounded-xl border border-outline-variant bg-white text-primary text-xs font-bold outline-none cursor-pointer"
+          title="Raio de proximidade">
+          <option value="1">1 km</option>
+          <option value="3">3 km</option>
+          <option value="5">5 km</option>
+          <option value="10" selected>10 km</option>
+          <option value="15">15 km</option>
+          <option value="20">20 km</option>
+          <option value="35">35 km</option>
+        </select>
+      </div>
       <button id="btnClearAllPetFilters" type="button"
         class="px-3.5 py-2 rounded-xl bg-white text-primary hover:bg-surface-container font-bold text-xs transition-all flex items-center gap-1.5 border border-outline-variant">
         <span class="material-symbols-outlined text-sm">filter_alt_off</span> Limpar filtros
@@ -1195,6 +1332,23 @@ function ensureAdvancedFilterControls() {
   host.appendChild(row);
 
   document.getElementById("btnNearbyPets")?.addEventListener("click", activateNearbyFilter);
+
+  document.getElementById("nearbyRadiusSelect")?.addEventListener("change", e => {
+    const allowed = [1, 3, 5, 10, 15, 20, 35];
+    const selected = Number(e.target.value);
+    currentActiveFilters.nearbyRadiusKm = allowed.includes(selected) ? selected : 10;
+
+    const btn = document.getElementById("btnNearbyPets");
+    if (btn) {
+      btn.innerHTML = `<span class="material-symbols-outlined text-sm">my_location</span> Próximos a mim (${currentActiveFilters.nearbyRadiusKm} km)`;
+    }
+
+    // Se o filtro já estiver ativo, reaplica imediatamente com o novo raio.
+    if (currentActiveFilters.nearby && currentUserPosition) {
+      renderApp();
+    }
+  });
+
   document.getElementById("btnClearAllPetFilters")?.addEventListener("click", clearAllPetFilters);
   document.getElementById("petSortOrder")?.addEventListener("change", e => {
     currentActiveFilters.sort = e.target.value === "oldest" ? "oldest" : "newest";
@@ -1624,7 +1778,7 @@ function renderApp() {
         Number(coords.lat),
         Number(coords.lng)
       );
-      if (!Number.isFinite(distance) || distance > 10) return false;
+      if (!Number.isFinite(distance) || distance > Number(currentActiveFilters.nearbyRadiusKm || 10)) return false;
     }
 
     return true;
