@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v76 carregado - prévia estável e downloads JPG/PDF dedicados");
+console.log("✅ Pet Searchers app.js BUILD v77 carregado - compartilhamento de JPG no mobile e PDF A4 em página única");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -2860,6 +2860,19 @@ function initModalEvents() {
   const btnDownloadJPG = document.getElementById("btnDownloadPosterJPG");
   if (btnDownloadJPG) {
     btnDownloadJPG.addEventListener("click", downloadPosterJPG);
+
+    // Em celular o JPG abre a folha nativa para salvar em Fotos ou compartilhar.
+    if (isMobileShareEnvironment()) {
+      btnDownloadJPG.setAttribute("title", "Salvar na galeria ou compartilhar imagem");
+      btnDownloadJPG.setAttribute("aria-label", "Salvar ou compartilhar cartaz JPG");
+      const jpgLabel = (btnDownloadJPG.textContent || "").trim();
+      if (/Baixar\s+Cartaz\s+JPG/i.test(jpgLabel)) {
+        btnDownloadJPG.innerHTML = btnDownloadJPG.innerHTML.replace(
+          /Baixar\s+Cartaz\s+JPG\s*\(4×5\)|Baixar\s+Cartaz\s+JPG\s*\(4x5\)|Baixar\s+Cartaz\s+JPG/gi,
+          "Salvar / Compartilhar JPG"
+        );
+      }
+    }
   }
 }
 
@@ -3772,6 +3785,46 @@ function triggerBlobDownload(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 15000);
 }
 
+function isMobileShareEnvironment() {
+  const ua = navigator.userAgent || "";
+  const mobileUA = /iPhone|iPad|iPod|Android|Mobile/i.test(ua);
+  const narrowViewport = Math.min(window.innerWidth || 9999, window.screen?.width || 9999) <= 820;
+  return mobileUA || narrowViewport;
+}
+
+async function shareOrSavePosterImage(blob, filename) {
+  const file = new File([blob], filename, { type: "image/jpeg" });
+
+  // Em iOS/Android, a Web Share API abre a folha nativa do sistema.
+  // No iPhone, ela oferece ações como "Salvar Imagem" (Fotos) e
+  // compartilhamento para WhatsApp, Mensagens, Mail, AirDrop etc.
+  if (
+    isMobileShareEnvironment() &&
+    navigator.share &&
+    (!navigator.canShare || navigator.canShare({ files: [file] }))
+  ) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: "Cartaz Pet Searchers",
+        text: "Cartaz de busca do Pet Searchers"
+      });
+      return { shared: true, downloaded: false };
+    } catch (err) {
+      // AbortError = usuário fechou a folha de compartilhamento.
+      // Nesse caso não forçamos outro download por cima.
+      if (err && err.name === "AbortError") {
+        return { shared: false, downloaded: false, cancelled: true };
+      }
+
+      console.warn("Compartilhamento nativo indisponível; usando download convencional.", err);
+    }
+  }
+
+  triggerBlobDownload(blob, filename);
+  return { shared: false, downloaded: true };
+}
+
 async function ensureJsPdfLoaded() {
   if (window.jspdf?.jsPDF) return window.jspdf.jsPDF;
 
@@ -3820,11 +3873,20 @@ async function downloadPosterPDF() {
       orientation: "portrait",
       unit: "mm",
       format: "a4",
-      compress: true
+      compress: true,
+      putOnlyUsedFonts: true
     });
 
+    // O cartaz inteiro é rasterizado em uma única imagem A4 e aplicado
+    // exclusivamente à primeira página. Isso impede quebra em 2 páginas.
     const imgData = canvas.toDataURL("image/jpeg", 0.94);
     pdf.addImage(imgData, "JPEG", 0, 0, 210, 297, undefined, "FAST");
+
+    // Garantia adicional: se alguma versão do jsPDF criar páginas extras,
+    // removemos todas além da primeira.
+    while (typeof pdf.getNumberOfPages === "function" && pdf.getNumberOfPages() > 1) {
+      pdf.deletePage(pdf.getNumberOfPages());
+    }
 
     const blob = pdf.output("blob");
     triggerBlobDownload(blob, `${getCurrentPosterFileBase()}.pdf`);
@@ -3868,7 +3930,10 @@ async function downloadPosterJPG() {
       );
     });
 
-    triggerBlobDownload(blob, `${getCurrentPosterFileBase()}.jpg`);
+    await shareOrSavePosterImage(
+      blob,
+      `${getCurrentPosterFileBase()}.jpg`
+    );
   } catch (err) {
     console.error("Erro ao gerar JPG do cartaz:", err);
     alert("⚠️ Não foi possível gerar a imagem JPG automaticamente.");
