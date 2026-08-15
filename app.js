@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v91 carregado - overlay definitivo da legenda 3+2");
+console.log("✅ Pet Searchers app.js BUILD v92 carregado - painel 3+2 posicionado por coordenadas reais");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -6733,4 +6733,234 @@ window.getRandomDefaultPhoto = getRandomDefaultPhoto;
   } else {
     bootV91();
   }
+})();
+
+
+// === v92 PAINEL 3+2 POSICIONADO PELAS COORDENADAS REAIS DOS CONTROLES ===
+(() => {
+  const VERY_PERI = "#6667AB";
+  let panelV92 = null;
+  let anchorElementsV92 = [];
+
+  const norm92 = s => String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
+
+  function findLeaf92(label, starts = false) {
+    const wanted = norm92(label);
+    return Array.from(document.querySelectorAll("button, a, [role='button'], span, div, p"))
+      .filter(el => {
+        const t = norm92(el.textContent);
+        return starts ? t.startsWith(wanted) : t === wanted;
+      })
+      .sort((a,b) => a.children.length - b.children.length)[0] || null;
+  }
+
+  function clickable92(el) {
+    if (!el) return null;
+    return el.closest("button, a, [role='button']") || el;
+  }
+
+  function getOriginals92() {
+    let status = [];
+    try {
+      if (typeof getMapLegendFilterElements === "function") {
+        status = getMapLegendFilterElements() || [];
+      }
+    } catch (_) {}
+
+    if (status.length < 3) {
+      status = [
+        clickable92(findLeaf92("Procurado")),
+        clickable92(findLeaf92("Avistado")),
+        clickable92(findLeaf92("Reencontrado", true))
+      ].filter(Boolean);
+    }
+
+    const reset = document.getElementById("btnResetMap") || clickable92(findLeaf92("Resetar Visão"));
+    const location = document.getElementById("btnCenterUserLocationV87")
+      || document.getElementById("btnUserPositionV86")
+      || document.getElementById("btnMapLocateMeV85")
+      || document.getElementById("btnMapLocateMe")
+      || clickable92(findLeaf92("Minha localização"));
+
+    if (status.length < 3 || !reset || !location) return null;
+    return { status: status.slice(0,3), reset, location };
+  }
+
+  function unionRect92(elements) {
+    const rects = elements.map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+    if (!rects.length) return null;
+    const left = Math.min(...rects.map(r => r.left));
+    const top = Math.min(...rects.map(r => r.top));
+    const right = Math.max(...rects.map(r => r.right));
+    const bottom = Math.max(...rects.map(r => r.bottom));
+    return { left, top, right, bottom, width: right-left, height: bottom-top };
+  }
+
+  function hideOriginals92(orig) {
+    [...orig.status, orig.reset, orig.location].forEach(el => {
+      el.style.setProperty("opacity", "0", "important");
+      el.style.setProperty("visibility", "hidden", "important");
+      el.style.setProperty("pointer-events", "none", "important");
+    });
+
+    // esconde separadores verticais próximos do reset
+    const rr = orig.reset.getBoundingClientRect();
+    Array.from(document.querySelectorAll("div, span")).forEach(el => {
+      if (panelV92 && panelV92.contains(el)) return;
+      const r = el.getBoundingClientRect();
+      if (r.height >= 16 && r.width <= 4 && Math.abs(r.top - rr.top) < 24 && r.left < rr.left && rr.left - r.right < 24) {
+        el.style.setProperty("visibility", "hidden", "important");
+      }
+    });
+  }
+
+  function styleButton92(btn, kind) {
+    btn.style.cssText = [
+      "box-sizing:border-box",
+      "font:inherit",
+      "cursor:pointer",
+      "white-space:nowrap",
+      "display:inline-flex",
+      "align-items:center",
+      "justify-content:center",
+      "gap:7px",
+      "margin:0"
+    ].join(";");
+
+    if (kind === "reset") {
+      btn.style.cssText += ";width:100%;min-height:38px;padding:8px 12px;border-radius:10px;border:1px solid #D8DEE7;background:#fff;color:#475569;font-size:12px;font-weight:700;";
+    } else if (kind === "location") {
+      btn.style.cssText += `;width:100%;min-height:38px;padding:8px 12px;border-radius:10px;border:1px solid #C9C5EE;background:#F3F1FB;color:${VERY_PERI};font-size:12px;font-weight:700;`;
+    } else {
+      btn.style.cssText += `;border:0;background:transparent;color:${kind};font-size:12px;font-weight:700;padding:4px 6px;`;
+    }
+  }
+
+  function buildPanel92(orig) {
+    if (panelV92) panelV92.remove();
+    panelV92 = document.createElement("div");
+    panelV92.id = "psLegendPanelV92";
+    panelV92.style.cssText = [
+      "position:absolute",
+      "z-index:2147483000",
+      "background:#fff",
+      "border:1px solid #D9DEE7",
+      "border-radius:14px",
+      "box-shadow:0 2px 8px rgba(15,23,42,.08)",
+      "padding:12px 16px",
+      "box-sizing:border-box",
+      "display:flex",
+      "flex-direction:column",
+      "gap:12px",
+      "pointer-events:auto"
+    ].join(";");
+
+    const top = document.createElement("div");
+    top.style.cssText = "display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:center;justify-items:center;width:100%;";
+
+    const specs = [
+      ["Procurado", "#EF2222"],
+      ["Avistado", "#159BD3"],
+      ["Reencontrado 🎉", "#169C48"]
+    ];
+    specs.forEach(([label,color],i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      styleButton92(b, color);
+      b.innerHTML = `<span style="width:11px;height:11px;border-radius:50%;background:${color};display:inline-block;flex:0 0 11px"></span><span>${label}</span>`;
+      b.addEventListener("click", () => {
+        const status = i === 0 ? "Procurado" : i === 1 ? "Avistado" : "Reencontrado";
+        if (typeof window.applyStatusFilterFromLegend === "function") window.applyStatusFilterFromLegend(status);
+        else try { orig.status[i].click(); } catch (_) {}
+      });
+      top.appendChild(b);
+    });
+
+    const bottom = document.createElement("div");
+    bottom.style.cssText = "display:grid;grid-template-columns:repeat(2,minmax(140px,170px));gap:14px;justify-content:center;align-items:center;width:100%;";
+
+    const reset = document.createElement("button");
+    reset.type = "button";
+    styleButton92(reset, "reset");
+    reset.innerHTML = '<span style="font-size:16px;line-height:1">↻</span><span>Resetar Visão</span>';
+    reset.addEventListener("click", () => orig.reset.click());
+
+    const location = document.createElement("button");
+    location.type = "button";
+    styleButton92(location, "location");
+    location.innerHTML = '<span style="font-size:16px;line-height:1;color:#6667AB">📍</span><span>Minha localização</span>';
+    location.addEventListener("click", () => {
+      if (typeof window.positionMapAtUserV86 === "function") window.positionMapAtUserV86(true);
+      else try { orig.location.click(); } catch (_) {}
+    });
+
+    bottom.append(reset, location);
+    panelV92.append(top, bottom);
+    document.body.appendChild(panelV92);
+
+    const style = document.createElement("style");
+    style.id = "psLegendPanelV92Responsive";
+    style.textContent = `
+      @media (max-width:520px) {
+        #psLegendPanelV92 { padding:9px 9px !important; gap:8px !important; }
+        #psLegendPanelV92 > div:first-child { gap:3px !important; }
+        #psLegendPanelV92 > div:first-child button { font-size:10px !important; padding:3px 2px !important; gap:4px !important; }
+        #psLegendPanelV92 > div:last-child { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:7px !important; }
+        #psLegendPanelV92 > div:last-child button { min-height:34px !important; font-size:10px !important; padding:6px 5px !important; }
+      }
+    `;
+    if (!document.getElementById(style.id)) document.head.appendChild(style);
+  }
+
+  function positionPanel92(orig) {
+    if (!panelV92) return;
+    const all = [...orig.status, orig.reset, orig.location];
+    const u = unionRect92(all);
+    if (!u) return;
+
+    // usa a posição real do painel atual e aumenta só o necessário para o layout 3+2
+    const desiredWidth = Math.max(390, Math.min(540, u.width + 36));
+    const desiredHeight = window.innerWidth <= 520 ? 98 : 108;
+    const viewportRight = window.scrollX + document.documentElement.clientWidth;
+    let left = window.scrollX + u.left - 12;
+    if (left + desiredWidth > viewportRight - 12) left = viewportRight - desiredWidth - 12;
+    if (left < window.scrollX + 12) left = window.scrollX + 12;
+    const top = window.scrollY + u.top - 10;
+
+    panelV92.style.left = `${left}px`;
+    panelV92.style.top = `${top}px`;
+    panelV92.style.width = `${desiredWidth}px`;
+    panelV92.style.minHeight = `${desiredHeight}px`;
+  }
+
+  function install92() {
+    const orig = getOriginals92();
+    if (!orig) return false;
+    anchorElementsV92 = [...orig.status, orig.reset, orig.location];
+    hideOriginals92(orig);
+    buildPanel92(orig);
+    positionPanel92(orig);
+    console.log("🎯 v92: painel 3+2 redesenhado por cima da legenda usando as coordenadas reais dos controles.");
+    return true;
+  }
+
+  function boot92() {
+    if (!install92()) {
+      const obs = new MutationObserver(() => {
+        if (install92()) obs.disconnect();
+      });
+      obs.observe(document.documentElement,{childList:true,subtree:true});
+      [100,250,500,900,1500,2500,4000,6000].forEach(ms=>setTimeout(install92,ms));
+    }
+
+    const reposition = () => {
+      const orig = getOriginals92();
+      if (orig && panelV92) positionPanel92(orig);
+    };
+    window.addEventListener("resize", reposition, { passive:true });
+    window.addEventListener("scroll", reposition, { passive:true });
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded",boot92,{once:true});
+  else boot92();
 })();
