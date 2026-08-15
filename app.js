@@ -185,7 +185,7 @@ function savePetsToCloud() {
       console.error("❌ Falha ao salvar no Firebase:", p.name, e);
     }
   });
-}
+}  // <-- fecha a função aqui corretamente
 
 // --- TODOS OS 27 ESTADOS DO BRASIL (IBGE) ---
 const BRAZIL_UFS = [
@@ -219,6 +219,7 @@ const BRAZIL_UFS = [
 ];
 
 const citiesCache = {};
+
 
 // --- MOCK INITIAL DATASET ---
 const INITIAL_PETS = [
@@ -5061,3 +5062,22 @@ window.adminEditPet = adminEditPet;
 window.adminDeletePet = adminDeletePet;
 window.downloadPosterJPG = downloadPosterJPG;
 window.getRandomDefaultPhoto = getRandomDefaultPhoto;
+
+async function repopulateFirestore() {
+  if (!db || !firestoreSDK) {
+    console.error("❌ Firestore não está inicializado.");
+    return;
+  }
+
+  for (const pet of INITIAL_PETS) {
+    try {
+      await savePetToFirebase(pet);
+      console.log("✅ Pet restaurado:", pet.name);
+    } catch (e) {
+      console.error("❌ Erro ao restaurar pet:", pet.name, e);
+    }
+  }
+}
+
+// Chame a função uma vez para repopular
+repopulateFirestore();
