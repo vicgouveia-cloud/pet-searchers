@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v103 carregado - JPG 4x5 sem linhas e com cantos arredondados");
+console.log("✅ Pet Searchers app.js BUILD v104 carregado - correção Safari iPhone SE no título PROCURA-SE");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -4949,6 +4949,55 @@ function ensureUnifiedPosterStyles() {
     #posterArea.ps-social-poster * {
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
+    }
+
+
+
+    /* ================================================================
+       v104 — Correção Safari iPhone SE / html2canvas
+       Evita corte na parte inferior de "PROCURA-SE".
+       ================================================================ */
+
+    #posterArea.ps-social-poster .ps-poster-title {
+      top: 27px !important;
+      height: 82px !important;
+      min-height: 82px !important;
+      line-height: 1.08 !important;
+      padding: 5px 0 9px !important;
+      box-sizing: border-box !important;
+      overflow: visible !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 60px !important;
+      font-family: Arial, Helvetica, sans-serif !important;
+      -webkit-font-smoothing: antialiased !important;
+      text-rendering: geometricPrecision !important;
+    }
+
+    #posterArea.ps-social-poster .ps-poster-date {
+      top: 116px !important;
+      height: 31px !important;
+      line-height: 31px !important;
+    }
+
+    /* Evita clipping imposto por wrappers durante a captura do canvas. */
+    #posterArea.ps-social-poster .ps-poster-header {
+      overflow: hidden !important;
+    }
+
+    #posterArea.ps-social-poster .ps-poster-title span,
+    #posterArea.ps-social-poster .ps-poster-title strong {
+      line-height: inherit !important;
+      padding-bottom: 3px !important;
+    }
+
+    /* Safari mobile costuma calcular bounding boxes de texto com 1–3 px a menos.
+       Este transform óptico move o texto levemente para cima sem alterar o layout. */
+    @supports (-webkit-touch-callout: none) {
+      #posterArea.ps-social-poster .ps-poster-title {
+        padding-bottom: 12px !important;
+      }
     }
 
 
