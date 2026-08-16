@@ -5821,7 +5821,7 @@ function buildUnifiedPoster(pet, format = "social") {
         </div>
 
         <div class="ps-info-column">
-          <h2 id="posterPetName" class="ps-pet-name">${name}</h2>
+          <h2 id="posterPetName" class="ps-pet-name" style="text-align: center !important; font-size: ${normalizedFormat === 'a4' ? '38px' : '34px'} !important; font-weight: 900 !important; color: #ef1717 !important; text-transform: uppercase !important; margin: 0 0 14px 0 !important; width: 100% !important; display: block !important;">${name}</h2>
 
           <div class="ps-info-box">
             <div class="ps-info-label">Idade</div>
@@ -6046,7 +6046,7 @@ function fitPosterPetNameSingleLine(root, format = "social") {
 
   const isA4 = format === "a4";
   const startSize = isA4 ? 38 : 34;
-  const minSize = isA4 ? 18 : 17;
+  const minSize = isA4 ? 20 : 18;
 
   nameEl.style.setProperty("white-space", "nowrap", "important");
   nameEl.style.setProperty("overflow-wrap", "normal", "important");
@@ -6057,11 +6057,14 @@ function fitPosterPetNameSingleLine(root, format = "social") {
   nameEl.style.setProperty("text-align", "center", "important");
   nameEl.style.setProperty("font-size", `${startSize}px`, "important");
 
-  // Force layout before measuring.
   void nameEl.offsetWidth;
 
+  // Largura real da coluna de texto (276px no social, 280px no A4)
+  const defaultColumnWidth = isA4 ? 280 : 274;
+  const measuredWidth = nameEl.clientWidth;
+  const available = (measuredWidth >= 120) ? (measuredWidth - 4) : defaultColumnWidth;
+
   let size = startSize;
-  const available = Math.max(1, nameEl.clientWidth - 2);
 
   while (size > minSize && nameEl.scrollWidth > available) {
     size -= 1;
@@ -6069,7 +6072,6 @@ function fitPosterPetNameSingleLine(root, format = "social") {
     void nameEl.offsetWidth;
   }
 
-  // Last safety margin for Safari/Chrome PDF rasterization.
   if (nameEl.scrollWidth > available && size > minSize) {
     size = minSize;
     nameEl.style.setProperty("font-size", `${size}px`, "important");
