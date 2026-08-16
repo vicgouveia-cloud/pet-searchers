@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v98 carregado - menu do mapa ajustado à referência aprovada");
+console.log("✅ Pet Searchers app.js BUILD v99 carregado - ícones de status nos marcadores do mapa");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -1527,13 +1527,17 @@ function updateMapMarkers(filteredPets) {
     let badgeColor = "bg-sky-500";
     let badgeText = getDisplayStatusLabel(pet.type);
 
+    let markerIconName = "visibility"; // Avistado
+
     if (pet.type === "Procurado") {
       markerColor = "#E52421";
       badgeColor = "bg-[#E52421]";
+      markerIconName = "warning";
     } else if (isResolved) {
       markerColor = "#16A34A";
       badgeColor = "bg-green-600";
       badgeText = "Reencontrado 🎉";
+      markerIconName = "check_circle";
     }
 
     const cleanPhone = (pet.contactPhone || '').replace(/\D/g, "");
@@ -1575,17 +1579,25 @@ function updateMapMarkers(filteredPets) {
         </div>
       </div>`;
 
-    // CircleMarker usa SVG do próprio Leaflet e NÃO depende de CSS externo.
-    // Isso evita o caso em que o marcador é criado, mas fica invisível porque
-    // as classes custom-marker-circle/marker-circle-* não existem no CSS carregado.
-    const marker = L.circleMarker([mapLat, mapLng], {
-      radius: 8,
-      color: "#FFFFFF",
-      weight: 2,
-      opacity: 1,
-      fillColor: markerColor,
-      fillOpacity: 0.95,
-      bubblingMouseEvents: true
+    // Marcador com ícone semântico:
+    // Procurado = aviso; Avistado = olho; Reencontrado = confirmação.
+    const markerIcon = L.divIcon({
+      className: "pet-map-icon-wrapper",
+      html: `
+        <div class="pet-map-status-icon" style="background:${markerColor}" aria-hidden="true">
+          <span class="material-symbols-outlined">${markerIconName}</span>
+        </div>
+      `,
+      iconSize: [25, 25],
+      iconAnchor: [12.5, 12.5],
+      popupAnchor: [0, -14]
+    });
+
+    const marker = L.marker([mapLat, mapLng], {
+      icon: markerIcon,
+      bubblingMouseEvents: true,
+      riseOnHover: true,
+      zIndexOffset: pet.type === "Procurado" ? 300 : (isResolved ? 100 : 200)
     })
       .addTo(leafletMap)
       .bindPopup(popupHtml, { maxWidth: 190, minWidth: 176, autoPan: true, autoPanPadding: [22, 55], keepInView: true, closeButton: false });
@@ -2000,17 +2012,26 @@ function locateUserOnMap() {
             interactive: false
           }).addTo(leafletMap);
 
-          userMapLocationLayer = L.circleMarker([lat, lng], {
-            radius: 7,
-            color: "#ffffff",
-            weight: 3,
-            fillColor: "#6667AB",
-            fillOpacity: 1
+          const userPersonIcon = L.divIcon({
+            className: "user-map-icon-wrapper",
+            html: `
+              <div class="user-map-person-icon" aria-hidden="true">
+                <span class="material-symbols-outlined">person</span>
+              </div>
+            `,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+          });
+
+          userMapLocationLayer = L.marker([lat, lng], {
+            icon: userPersonIcon,
+            interactive: true,
+            zIndexOffset: 2000
           }).addTo(leafletMap);
 
           userMapLocationLayer.bindTooltip("Sua localização aproximada", {
             direction: "top",
-            offset: [0, -8],
+            offset: [0, -15],
             opacity: 0.95
           });
 
