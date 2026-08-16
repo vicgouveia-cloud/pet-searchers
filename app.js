@@ -4703,12 +4703,13 @@ function ensureUnifiedPosterStyles() {
 
     #posterArea .ps-pet-name {
       color: #ef1717;
-      font-size: 34px;
+      font-size: 37px;
       line-height: 1;
       font-weight: 900;
       margin: 0 0 14px;
       text-transform: uppercase;
       overflow-wrap: anywhere;
+      text-align: center !important;
     }
 
     #posterArea .ps-info-box {
@@ -4976,9 +4977,10 @@ function ensureUnifiedPosterStyles() {
     }
 
     #posterArea.ps-social-poster .ps-pet-name {
-      font-size: 31px !important;
+      font-size: 34px !important;
       line-height: 1.02 !important;
       margin: 0 0 12px !important;
+      text-align: center !important;
     }
 
     #posterArea.ps-social-poster .ps-info-box {
@@ -5238,12 +5240,13 @@ function ensureUnifiedPosterStyles() {
     }
 
     #posterArea.ps-social-poster .ps-pet-name {
-      font-size: 31px !important;
+      font-size: 34px !important;
       line-height: 1.01 !important;
       margin: 0 0 12px !important;
       color: #ef1717 !important;
       font-weight: 900 !important;
       overflow-wrap: anywhere !important;
+      text-align: center !important;
     }
 
     #posterArea.ps-social-poster .ps-info-box {
@@ -5555,7 +5558,8 @@ function ensureUnifiedPosterStyles() {
     }
 
     #posterArea.ps-a4-poster .ps-pet-name {
-      font-size: 35px;
+      font-size: 38px !important;
+      text-align: center !important;
     }
 
 
@@ -5673,6 +5677,7 @@ function ensureUnifiedPosterStyles() {
       text-overflow: clip !important;
       font-family: Arial, Helvetica, sans-serif !important;
       line-height: 1.05 !important;
+      text-align: center !important;
     }
 
 
@@ -6040,7 +6045,7 @@ function fitPosterPetNameSingleLine(root, format = "social") {
   if (!nameEl) return;
 
   const isA4 = format === "a4";
-  const startSize = isA4 ? 35 : 31;
+  const startSize = isA4 ? 38 : 34;
   const minSize = isA4 ? 18 : 17;
 
   nameEl.style.setProperty("white-space", "nowrap", "important");
@@ -6049,6 +6054,7 @@ function fitPosterPetNameSingleLine(root, format = "social") {
   nameEl.style.setProperty("hyphens", "none", "important");
   nameEl.style.setProperty("width", "100%", "important");
   nameEl.style.setProperty("max-width", "100%", "important");
+  nameEl.style.setProperty("text-align", "center", "important");
   nameEl.style.setProperty("font-size", `${startSize}px`, "important");
 
   // Force layout before measuring.
