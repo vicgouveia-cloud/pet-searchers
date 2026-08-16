@@ -35,6 +35,7 @@ async function initFirebaseConnection() {
     return false;
   }
 }
+
 // --- MAPEAMENTO OFICIAL DE CAPITAIS DOS 27 ESTADOS DO BRASIL ---
 const STATE_CAPITALS = {
   AC: "Rio Branco", AL: "Maceió", AP: "Macapá", AM: "Manaus", BA: "Salvador",
@@ -159,13 +160,13 @@ function savePetsToCloud() {
 
   petsData.forEach(async (p) => {
     try {
-      await savePetToFirebase(p); // usa apenas o Firebase
+      await savePetToFirebase(p);
       console.log("✅ Pet sincronizado com Firebase:", p.name);
     } catch (e) {
       console.error("❌ Falha ao salvar no Firebase:", p.name, e);
     }
   });
-}  // <-- fecha a função aqui corretamente
+}
 
 // --- TODOS OS 27 ESTADOS DO BRASIL (IBGE) ---
 const BRAZIL_UFS = [
@@ -272,8 +273,7 @@ function initDatePicker() {
   }
 }
 
-// --- GEOLOCALIZAÇÃO PRECISA E INTELIGENTE EM CASCATA ---
-// --- DICIOMÁRIO LOCAL DE EMERGÊNCIA DE COORDENADAS POR CIDADE ---
+// --- DICIONÁRIO LOCAL DE EMERGÊNCIA DE COORDENADAS POR CIDADE ---
 const POPULAR_CITY_COORDINATES = {
   // Rio de Janeiro
   "petropolis": { lat: -22.5050, lng: -43.1788 },
@@ -490,9 +490,8 @@ async function fetchGeocodeCoordinates(address = "", city = "", state = "") {
   if (rawAddress && cleanCity && cleanState) {
     const candidates = [];
 
-    // Limpeza profunda de anotações entre parênteses, prefixos, sufixos e ruídos
     let cleanAddress = rawAddress
-      .replace(/\(.*?\)/g, " ") // remove tudo entre parênteses ex: "(ao lado da Casa de Festas JM)"
+      .replace(/\(.*?\)/g, " ")
       .replace(/,\s*[A-Z]{2}\b/gi, "")
       .replace(/-\s*[A-Z]{2}\b/gi, "")
       .replace(new RegExp(cleanCity, "gi"), "")
@@ -500,12 +499,10 @@ async function fetchGeocodeCoordinates(address = "", city = "", state = "") {
       .replace(/\s+/g, " ")
       .trim();
 
-    // 1. Endereço Limpo Completo na Cidade
     if (cleanAddress && cleanAddress.length >= 3) {
       candidates.push(`${cleanAddress}, ${cleanCity}, ${cleanState}, Brasil`);
     }
 
-    // 2. Tenta segmentos e bairros/distritos contidos na string de endereço original
     const rawNoParens = rawAddress.replace(/\(.*?\)/g, " ").replace(/\s+/g, " ").trim();
     const segments = rawNoParens.split(/[,;\-\/]/).map(s => s.trim()).filter(s => s.length >= 3);
     
@@ -522,13 +519,11 @@ async function fetchGeocodeCoordinates(address = "", city = "", state = "") {
       }
     }
 
-    // 3. Apenas o nome da rua (removendo números)
     const streetOnly = cleanAddress.replace(/\d+/g, "").trim();
     if (streetOnly && streetOnly.length >= 3 && streetOnly !== cleanAddress) {
       candidates.push(`${streetOnly}, ${cleanCity}, ${cleanState}, Brasil`);
     }
 
-    // 4. Primeiras 3 palavras
     const words = cleanAddress.split(" ");
     if (words.length > 2) {
       const firstWords = words.slice(0, 3).join(" ").replace(/\d+/g, "").trim();
@@ -537,7 +532,6 @@ async function fetchGeocodeCoordinates(address = "", city = "", state = "") {
       }
     }
 
-    // Testa os candidatos únicos em ordem de prioridade
     const uniqueCandidates = [...new Set(candidates)];
     for (let cand of uniqueCandidates) {
       const coords = await singleNominatimQuery(cand, 2400);
@@ -546,7 +540,6 @@ async function fetchGeocodeCoordinates(address = "", city = "", state = "") {
       }
     }
 
-    // 5. Verifica se algum segmento do endereço é um distrito ou bairro conhecido (ex: Pedro do Rio, Itaipava, etc.)
     for (let seg of segments) {
       const distCoords = getLocalCityCoords(seg);
       if (distCoords) {
@@ -555,7 +548,6 @@ async function fetchGeocodeCoordinates(address = "", city = "", state = "") {
     }
   }
 
-  // 5b. Fallback para o Centro da Cidade (via Nominatim)
   if (cleanCity && cleanState) {
     const cityCoords = await singleNominatimQuery(`${cleanCity}, ${cleanState}, Brasil`, 2500);
     if (cityCoords) {
@@ -563,7 +555,6 @@ async function fetchGeocodeCoordinates(address = "", city = "", state = "") {
     }
   }
 
-  // 5c. Fallback para dicionário local de coordenadas por cidade se a API do Nominatim oscilar ou falhar
   const localCityCoords = getLocalCityCoords(cleanCity);
   if (localCityCoords) {
     return localCityCoords;
@@ -1328,9 +1319,7 @@ async function renewPetListing(petId) {
     pet.daysRemaining = 30;
     savePetsToStorage();
 
-    const coords = await fetchGeocodeCoordinates(
-      `${pet.address || ""}, ${pet.city || ""}, ${pet.state || ""}, Brasil`
-    );
+    const coords = await fetchGeocodeCoordinates(pet.address, pet.city, pet.state);
 
     if (coords) {
       pet.lat = coords.lat;
@@ -2166,11 +2155,13 @@ async function adminChangeStatus(petId, newStatus) {
     pet.lastModifiedAt = new Date().toISOString();
     saveEditedPet(pet);
     savePetsToStorage();
-const coords = await fetchGeocodeCoordinates(`${pet.address}, ${pet.city}, ${pet.state}, Brasil`);
-if (coords) {
-  pet.lat = coords.lat;
-  pet.lng = coords.lng;
-}
+
+    const coords = await fetchGeocodeCoordinates(pet.address, pet.city, pet.state);
+    if (coords) {
+      pet.lat = coords.lat;
+      pet.lng = coords.lng;
+    }
+
     await savePetToFirebase(pet);
     renderApp();
     alert(`🎉 O status de "${pet.name}" foi alterado com sucesso para: ${newStatus}!`);
