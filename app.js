@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v105 carregado - PDF A4 sem linhas no cabeçalho e nome em uma linha");
+console.log("✅ Pet Searchers app.js BUILD v106 carregado - fontes da coluna do cartaz +2pt");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -5135,6 +5135,60 @@ function ensureUnifiedPosterStyles() {
       text-overflow: clip !important;
       font-family: Arial, Helvetica, sans-serif !important;
       line-height: 1.05 !important;
+    }
+
+
+
+    /* ================================================================
+       v106 — Coluna de informações +2pt
+       Aplicado ao JPG 4:5 e ao PDF A4.
+       ================================================================ */
+
+    #posterArea .ps-info-label {
+      font-size: 12px !important;
+    }
+
+    #posterArea .ps-info-value {
+      font-size: 15px !important;
+    }
+
+    #posterArea .ps-observation,
+    #posterArea .ps-observation .ps-info-value {
+      font-size: 15px !important;
+      line-height: 1.30 !important;
+    }
+
+    #posterArea .ps-last-title {
+      font-size: 13px !important;
+    }
+
+    #posterArea .ps-last-text {
+      font-size: 14.5px !important;
+      line-height: 1.42 !important;
+    }
+
+    /* No A4, mantém o mesmo ganho visual de aproximadamente 2pt. */
+    #posterArea.ps-a4-poster .ps-info-label {
+      font-size: 13px !important;
+    }
+
+    #posterArea.ps-a4-poster .ps-info-value {
+      font-size: 16px !important;
+    }
+
+    #posterArea.ps-a4-poster .ps-observation,
+    #posterArea.ps-a4-poster .ps-observation .ps-info-value {
+      font-size: 16px !important;
+      line-height: 1.30 !important;
+    }
+
+    #posterArea.ps-a4-poster .ps-last-title {
+      font-size: 14px !important;
+    }
+
+    #posterArea.ps-a4-poster .ps-last-text {
+      font-size: 15.5px !important;
+      line-height: 1.42 !important;
     }
 
 
