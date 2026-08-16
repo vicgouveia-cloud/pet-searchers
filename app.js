@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v106 carregado - fontes da coluna do cartaz +2pt");
+console.log("✅ Pet Searchers app.js BUILD v107 carregado - geocodificação por cidade sem fallback incorreto para capital");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -565,6 +565,11 @@ const POPULAR_CITY_COORDINATES = {
   "barueri": { lat: -23.5111, lng: -46.8761 },
   "limeira": { lat: -22.5647, lng: -47.4017 },
   "suzano": { lat: -23.5414, lng: -46.3108 },
+  "sumare": { lat: -22.8216, lng: -47.2669 },
+  "hortolandia": { lat: -22.8583, lng: -47.2200 },
+  "americana": { lat: -22.7392, lng: -47.3314 },
+  "nova odessa": { lat: -22.7775, lng: -47.2958 },
+  "paulinia": { lat: -22.7611, lng: -47.1542 },
   // Minas Gerais
   "belo horizonte": { lat: -19.9167, lng: -43.9345 },
   "juiz de fora": { lat: -21.7665, lng: -43.3496 },
@@ -711,6 +716,65 @@ function getLocalCityCoords(cityName) {
   return POPULAR_CITY_COORDINATES[normalized] || null;
 }
 
+// --- VALIDAÇÃO GEOGRÁFICA DOS RESULTADOS DE GEOCODIFICAÇÃO ---
+function normalizeGeoText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function distanceKmBetweenCoords(lat1, lng1, lat2, lng2) {
+  const toRad = deg => deg * Math.PI / 180;
+  const R = 6371;
+  const dLat = toRad(Number(lat2) - Number(lat1));
+  const dLng = toRad(Number(lng2) - Number(lng1));
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(Number(lat1))) *
+      Math.cos(toRad(Number(lat2))) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function isNearStateCapitalCoords(lat, lng, state, toleranceKm = 18) {
+  const ufObj = BRAZIL_UFS.find(u => u.sigla === String(state || "").trim().toUpperCase());
+  if (!ufObj || !Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) return false;
+  return distanceKmBetweenCoords(lat, lng, ufObj.lat, ufObj.lng) <= toleranceKm;
+}
+
+function isCoordinatesPlausibleForCity(coords, city, state) {
+  if (!coords || !Number.isFinite(Number(coords.lat)) || !Number.isFinite(Number(coords.lng))) {
+    return false;
+  }
+
+  const normalizedCity = normalizeGeoText(city);
+  const normalizedState = String(state || "").trim().toUpperCase();
+  if (!normalizedCity) return true;
+
+  // Quando a cidade existe no dicionário local, rejeita resultados muito distantes.
+  // 60 km permite bairros/distritos/regiões rurais sem aceitar outra metrópole.
+  const localCity = getLocalCityCoords(city);
+  if (localCity) {
+    const distanceFromCity = distanceKmBetweenCoords(
+      coords.lat, coords.lng, localCity.lat, localCity.lng
+    );
+    if (distanceFromCity > 60) return false;
+  }
+
+  // Nunca aceita silenciosamente a capital para uma cidade explicitamente diferente.
+  const capitalName = normalizeGeoText(getCapitalCityForState(normalizedState));
+  if (
+    normalizedCity !== capitalName &&
+    isNearStateCapitalCoords(coords.lat, coords.lng, normalizedState, 18)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 // --- CONSULTA SEGURA AO NOMINATIM ---
 async function singleNominatimQuery(query, timeoutMs = 3500) {
   if (!query) return null;
@@ -800,7 +864,7 @@ async function fetchGeocodeCoordinates(address = "", city = "", state = "") {
     const uniqueCandidates = [...new Set(candidates)];
     for (let cand of uniqueCandidates) {
       const coords = await singleNominatimQuery(cand, 2400);
-      if (coords) {
+      if (coords && isCoordinatesPlausibleForCity(coords, cleanCity, cleanState)) {
         return coords;
       }
     }
@@ -817,7 +881,7 @@ async function fetchGeocodeCoordinates(address = "", city = "", state = "") {
   // 5b. Fallback para o Centro da Cidade (via Nominatim)
   if (cleanCity && cleanState) {
     const cityCoords = await singleNominatimQuery(`${cleanCity}, ${cleanState}, Brasil`, 2500);
-    if (cityCoords) {
+    if (cityCoords && isCoordinatesPlausibleForCity(cityCoords, cleanCity, cleanState)) {
       return cityCoords;
     }
   }
@@ -828,14 +892,45 @@ async function fetchGeocodeCoordinates(address = "", city = "", state = "") {
     return localCityCoords;
   }
 
-  // 6. Fallback final para a Capital / Estado (UF)
-  const ufObj = BRAZIL_UFS.find(u => u.sigla === cleanState) || { lat: -23.5505, lng: -46.6333 };
-  return { lat: ufObj.lat, lng: ufObj.lng };
+  // 6. Não usa mais a capital do estado como fallback para uma cidade diferente.
+  // Uma coordenada ausente é preferível a exibir o pet em uma cidade errada.
+  console.warn(`⚠️ Geocodificação sem resultado confiável para: ${cleanCity}/${cleanState}`, rawAddress);
+  return null;
 }
 
 async function retroactiveGeocodePets() {
   let updated = false;
   const petsNeedingPreciseGeocode = [];
+
+  // v107: correção imediata de registros antigos posicionados na capital.
+  // Ex.: um pet de Sumaré/SP salvo anteriormente em São Paulo/SP.
+  for (const pet of petsData) {
+    const cityCenter = getLocalCityCoords(pet.city);
+    const normalizedPetCity = normalizeGeoText(pet.city);
+    const normalizedCapital = normalizeGeoText(getCapitalCityForState(pet.state));
+
+    if (
+      cityCenter &&
+      normalizedPetCity &&
+      normalizedPetCity !== normalizedCapital &&
+      isNearStateCapitalCoords(Number(pet.lat), Number(pet.lng), pet.state, 18)
+    ) {
+      console.warn(
+        `📍 Corrigindo posição antiga de ${pet.name || "pet"}:`,
+        `${pet.city}/${pet.state}`,
+        "estava nas coordenadas da capital."
+      );
+      pet.lat = cityCenter.lat;
+      pet.lng = cityCenter.lng;
+      pet.geocodedCity = pet.city || "";
+      pet.geocodedAddress = "";
+      updated = true;
+
+      try {
+        if (pet.id && typeof saveEditedPet === "function") saveEditedPet(pet);
+      } catch (_) {}
+    }
+  }
 
   // Primeiro: garante que TODOS os pets tenham uma posição utilizável no mapa.
   // Isso não bloqueia a abertura do portal esperando dezenas de consultas externas.
@@ -848,20 +943,37 @@ async function retroactiveGeocodePets() {
     const validCoords = Number.isFinite(Number(pet.lat)) && Number.isFinite(Number(pet.lng)) &&
       Math.abs(Number(pet.lat)) <= 90 && Math.abs(Number(pet.lng)) <= 180;
 
-    if (!validCoords) {
+    const normalizedPetCity = normalizeGeoText(pet.city);
+    const normalizedCapital = normalizeGeoText(getCapitalCityForState(pet.state));
+    const isWrongCapitalPosition =
+      validCoords &&
+      normalizedPetCity &&
+      normalizedPetCity !== normalizedCapital &&
+      isNearStateCapitalCoords(Number(pet.lat), Number(pet.lng), pet.state, 18);
+
+    if (!validCoords || isWrongCapitalPosition) {
+      // Prioriza o centro conhecido da cidade. Nunca substitui automaticamente
+      // por coordenadas da capital do estado.
       const cityCoords = getLocalCityCoords(pet.city);
-      const ufObj = BRAZIL_UFS.find(u => u.sigla === pet.state);
-      const fallback = cityCoords || (ufObj ? { lat: ufObj.lat, lng: ufObj.lng } : { lat: -14.235, lng: -51.9253 });
-      pet.lat = fallback.lat;
-      pet.lng = fallback.lng;
-      pet.geocodedCity = pet.city || "";
-      pet.geocodedAddress = pet.address || "";
-      updated = true;
+      if (cityCoords) {
+        pet.lat = cityCoords.lat;
+        pet.lng = cityCoords.lng;
+        pet.geocodedCity = pet.city || "";
+        pet.geocodedAddress = "";
+        updated = true;
+      }
+
+      // Mesmo após aplicar o centro local, tenta obter o endereço mais preciso.
+      if (!petsNeedingPreciseGeocode.includes(pet)) {
+        petsNeedingPreciseGeocode.push(pet);
+      }
     }
 
     const cityChanged = !pet.geocodedCity || pet.geocodedCity !== pet.city;
     const addressChanged = !pet.geocodedAddress || pet.geocodedAddress !== pet.address;
-    if (cityChanged || addressChanged) petsNeedingPreciseGeocode.push(pet);
+    if ((cityChanged || addressChanged) && !petsNeedingPreciseGeocode.includes(pet)) {
+      petsNeedingPreciseGeocode.push(pet);
+    }
   }
 
   if (updated) {
@@ -873,11 +985,22 @@ async function retroactiveGeocodePets() {
   for (const pet of petsNeedingPreciseGeocode) {
     try {
       const coords = await fetchGeocodeCoordinates(pet.address, pet.city, pet.state);
-      if (coords && (coords.lat !== pet.lat || coords.lng !== pet.lng)) {
+      if (
+        coords &&
+        isCoordinatesPlausibleForCity(coords, pet.city, pet.state) &&
+        (coords.lat !== pet.lat || coords.lng !== pet.lng)
+      ) {
         pet.lat = coords.lat;
         pet.lng = coords.lng;
         pet.geocodedCity = pet.city || "";
         pet.geocodedAddress = pet.address || "";
+
+        // Persiste também no mapa de edições para impedir que um snapshot antigo
+        // do Firebase/localStorage reverta a correção no próximo carregamento.
+        try {
+          if (pet.id && typeof saveEditedPet === "function") saveEditedPet(pet);
+        } catch (_) {}
+
         savePetsToStorage();
         renderApp();
         if (db && firestoreSDK) await savePetToFirebase(pet);
