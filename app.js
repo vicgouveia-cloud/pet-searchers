@@ -300,7 +300,6 @@ function listenToFirebasePets() {
 
       const editedMap = getEditedPetsMap();
 
-      // Aplica edições salvas do Administrador nos registros vindos da nuvem
       const mergedCloudPets = filteredPets.map(cloudPet => {
         const localEdit = editedMap[cloudPet.id];
         let merged = localEdit ? { ...cloudPet, ...localEdit } : { ...cloudPet };
@@ -447,8 +446,6 @@ let userMapLocationAccuracyLayer = null;
 // Admin State
 let isAdminAuthenticated = false;
 let purgedCountTotal = 0;
-
-// Date Picker Instance (Flatpickr pt-BR)
 let datePickerInstance = null;
 
 // --- GERENCIAMENTO DE SENHA ADMIN ---
@@ -804,7 +801,6 @@ async function fetchGeocodeCoordinates(address = "", city = "", state = "") {
   let cleanState = (state || "").trim().toUpperCase();
   let cleanCity = (city || "").trim();
 
-  // Resolve automaticamente "Capital" para o nome verdadeiro da Capital do estado (ex: CE -> Fortaleza, SP -> São Paulo, etc.)
   if (!cleanCity || cleanCity.toLowerCase() === "capital") {
     cleanCity = getCapitalCityForState(cleanState);
   }
@@ -1017,7 +1013,6 @@ async function retroactiveGeocodePets() {
 function sanitizePetObject(pet) {
   if (!pet) return pet;
 
-  // Converte "Capital" para o nome real da capital do estado (ex: CE -> Fortaleza, SP -> São Paulo, etc.)
   if (pet.city && (pet.city.trim().toLowerCase() === "capital" || pet.city.trim() === "")) {
     pet.city = getCapitalCityForState(pet.state);
   }
@@ -1127,9 +1122,6 @@ function markPetAsDeleted(petId) {
   }
 }
 
-// --- FIREBASE FIRESTORE SYNC & PERSISTENCE ENGINE ---
-
-// --- AUTOMATED 30-DAY EXPIRATION ENGINE ---
 function runAutoPurgeEngine() {
   const now = new Date();
   const validPets = [];
@@ -1160,7 +1152,6 @@ function runAutoPurgeEngine() {
   }
 }
 
-// --- LOCATION DROPDOWN INITIALIZATION (TODOS OS ESTADOS E CIDADES DO BRASIL VIA IBGE) ---
 function initLocationSelectors() {
   const filterState = document.getElementById("filterState");
   const filterCity = document.getElementById("filterCity");
@@ -1294,7 +1285,6 @@ function initLeafletMap() {
     zoomControl: true
   });
 
-  // Camada oficial do Google Maps Roadmap (Visual limpo, atualizado e em Português-BR)
   L.tileLayer('https://{s}.google.com/vt/lyrs=m&hl=pt-BR&x={x}&y={y}&z={z}', {
     maxZoom: 20,
     subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
@@ -1787,7 +1777,6 @@ function focusPetOnMap(petId) {
   const mapCoords = getPetMapCoordinates(pet);
   if (!mapCoords) return;
 
-  // 1. Rola a tela suavemente até a seção do mapa
   const mapElement = document.getElementById("mapSection") || document.getElementById("map");
   if (mapElement) {
     mapElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1819,6 +1808,445 @@ function focusPetOnMap(petId) {
   }
 }
 
+function getMapLegendFilterElements() {
+  const statusByLabel = {
+    "procurado": "Procurado",
+    "avistado": "Avistado",
+    "reencontrado": "Reencontrado",
+    "reencontrado 🎉": "Reencontrado"
+  };
+
+  const results = [];
+  const seen = new Set();
+
+  document.querySelectorAll(".legend-filter-btn").forEach(el => {
+    const status = el.dataset.legendStatus || statusByLabel[(el.textContent || "").trim().toLowerCase()];
+    if (status && !seen.has(el)) {
+      el.dataset.legendStatus = status;
+      results.push(el);
+      seen.add(el);
+    }
+  });
+
+  document.querySelectorAll("button, a, [role='button'], span, div").forEach(el => {
+    const label = (el.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+    const status = statusByLabel[label];
+    if (!status) return;
+
+    const childText = Array.from(el.children || [])
+      .map(c => (c.textContent || "").replace(/\s+/g, " ").trim().toLowerCase())
+      .filter(Boolean);
+    if (childText.some(t => statusByLabel[t])) return;
+
+    if (!seen.has(el)) {
+      el.dataset.legendStatus = status;
+      el.classList.add("legend-filter-btn");
+      el.style.cursor = "pointer";
+      el.setAttribute("role", "button");
+      el.setAttribute("tabindex", "0");
+      el.setAttribute("aria-label", `Filtrar mapa por ${status}`);
+      results.push(el);
+      seen.add(el);
+    }
+  });
+
+  return results;
+}
+
+function applyStatusFilterFromLegend(status) {
+  currentActiveFilters.status =
+    currentActiveFilters.status === status ? "" : status;
+
+  syncStatusFilterUI();
+  renderApp();
+}
+
+function getMapLegendResetElement() {
+  const candidates = document.querySelectorAll("button, a, [role='button'], span, div");
+  for (const el of candidates) {
+    const label = (el.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+    if (label !== "resetar visão") continue;
+
+    const childLabels = Array.from(el.children || [])
+      .map(c => (c.textContent || "").replace(/\s+/g, " ").trim().toLowerCase())
+      .filter(Boolean);
+
+    if (childLabels.some(t => t === "resetar visão")) continue;
+    return el;
+  }
+  return null;
+}
+
+function getSmallestCommonAncestor(elements) {
+  const valid = elements.filter(Boolean);
+  if (!valid.length) return null;
+
+  let node = valid[0];
+  while (node && node !== document.body) {
+    if (valid.every(el => node.contains(el))) return node;
+    node = node.parentElement;
+  }
+  return null;
+}
+
+function ensureMapLegendControlStyles() {
+  if (document.getElementById("petSearchersMapLegendStyles")) return;
+
+  const style = document.createElement("style");
+  style.id = "petSearchersMapLegendStyles";
+  style.textContent = `
+    .ps-map-legend-layout {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-sizing: border-box;
+    }
+
+    .ps-map-legend-status-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      align-items: center;
+      box-sizing: border-box;
+    }
+
+    .ps-map-legend-action-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      align-items: stretch;
+      padding-top: 9px;
+      border-top: 1px solid rgba(148, 163, 184, .28);
+      box-sizing: border-box;
+    }
+
+    .ps-map-legend-layout .legend-filter-btn {
+      min-width: 0;
+      min-height: 34px;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 5px !important;
+      padding: 6px 8px !important;
+      border-radius: 10px !important;
+      white-space: nowrap;
+      box-sizing: border-box;
+      transition: background-color .18s ease, transform .18s ease, box-shadow .18s ease;
+    }
+
+    .ps-map-legend-reset,
+    .ps-map-locate-btn {
+      min-width: 0;
+      min-height: 36px;
+      width: 100%;
+      border: 0;
+      border-radius: 10px;
+      padding: 7px 10px;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 6px !important;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      box-sizing: border-box;
+      transition: background-color .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+
+    .ps-map-legend-reset {
+      background: #f8fafc;
+      color: #475569;
+      border: 1px solid #dbe2ea;
+    }
+
+    .ps-map-locate-btn {
+      background: #eaf4ff;
+      color: #0b5cab;
+      border: 1px solid #bdd9f5;
+    }
+
+    .ps-map-legend-reset:hover,
+    .ps-map-locate-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 7px rgba(15, 23, 42, .08);
+    }
+
+    .ps-map-locate-btn[aria-busy="true"] {
+      opacity: .72;
+      cursor: wait;
+    }
+
+    .ps-map-legend-status-row-direct {
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+      align-items: center !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    .ps-map-legend-action-row-direct {
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+      align-items: center !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    .ps-map-legend-action-row-direct > * {
+      min-width: 0 !important;
+    }
+
+    .ps-map-location-actions-v83 {
+      width: 100% !important;
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+      align-items: center !important;
+      box-sizing: border-box !important;
+    }
+
+    @media (max-width: 520px) {
+      .ps-map-location-actions-v83 {
+        gap: 6px !important;
+      }
+
+      .ps-map-location-actions-v83 .ps-map-legend-reset,
+      .ps-map-location-actions-v83 .ps-map-locate-btn {
+        min-height: 32px !important;
+        font-size: 10px !important;
+        padding: 5px 6px !important;
+      }
+
+      .ps-map-legend-layout {
+        gap: 8px;
+      }
+
+      .ps-map-legend-status-row {
+        gap: 4px;
+      }
+
+      .ps-map-legend-layout .legend-filter-btn {
+        min-height: 32px;
+        padding: 5px 4px !important;
+        font-size: 10px !important;
+      }
+
+      .ps-map-legend-action-row {
+        gap: 6px;
+        padding-top: 7px;
+      }
+
+      .ps-map-legend-reset,
+      .ps-map-locate-btn {
+        min-height: 34px;
+        padding: 6px 6px;
+        font-size: 10.5px;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function clearUserMapLocationIndicator() {
+  if (!leafletMap) return;
+
+  if (userMapLocationLayer) {
+    try { leafletMap.removeLayer(userMapLocationLayer); } catch (_) {}
+    userMapLocationLayer = null;
+  }
+
+  if (userMapLocationAccuracyLayer) {
+    try { leafletMap.removeLayer(userMapLocationAccuracyLayer); } catch (_) {}
+    userMapLocationAccuracyLayer = null;
+  }
+}
+
+function getMapZoomForAccuracy(accuracy) {
+  const value = Number(accuracy) || 3000;
+  if (value <= 80) return 16;
+  if (value <= 250) return 15;
+  if (value <= 700) return 14;
+  if (value <= 2000) return 13;
+  if (value <= 5000) return 12;
+  return 11;
+}
+
+function locateUserOnMap() {
+  const btn = document.getElementById("btnMapLocateMe");
+
+  if (!navigator.geolocation) {
+    alert("Seu navegador não disponibiliza geolocalização.");
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.setAttribute("aria-busy", "true");
+    btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">progress_activity</span><span>Localizando...</span>';
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      const lat = Number(position.coords.latitude);
+      const lng = Number(position.coords.longitude);
+      const accuracy = Math.max(20, Number(position.coords.accuracy) || 1000);
+
+      currentUserPosition = { lat, lng };
+
+      if (leafletMap && Number.isFinite(lat) && Number.isFinite(lng)) {
+        clearUserMapLocationIndicator();
+
+        try {
+          userMapLocationAccuracyLayer = L.circle([lat, lng], {
+            radius: accuracy,
+            color: "#6667AB",
+            weight: 1,
+            opacity: 0.65,
+            fillColor: "#8B8CC7",
+            fillOpacity: 0.11,
+            interactive: false
+          }).addTo(leafletMap);
+
+          const userPersonIcon = L.divIcon({
+            className: "user-map-icon-wrapper",
+            html: `
+              <div class="user-map-person-icon" aria-hidden="true">
+                <span class="material-symbols-outlined">person</span>
+              </div>
+            `,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+          });
+
+          userMapLocationLayer = L.marker([lat, lng], {
+            icon: userPersonIcon,
+            interactive: true,
+            zIndexOffset: 2000
+          }).addTo(leafletMap);
+
+          userMapLocationLayer.bindTooltip("Sua localização aproximada", {
+            direction: "top",
+            offset: [0, -15],
+            opacity: 0.95
+          });
+
+          leafletMap.setView([lat, lng], getMapZoomForAccuracy(accuracy), { animate: true });
+          setTimeout(() => {
+            try { leafletMap.invalidateSize(); } catch (_) {}
+          }, 100);
+        } catch (err) {
+          console.warn("Não foi possível posicionar a localização do usuário no mapa:", err);
+        }
+      }
+
+      if (btn) {
+        btn.disabled = false;
+        btn.setAttribute("aria-busy", "false");
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span><span>Minha localização</span>';
+      }
+    },
+    error => {
+      if (btn) {
+        btn.disabled = false;
+        btn.setAttribute("aria-busy", "false");
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span><span>Minha localização</span>';
+      }
+
+      let message = "Não foi possível obter sua localização neste momento.";
+      if (error?.code === 1) {
+        message = "Permita o acesso à localização no navegador para usar o botão Minha localização.";
+      } else if (error?.code === 3) {
+        message = "A localização demorou mais do que o esperado. Tente novamente.";
+      }
+      alert(message);
+    },
+    {
+      enableHighAccuracy: false,
+      timeout: 10000,
+      maximumAge: 60000
+    }
+  );
+}
+
+function getLegendControlWrapper(el, stopAt = null) {
+  if (!el) return null;
+
+  let current = el;
+  const ownText = (el.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+
+  while (current.parentElement && current.parentElement !== stopAt && current.parentElement !== document.body) {
+    const parent = current.parentElement;
+    const parentText = (parent.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+
+    if (parentText !== ownText) break;
+    if (parent.querySelectorAll("button, a, [role='button']").length > 1) break;
+
+    current = parent;
+  }
+
+  return current;
+}
+
+function bindMapLegendFilters() {
+  const statusButtons = [
+    ["legendFilterLost", "Procurado"],
+    ["legendFilterSighted", "Avistado"],
+    ["legendFilterFound", "Reencontrado"]
+  ];
+
+  statusButtons.forEach(([id, status]) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+
+    btn.dataset.legendStatus = status;
+    btn.classList.add("legend-filter-btn");
+
+    if (btn.dataset.statusFilterBound !== "1") {
+      btn.dataset.statusFilterBound = "1";
+      btn.addEventListener("click", () => {
+        applyStatusFilterFromLegend(status);
+      });
+    }
+  });
+
+  const locationBtn = document.getElementById("btnMapLocateMe");
+  if (locationBtn && locationBtn.dataset.locationBound !== "1") {
+    locationBtn.dataset.locationBound = "1";
+    locationBtn.addEventListener("click", locateUserOnMap);
+  }
+
+  syncStatusFilterUI();
+}
+
+window.addEventListener("orientationchange", () => {
+  setTimeout(() => {
+    optimizeMobileTopHeader();
+    enhanceMapLayout();
+    const reportModal = document.getElementById("reportModal");
+    if (reportModal && !reportModal.classList.contains("hidden")) {
+      prepareReportModalForViewport({ restoreScroll: false });
+    }
+  }, 180);
+});
+
+window.addEventListener("resize", () => {
+  optimizeMobileTopHeader();
+});
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", () => {
+    const reportModal = document.getElementById("reportModal");
+    if (reportModal && !reportModal.classList.contains("hidden")) {
+      ensureMobileResponsiveStyles();
+    }
+  });
+}
 
 
 // --- FILTROS DA LEGENDA DO MAPA (PROCURADO / AVISTADO / REENCONTRADO) ---
@@ -2809,7 +3237,6 @@ function initFilterEvents() {
   // Filtros da legenda superior do mapa
   bindMapLegendFilters();
 
-  // Main filter bar status pills
   document.querySelectorAll(".filter-status-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       currentActiveFilters.status = btn.dataset.status;
@@ -2858,7 +3285,6 @@ function syncStatusFilterUI() {
     b.style.boxShadow = "none";
   });
 
-  // Main Filter Pills
   document.querySelectorAll(".filter-status-btn").forEach(b => {
     const s = b.dataset.status;
     let isActive = false;
@@ -2874,7 +3300,6 @@ function syncStatusFilterUI() {
   });
 }
 
-// --- APP RENDERER ---
 function renderApp() {
   runAutoPurgeEngine();
 
@@ -2946,7 +3371,6 @@ function renderApp() {
   if (isAdminAuthenticated) renderAdminDashboardTable();
 }
 
-// --- PET CARD HTML TEMPLATE (COM BOTÃO DETALHES COMPLETOS VISÍVEL) ---
 function createPetCardHtml(pet) {
   const isFoundOwner = pet.type === "Encontrado pelo dono";
   const isFoundPet = pet.type === "Dono encontrado";
@@ -2969,7 +3393,6 @@ function createPetCardHtml(pet) {
   return `
     <article id="card-${pet.id}" onclick="focusPetOnMap('${pet.id}')" class="pet-card bg-surface rounded-2xl border border-outline-variant/50 overflow-hidden shadow-sm flex flex-col group relative cursor-pointer hover:shadow-md hover:border-secondary transition-all h-full justify-between" title="Clique para ver este pet no mapa">
       
-      <!-- Imagem 1:1 no topo com object-contain e Fundo Branco -->
       <div class="w-full aspect-square shrink-0 relative overflow-hidden bg-white border-b border-outline-variant/30 flex items-center justify-center p-1.5 cursor-pointer group/img" style="aspect-ratio: 1 / 1;" onclick="event.stopPropagation(); openImageLightbox('${pet.id}')" title="Clique para ampliar a foto deste pet em tela cheia">
         <img src="${getPetPhoto(pet)}" alt="${pet.name}" onerror="this.onerror=null; this.src=getRandomDefaultPhoto('${pet.species}');" class="w-full h-full object-contain rounded-lg group-hover/img:scale-105 transition-transform duration-500"/>
         
@@ -2986,7 +3409,6 @@ function createPetCardHtml(pet) {
         </div>
       </div>
 
-      <!-- Informações no rodapé do cartão (Todas as informações e botões 100% visíveis) -->
       <div class="p-5 flex flex-col flex-1 justify-between space-y-3 bg-surface">
         
         <div>
@@ -3039,7 +3461,6 @@ function createPetCardHtml(pet) {
           </div>
         </div>
 
-        <!-- Botões de Ação do Card (Totalmente Visíveis) -->
         <div class="grid grid-cols-2 gap-2 pt-2">
           <button onclick="event.stopPropagation(); focusPetOnMap('${pet.id}')" class="py-2 px-2.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary font-bold text-xs transition-colors flex items-center justify-center gap-1" title="Visualizar a geolocalização no mapa">
             <span class="material-symbols-outlined text-sm">map</span> Ver no Mapa
@@ -3116,7 +3537,6 @@ function openImageLightbox(petId) {
   }
 }
 
-// --- FORMATADOR MÁSCARA TELEFONE BRASIL (XX) XXXXX-XXXX ---
 function formatBrazilianPhone(val) {
   if (!val) return "";
   let digits = val.replace(/\D/g, "").slice(0, 11);
@@ -3127,7 +3547,6 @@ function formatBrazilianPhone(val) {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
 }
 
-// --- COMPRESSÃO DE IMAGEM HD (PRESERVA FOTOS EM ALTA NITIDEZ COM TAMANHO OTIMIZADO PARA DISPOSITIVOS MÓVEIS) ---
 function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.68) {
   return new Promise((resolve, reject) => {
     if (!file || !file.type || !file.type.startsWith("image/")) {
@@ -3922,7 +4341,6 @@ function setReportFormType(type) {
 
 let isFormSubmitting = false;
 
-// --- SUBMISSÃO DE FORMULÁRIO COM PROTEÇÃO TRY/FINALLY E SINCRONIZAÇÃO EM NUVEM ---
 async function handleFormSubmit(e) {
   e.preventDefault();
   if (isFormSubmitting) return;
@@ -3968,7 +4386,6 @@ async function handleFormSubmit(e) {
       }
     }
 
-    // Geolocalização com tempo limite seguro de 2s para nunca travar a resposta
     let geoCoords = { lat: -23.5505, lng: -46.6333 };
     try {
       const resCoords = await fetchGeocodeCoordinates(address, city, state);
@@ -4018,7 +4435,6 @@ async function handleFormSubmit(e) {
       petsData.unshift(targetPet);
     }
 
-    // 1. Salva localmente e fecha modal/renderiza IMEDIATAMENTE
     savePetsToStorage();
 
     try {
@@ -4063,7 +4479,6 @@ async function handleFormSubmit(e) {
       console.warn("Erro ao exibir modal de aviso de 30 dias:", noticeErr);
     }
 
-    // 2. Sincroniza com Firebase Firestore em segundo plano
     if (targetPet) {
       savePetToFirebase(targetPet).catch(err => {
         console.warn("Sincronização em nuvem concluída no banco local:", err);
@@ -6457,7 +6872,6 @@ async function adminDeletePet(petId) {
   }
 }
 
-// --- EXPORT DATABASE BACKUP (JSON / CSV) ---
 function exportBackupJSON() {
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(petsData, null, 2));
   const dlAnchor = document.createElement('a');
@@ -6498,7 +6912,6 @@ function exportBackupCSV() {
   link.remove();
 }
 
-// Vinculações globais para manipuladores inline no HTML (onclick / onchange / onerror)
 window.focusPetOnMap = focusPetOnMap;
 window.openImageLightbox = openImageLightbox;
 window.renewPetListing = renewPetListing;
