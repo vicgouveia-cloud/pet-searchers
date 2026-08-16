@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v100 carregado - cabeçalho e telefone dos cartazes alinhados");
+console.log("✅ Pet Searchers app.js BUILD v101 carregado - JPG 4x5 padronizado desktop e mobile");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -4347,6 +4347,186 @@ function ensureUnifiedPosterStyles() {
       display: none !important;
     }
 
+
+    /* ================================================================
+       v101 — JPG 4:5 oficial (desktop e mobile usam a mesma matriz 800x1000)
+       Layout reproduz a referência aprovada, sem depender da escala da prévia.
+       ================================================================ */
+    #posterArea .ps-header-line {
+      display: block;
+      width: 76%;
+      height: 2px;
+      min-height: 2px;
+      flex: 0 0 2px;
+      background: rgba(255,255,255,.96);
+      margin: 0 auto;
+      padding: 0;
+      border: 0;
+      box-shadow: none;
+      box-sizing: border-box;
+    }
+
+    #posterArea .ps-poster-date {
+      border: 0 !important;
+    }
+
+    #posterArea.ps-social-poster {
+      width: 800px !important;
+      height: 1000px !important;
+      min-width: 800px !important;
+      max-width: 800px !important;
+      min-height: 1000px !important;
+      max-height: 1000px !important;
+      grid-template-rows: 17.5% 65% 17.5% !important;
+    }
+
+    #posterArea.ps-social-poster .ps-poster-header {
+      padding: 24px 34px 17px !important;
+      justify-content: center !important;
+      overflow: hidden !important;
+    }
+
+    #posterArea.ps-social-poster .ps-poster-title {
+      font-size: 61px !important;
+      line-height: .98 !important;
+      margin: 0 0 10px !important;
+      padding: 0 !important;
+      transform: none !important;
+      position: relative !important;
+      z-index: 3 !important;
+    }
+
+    #posterArea.ps-social-poster .ps-poster-date {
+      width: auto !important;
+      margin: 7px 0 !important;
+      padding: 0 14px !important;
+      font-size: 17px !important;
+      line-height: 1.15 !important;
+      letter-spacing: .65px !important;
+      position: relative !important;
+      z-index: 3 !important;
+      background: #ef1717 !important;
+    }
+
+    #posterArea.ps-social-poster .ps-poster-body {
+      padding: 28px 30px 24px !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+
+    #posterArea.ps-social-poster .ps-poster-center {
+      width: 100% !important;
+      max-width: 740px !important;
+      grid-template-columns: minmax(0, 57%) minmax(0, 39%) !important;
+      column-gap: 26px !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+
+    #posterArea.ps-social-poster .ps-photo-shell {
+      width: 100% !important;
+      aspect-ratio: 4 / 5 !important;
+      border-radius: 13px !important;
+      border: 2px solid #d5d8de !important;
+      box-shadow: none !important;
+    }
+
+    #posterArea.ps-social-poster .ps-info-column {
+      width: 100% !important;
+      padding-left: 0 !important;
+      align-self: center !important;
+    }
+
+    #posterArea.ps-social-poster .ps-pet-name {
+      font-size: 31px !important;
+      line-height: 1.02 !important;
+      margin: 0 0 12px !important;
+    }
+
+    #posterArea.ps-social-poster .ps-info-box {
+      border-radius: 10px !important;
+      padding: 8px 10px 7px !important;
+      margin-bottom: 8px !important;
+    }
+
+    #posterArea.ps-social-poster .ps-info-label {
+      font-size: 10px !important;
+      margin-bottom: 4px !important;
+    }
+
+    #posterArea.ps-social-poster .ps-info-value {
+      font-size: 13px !important;
+      line-height: 1.25 !important;
+    }
+
+    #posterArea.ps-social-poster .ps-last-seen {
+      border-top-width: 4px !important;
+      margin-top: 10px !important;
+      padding-top: 12px !important;
+    }
+
+    #posterArea.ps-social-poster .ps-last-title {
+      font-size: 11px !important;
+      margin-bottom: 7px !important;
+    }
+
+    #posterArea.ps-social-poster .ps-last-text {
+      font-size: 12.4px !important;
+      line-height: 1.38 !important;
+    }
+
+    #posterArea.ps-social-poster .ps-poster-footer {
+      padding: 13px 28px 12px !important;
+      justify-content: center !important;
+    }
+
+    #posterArea.ps-social-poster .ps-footer-call {
+      font-size: 13.5px !important;
+      margin-bottom: 7px !important;
+    }
+
+    #posterArea.ps-social-poster .ps-footer-divider {
+      width: 76% !important;
+      margin-bottom: 9px !important;
+    }
+
+    #posterArea.ps-social-poster .ps-footer-row {
+      gap: 18px !important;
+      min-height: 54px !important;
+    }
+
+    #posterArea.ps-social-poster .ps-footer-logo {
+      width: 55px !important;
+      height: 55px !important;
+    }
+
+    #posterArea.ps-social-poster .ps-footer-phone-wrap {
+      gap: 12px !important;
+      min-height: 44px !important;
+    }
+
+    #posterArea.ps-social-poster .ps-wa {
+      width: 43px !important;
+      height: 43px !important;
+      flex-basis: 43px !important;
+    }
+
+    #posterArea.ps-social-poster .ps-wa svg {
+      width: 24px !important;
+      height: 24px !important;
+    }
+
+    #posterArea.ps-social-poster .ps-footer-phone {
+      font-size: 29px !important;
+      line-height: 43px !important;
+      min-height: 43px !important;
+    }
+
+    #posterArea.ps-social-poster .ps-footer-bottom {
+      font-size: 13.5px !important;
+      margin-top: 7px !important;
+    }
+
     /* Pequenos ajustes proporcionais para o A4, mantendo exatamente a mesma aparência. */
     #posterArea.ps-a4-poster .ps-poster-body {
       padding-top: 32px;
@@ -4437,7 +4617,9 @@ function buildUnifiedPoster(pet, format = "social") {
   posterArea.innerHTML = `
     <section class="ps-poster-header">
       <div class="ps-poster-title">PROCURA-SE</div>
+      <div class="ps-header-line" aria-hidden="true"></div>
       <div class="ps-poster-date">${dateText}</div>
+      <div class="ps-header-line" aria-hidden="true"></div>
     </section>
 
     <section class="ps-poster-body">
