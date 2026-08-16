@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v102 carregado - JPG 4x5 alinhado à referência aprovada");
+console.log("✅ Pet Searchers app.js BUILD v103 carregado - JPG 4x5 sem linhas e com cantos arredondados");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -4823,6 +4823,132 @@ function ensureUnifiedPosterStyles() {
       line-height: 1.15 !important;
       margin-top: 9px !important;
       font-weight: 900 !important;
+    }
+
+
+
+    /* ================================================================
+       v103 — JPG 4:5 final
+       - sem linhas no cabeçalho
+       - cantos externos arredondados
+       - visual igual à referência aprovada
+       ================================================================ */
+
+    #posterArea.ps-social-poster {
+      border-radius: 26px !important;
+      overflow: hidden !important;
+      background: #ffffff !important;
+      box-shadow: none !important;
+    }
+
+    #posterArea.ps-social-poster .ps-poster-header {
+      height: 175px !important;
+      min-height: 175px !important;
+      position: relative !important;
+      display: block !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      background: #ef1717 !important;
+      border-top-left-radius: 26px !important;
+      border-top-right-radius: 26px !important;
+    }
+
+    #posterArea.ps-social-poster .ps-poster-title {
+      position: absolute !important;
+      left: 0 !important;
+      right: 0 !important;
+      top: 34px !important;
+      height: 66px !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      background: #ef1717 !important;
+      color: #ffffff !important;
+      font-size: 62px !important;
+      line-height: 66px !important;
+      font-weight: 900 !important;
+      text-transform: uppercase !important;
+      letter-spacing: .15px !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      text-decoration: none !important;
+      transform: none !important;
+      z-index: 4 !important;
+    }
+
+    #posterArea.ps-social-poster .ps-poster-date {
+      position: absolute !important;
+      left: 0 !important;
+      right: 0 !important;
+      top: 110px !important;
+      width: 100% !important;
+      height: 31px !important;
+      margin: 0 !important;
+      padding: 0 20px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      background: #ef1717 !important;
+      color: #ffffff !important;
+      font-size: 18px !important;
+      line-height: 31px !important;
+      font-weight: 900 !important;
+      letter-spacing: .55px !important;
+      text-transform: uppercase !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      text-decoration: none !important;
+      box-sizing: border-box !important;
+      transform: none !important;
+      z-index: 4 !important;
+    }
+
+    /* Remove completamente quaisquer linhas herdadas do v101/v102. */
+    #posterArea.ps-social-poster .ps-header-line {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      width: 0 !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: 0 !important;
+      background: transparent !important;
+    }
+
+    #posterArea.ps-social-poster .ps-poster-title::before,
+    #posterArea.ps-social-poster .ps-poster-title::after,
+    #posterArea.ps-social-poster .ps-poster-date::before,
+    #posterArea.ps-social-poster .ps-poster-date::after {
+      content: none !important;
+      display: none !important;
+    }
+
+    #posterArea.ps-social-poster .ps-poster-body {
+      background: #ffffff !important;
+    }
+
+    #posterArea.ps-social-poster .ps-photo-shell {
+      border-radius: 18px !important;
+      overflow: hidden !important;
+    }
+
+    #posterArea.ps-social-poster .ps-poster-footer {
+      border-bottom-left-radius: 26px !important;
+      border-bottom-right-radius: 26px !important;
+      overflow: hidden !important;
+    }
+
+    /* A pré-visualização também respeita os cantos arredondados. */
+    #posterArea.ps-social-poster,
+    #posterArea.ps-social-poster * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
 
 
