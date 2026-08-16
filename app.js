@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v104 carregado - correção Safari iPhone SE no título PROCURA-SE");
+console.log("✅ Pet Searchers app.js BUILD v105 carregado - PDF A4 sem linhas no cabeçalho e nome em uma linha");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -5020,6 +5020,124 @@ function ensureUnifiedPosterStyles() {
       font-size: 35px;
     }
 
+
+    /* ================================================================
+       v105 — PDF A4
+       Cabeçalho limpo + nome do pet sempre em uma linha.
+       Estas regras NÃO alteram o JPG social.
+       ================================================================ */
+
+    #posterArea.ps-a4-poster .ps-poster-header {
+      position: relative !important;
+      display: block !important;
+      overflow: hidden !important;
+      padding: 0 !important;
+      background: #ef1717 !important;
+    }
+
+    #posterArea.ps-a4-poster .ps-poster-title {
+      position: absolute !important;
+      z-index: 5 !important;
+      left: 0 !important;
+      right: 0 !important;
+      top: 38px !important;
+      height: 82px !important;
+      min-height: 82px !important;
+      margin: 0 !important;
+      padding: 5px 0 9px !important;
+      box-sizing: border-box !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      color: #ffffff !important;
+      background: #ef1717 !important;
+      font-family: Arial, Helvetica, sans-serif !important;
+      font-size: 60px !important;
+      line-height: 1.08 !important;
+      font-weight: 900 !important;
+      letter-spacing: .2px !important;
+      text-transform: uppercase !important;
+      white-space: nowrap !important;
+      overflow: visible !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      text-decoration: none !important;
+      transform: none !important;
+      -webkit-font-smoothing: antialiased !important;
+      text-rendering: geometricPrecision !important;
+    }
+
+    #posterArea.ps-a4-poster .ps-poster-date {
+      position: absolute !important;
+      z-index: 5 !important;
+      left: 0 !important;
+      right: 0 !important;
+      top: 126px !important;
+      width: 100% !important;
+      height: 32px !important;
+      min-height: 32px !important;
+      margin: 0 !important;
+      padding: 0 18px !important;
+      box-sizing: border-box !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      color: #ffffff !important;
+      background: #ef1717 !important;
+      font-family: Arial, Helvetica, sans-serif !important;
+      font-size: 17px !important;
+      line-height: 32px !important;
+      font-weight: 900 !important;
+      letter-spacing: .55px !important;
+      text-transform: uppercase !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+      border-top: 0 !important;
+      border-bottom: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      text-decoration: none !important;
+      transform: none !important;
+    }
+
+    /* Nenhuma linha decorativa no cabeçalho do PDF. */
+    #posterArea.ps-a4-poster .ps-header-line {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      width: 0 !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: 0 !important;
+      background: transparent !important;
+    }
+
+    #posterArea.ps-a4-poster .ps-poster-title::before,
+    #posterArea.ps-a4-poster .ps-poster-title::after,
+    #posterArea.ps-a4-poster .ps-poster-date::before,
+    #posterArea.ps-a4-poster .ps-poster-date::after {
+      content: none !important;
+      display: none !important;
+    }
+
+    #posterArea.ps-a4-poster .ps-pet-name {
+      display: block !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      white-space: nowrap !important;
+      overflow: visible !important;
+      overflow-wrap: normal !important;
+      word-break: normal !important;
+      hyphens: none !important;
+      text-overflow: clip !important;
+      font-family: Arial, Helvetica, sans-serif !important;
+      line-height: 1.05 !important;
+    }
+
+
     @media print {
       @page {
         size: A4 portrait;
@@ -5152,6 +5270,9 @@ function buildUnifiedPoster(pet, format = "social") {
       <div class="ps-footer-bottom">A sua informação pode fazer toda a diferença! 🐾</div>
     </footer>
   `;
+
+  // Mantém nomes longos em uma linha também na pré-visualização.
+  requestAnimationFrame(() => fitPosterPetNameSingleLine(posterArea, normalizedFormat));
 }
 
 function applyPosterLayoutAdjustments() {
@@ -5321,6 +5442,42 @@ function createPosterExportClone(format = "social") {
   };
 }
 
+
+function fitPosterPetNameSingleLine(root, format = "social") {
+  const nameEl = root?.querySelector("#posterPetName");
+  if (!nameEl) return;
+
+  const isA4 = format === "a4";
+  const startSize = isA4 ? 35 : 31;
+  const minSize = isA4 ? 18 : 17;
+
+  nameEl.style.setProperty("white-space", "nowrap", "important");
+  nameEl.style.setProperty("overflow-wrap", "normal", "important");
+  nameEl.style.setProperty("word-break", "normal", "important");
+  nameEl.style.setProperty("hyphens", "none", "important");
+  nameEl.style.setProperty("width", "100%", "important");
+  nameEl.style.setProperty("max-width", "100%", "important");
+  nameEl.style.setProperty("font-size", `${startSize}px`, "important");
+
+  // Force layout before measuring.
+  void nameEl.offsetWidth;
+
+  let size = startSize;
+  const available = Math.max(1, nameEl.clientWidth - 2);
+
+  while (size > minSize && nameEl.scrollWidth > available) {
+    size -= 1;
+    nameEl.style.setProperty("font-size", `${size}px`, "important");
+    void nameEl.offsetWidth;
+  }
+
+  // Last safety margin for Safari/Chrome PDF rasterization.
+  if (nameEl.scrollWidth > available && size > minSize) {
+    size = minSize;
+    nameEl.style.setProperty("font-size", `${size}px`, "important");
+  }
+}
+
 async function lockPosterPhotoAspectRatioForExport(root) {
   const img = root?.querySelector("#posterImg");
   const shell = img?.closest(".ps-photo-shell");
@@ -5397,6 +5554,9 @@ async function renderPosterExportCanvas(format = "social") {
         setTimeout(resolve, 1200);
       });
     }));
+
+    // Ajusta nomes longos para permanecerem em uma única linha.
+    fitPosterPetNameSingleLine(exportClone.element, format);
 
     // Trava a fotografia nas proporções originais antes da captura.
     await lockPosterPhotoAspectRatioForExport(exportClone.element);
