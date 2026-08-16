@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v99 carregado - ícones de status nos marcadores do mapa");
+console.log("✅ Pet Searchers app.js BUILD v100 carregado - cabeçalho e telefone dos cartazes alinhados");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -4077,22 +4077,30 @@ function ensureUnifiedPosterStyles() {
       justify-content: center;
       align-items: center;
       text-align: center;
-      padding: 18px 30px 20px;
+      padding: 20px 30px 18px;
       box-sizing: border-box;
     }
 
     #posterArea .ps-poster-title {
+      position: relative;
+      z-index: 2;
+      display: block;
       font-size: 60px;
-      line-height: .95;
+      line-height: 1;
       font-weight: 900;
       letter-spacing: .3px;
-      margin: -2px 0 12px;
+      margin: 0;
+      padding: 0;
       text-transform: uppercase;
+      background: #ef1717;
     }
 
     #posterArea .ps-poster-date {
+      position: relative;
+      z-index: 1;
       width: 66%;
-      padding: 8px 12px;
+      margin-top: 14px;
+      padding: 7px 12px;
       border-top: 2px solid rgba(255,255,255,.95);
       border-bottom: 2px solid rgba(255,255,255,.95);
       font-size: 17px;
@@ -4271,35 +4279,49 @@ function ensureUnifiedPosterStyles() {
     }
 
     #posterArea .ps-footer-phone-wrap {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
+      gap: 12px;
       min-width: 0;
+      min-height: 46px;
+      box-sizing: border-box;
     }
 
     #posterArea .ps-wa {
-      width: 34px;
-      height: 34px;
+      width: 42px;
+      height: 42px;
       border: 3px solid #ffffff;
       border-radius: 50%;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
-      line-height: 1;
-      font-weight: 900;
       box-sizing: border-box;
+      flex: 0 0 42px;
+      padding: 0;
+      margin: 0;
+      line-height: 0;
+    }
+
+    #posterArea .ps-wa svg {
+      width: 23px;
+      height: 23px;
+      display: block;
       flex: 0 0 auto;
     }
 
     #posterArea .ps-footer-phone {
       color: #ffffff;
       font-size: 30px;
-      line-height: 1;
+      line-height: 42px;
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
       font-weight: 900;
       letter-spacing: .3px;
       white-space: nowrap;
+      margin: 0;
+      padding: 0;
     }
 
     #posterArea .ps-footer-bottom {
@@ -4308,6 +4330,21 @@ function ensureUnifiedPosterStyles() {
       font-weight: 900;
       margin-top: 7px;
       text-transform: uppercase;
+    }
+
+
+    #posterArea .ps-poster-title,
+    #posterArea .ps-poster-title * {
+      text-decoration: none !important;
+      border-top: 0 !important;
+      border-bottom: 0 !important;
+      box-shadow: none !important;
+    }
+
+    #posterArea .ps-poster-title::before,
+    #posterArea .ps-poster-title::after {
+      content: none !important;
+      display: none !important;
     }
 
     /* Pequenos ajustes proporcionais para o A4, mantendo exatamente a mesma aparência. */
@@ -4448,7 +4485,11 @@ function buildUnifiedPoster(pet, format = "social") {
       <div class="ps-footer-row">
         ${logoSrc ? `<img class="ps-footer-logo" src="${escapePetHtml(logoSrc)}" alt="Pet Searchers">` : ""}
         <div class="ps-footer-phone-wrap">
-          <span class="ps-wa">☎</span>
+          <span class="ps-wa" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img" focusable="false">
+              <path fill="#ffffff" d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2Z"/>
+            </svg>
+          </span>
           <span id="posterContactPhone" class="ps-footer-phone">${phone}</span>
         </div>
       </div>
