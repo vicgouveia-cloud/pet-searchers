@@ -1,4 +1,4 @@
-console.log("✅ Pet Searchers app.js BUILD v110 carregado - nome do pet +3pt corrigido no CSS e no ajuste automático");
+console.log("✅ Pet Searchers app.js BUILD v111 carregado - nome do pet maior e centralizado");
 /* ==========================================================================
    Pet Searchers Portal - Application Logic (app.js v60)
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
@@ -5609,6 +5609,50 @@ function ensureUnifiedPosterStyles() {
     }
 
 
+
+    /* ================================================================
+       v111 — Nome do pet maior e centralizado na coluna de texto
+       ================================================================ */
+
+    #posterArea.ps-social-poster .ps-pet-name {
+      font-size: 40px !important;
+      line-height: 1.02 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 0 14px !important;
+      padding: 0 !important;
+      text-align: center !important;
+      display: block !important;
+      color: #ef1717 !important;
+      font-weight: 900 !important;
+      white-space: nowrap !important;
+      overflow: visible !important;
+      overflow-wrap: normal !important;
+      word-break: normal !important;
+      hyphens: none !important;
+      box-sizing: border-box !important;
+    }
+
+    #posterArea.ps-a4-poster .ps-pet-name {
+      font-size: 44px !important;
+      line-height: 1.02 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 0 14px !important;
+      padding: 0 !important;
+      text-align: center !important;
+      display: block !important;
+      color: #ef1717 !important;
+      font-weight: 900 !important;
+      white-space: nowrap !important;
+      overflow: visible !important;
+      overflow-wrap: normal !important;
+      word-break: normal !important;
+      hyphens: none !important;
+      box-sizing: border-box !important;
+    }
+
+
     @media print {
       @page {
         size: A4 portrait;
@@ -5917,8 +5961,8 @@ function fitPosterPetNameSingleLine(root, format = "social") {
   if (!nameEl) return;
 
   const isA4 = format === "a4";
-  const startSize = isA4 ? 38 : 34;
-  const minSize = isA4 ? 20 : 19;
+  const startSize = isA4 ? 44 : 40;
+  const minSize = isA4 ? 22 : 21;
 
   nameEl.style.setProperty("white-space", "nowrap", "important");
   nameEl.style.setProperty("overflow-wrap", "normal", "important");
@@ -5927,6 +5971,8 @@ function fitPosterPetNameSingleLine(root, format = "social") {
   nameEl.style.setProperty("width", "100%", "important");
   nameEl.style.setProperty("max-width", "100%", "important");
   nameEl.style.setProperty("font-size", `${startSize}px`, "important");
+  nameEl.style.setProperty("text-align", "center", "important");
+  nameEl.style.setProperty("display", "block", "important");
 
   // Force layout before measuring.
   void nameEl.offsetWidth;
