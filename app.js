@@ -4,7 +4,7 @@ console.log("✅ Pet Searchers app.js BUILD v111 carregado - nome do pet maior e
    Banco Global em Nuvem em Tempo Real (Visível para Todos na Web),
    Geolocalização Precisa com Time-out Anti-Travamento (AbortController),
    Status Verdes de Reencontro, Botão Detalhes Completos nos Cards,
-   Calendário Português Brasil (dd/mm/aaaa) e Painel Admin Master (Pet129502@)
+   Calendário Português Brasil (dd/mm/aaaa) e Painel Admin Master
    ========================================================================== */
 
 // Configuração Oficial do Firebase Firestore (Projeto: pet-searchers-52c3e)
@@ -451,13 +451,28 @@ let purgedCountTotal = 0;
 // Date Picker Instance (Flatpickr pt-BR)
 let datePickerInstance = null;
 
-// --- GERENCIAMENTO DE SENHA ADMIN ---
-function getAdminPassword() {
-  return localStorage.getItem("pet_searchers_admin_password_v2") || "Pet129502@";
+// --- GERENCIAMENTO SEGURO DE AUTENTICAÇÃO ADMIN (HASH CRIPTOGRÁFICO SHA-256) ---
+const DEFAULT_ADMIN_PWD_HASH = "e6ac9a21ded2b0bf4d41793cf14fdf7aa46ab98585e164bfe6436bcf6511592a";
+
+async function computeSha256(text) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(String(text || ""));
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-function setAdminPassword(newPassword) {
-  localStorage.setItem("pet_searchers_admin_password_v2", newPassword);
+function getAdminPasswordHash() {
+  try {
+    localStorage.removeItem("pet_searchers_admin_password_v2");
+    localStorage.removeItem("pet_searchers_admin_password_v1");
+    localStorage.removeItem("pet_searchers_admin_password");
+  } catch (_) {}
+  return localStorage.getItem("pet_searchers_admin_pwd_hash_v3") || DEFAULT_ADMIN_PWD_HASH;
+}
+
+function setAdminPasswordHash(newHash) {
+  localStorage.setItem("pet_searchers_admin_pwd_hash_v3", newHash);
 }
 
 // --- APP INITIALIZATION ---
@@ -6484,12 +6499,13 @@ function initAdminEvents() {
   btnCloseAdminChangePassword?.addEventListener("click", () => adminChangePasswordModal?.classList.add("hidden"));
   btnCancelChangePassword?.addEventListener("click", () => adminChangePasswordModal?.classList.add("hidden"));
 
-  adminLoginForm?.addEventListener("submit", (e) => {
+  adminLoginForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const enteredPassword = document.getElementById("iptAdminPassword")?.value;
-    const currentMasterPassword = getAdminPassword();
+    const enteredPassword = document.getElementById("iptAdminPassword")?.value || "";
+    const enteredHash = await computeSha256(enteredPassword);
+    const expectedHash = getAdminPasswordHash();
 
-    if (enteredPassword === currentMasterPassword) {
+    if (enteredHash === expectedHash) {
       isAdminAuthenticated = true;
       adminLoginModal?.classList.add("hidden");
       const iptP = document.getElementById("iptAdminPassword");
@@ -6500,15 +6516,16 @@ function initAdminEvents() {
     }
   });
 
-  adminChangePasswordForm.addEventListener("submit", (e) => {
+  adminChangePasswordForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const currentPwd = document.getElementById("iptCurrentAdminPassword").value;
-    const newPwd = document.getElementById("iptNewAdminPassword").value;
-    const confirmPwd = document.getElementById("iptConfirmAdminPassword").value;
+    const currentPwd = document.getElementById("iptCurrentAdminPassword")?.value || "";
+    const newPwd = document.getElementById("iptNewAdminPassword")?.value || "";
+    const confirmPwd = document.getElementById("iptConfirmAdminPassword")?.value || "";
 
-    const storedMasterPwd = getAdminPassword();
+    const currentHash = await computeSha256(currentPwd);
+    const storedHash = getAdminPasswordHash();
 
-    if (currentPwd !== storedMasterPwd) {
+    if (currentHash !== storedHash) {
       alert("❌ A 'Senha Atual' informada está incorreta!");
       return;
     }
@@ -6523,9 +6540,10 @@ function initAdminEvents() {
       return;
     }
 
-    setAdminPassword(newPwd);
+    const newHash = await computeSha256(newPwd);
+    setAdminPasswordHash(newHash);
     adminChangePasswordForm.reset();
-    adminChangePasswordModal.classList.add("hidden");
+    adminChangePasswordModal?.classList.add("hidden");
 
     alert("🔒 Senha de Administração alterada com sucesso!\nUtilize sua nova senha em próximos acessos.");
   });
